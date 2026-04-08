@@ -1,0 +1,230 @@
+// Package logger 提供 AgentWiki 项目的日志工具
+// 支持多级别日志、文件输出和基于大小的日志轮转
+package logger
+
+import (
+	"fmt"
+	"io"
+	"log"
+	"os"
+	"path/filepath"
+	"sync"
+)
+
+// 日志级别常量
+const (
+	LevelDebug = 0 // 调试级别
+	LevelInfo  = 1 // 信息级别
+	LevelWarn  = 2 // 警告级别
+	LevelError = 3 // 错误级别
+)
+
+// 日志级别名称映射
+var levelNames = map[int]string{
+	LevelDebug: "DEBUG",
+	LevelInfo:  "INFO",
+	LevelWarn:  "WARN",
+	LevelError: "ERROR",
+}
+
+// LoggerConfig 日志配置结构体
+type LoggerConfig struct {
+	Level      int    // 日志级别：0=Debug, 1=Info, 2=Warn, 3=Error
+	FilePath   string // 日志文件路径，为空则仅输出到 stdout
+	MaxSizeMB  int    // 单个日志文件最大大小（MB），0 表示不限制
+	MaxBackups int    // 保留的备份日志文件数量，0 表示不保留备份
+}
+
+// Logger 自定义日志结构体
+// 支持多级别日志输出和文件轮转
+type Logger struct {
+	level      int
+	filePath   string
+	maxSize    int64 // 最大文件大小（字节）
+	maxBackups int
+	mu         sync.Mutex
+	file       *os.File
+	fileSize   int64
+	logger     *log.Logger
+}
+
+// NewLogger 根据配置创建新的 Logger 实例
+// 如果配置了文件路径，会自动打开文件进行写入
+func NewLogger(config *LoggerConfig) *Logger {
+	if config == nil {
+		config = &LoggerConfig{
+			Level: LevelInfo,
+		}
+	}
+
+	l := &Logger{
+		level:      config.Level,
+		filePath:   config.FilePath,
+		maxSize:    int64(config.MaxSizeMB) * 1024 * 1024,
+		maxBackups: config.MaxBackups,
+	}
+
+	// 如果配置了文件路径，初始化文件输出
+	if config.FilePath != "" {
+		l.initFile()
+	}
+
+	// 设置默认输出目标
+	var output io.Writer = os.Stdout
+	if l.file != nil {
+		output = io.MultiWriter(os.Stdout, l.file)
+	}
+
+	l.logger = log.New(output, "", 0)
+	return l
+}
+
+// initFile 初始化日志文件
+// 如果文件已存在，获取当前文件大小用于轮转判断
+func (l *Logger) initFile() {
+	// 确保目录存在
+	dir := filepath.Dir(l.filePath)
+	if err := os.MkdirAll(dir, 0755); err != nil {
+		fmt.Fprintf(os.Stderr, "创建日志目录失败: %v\n", err)
+		return
+	}
+
+	// 打开文件（追加模式）
+	f, err := os.OpenFile(l.filePath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "打开日志文件失败: %v\n", err)
+		return
+	}
+
+	// 获取当前文件大小
+	info, err := f.Stat()
+	if err == nil {
+		l.fileSize = info.Size()
+	}
+
+	l.file = f
+}
+
+// rotate 检查并执行日志文件轮转
+// 当文件大小超过限制时，将当前文件重命名为备份文件
+func (l *Logger) rotate() error {
+	if l.maxSize <= 0 || l.file == nil {
+		return nil
+	}
+
+	info, err := l.file.Stat()
+	if err != nil {
+		return err
+	}
+
+	if info.Size() < l.maxSize {
+		return nil
+	}
+
+	// 关闭当前文件
+	l.file.Close()
+
+	// 执行备份轮转
+	if l.maxBackups > 0 {
+		// 删除最旧的备份
+		oldestBackup := fmt.Sprintf("%s.%d", l.filePath, l.maxBackups)
+		os.Remove(oldestBackup)
+
+		// 将现有备份依次后移
+		for i := l.maxBackups - 1; i >= 1; i-- {
+			oldName := fmt.Sprintf("%s.%d", l.filePath, i)
+			newName := fmt.Sprintf("%s.%d", l.filePath, i+1)
+			os.Rename(oldName, newName)
+		}
+
+		// 将当前日志文件重命名为第一个备份
+		os.Rename(l.filePath, l.filePath+".1")
+	}
+
+	// 重新打开日志文件
+	f, err := os.OpenFile(l.filePath, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
+	if err != nil {
+		return fmt.Errorf("重新打开日志文件失败: %w", err)
+	}
+
+	l.file = f
+	l.fileSize = 0
+
+	// 更新 logger 的输出目标
+	var output io.Writer = os.Stdout
+	output = io.MultiWriter(os.Stdout, l.file)
+	l.logger = log.New(output, "", 0)
+
+	return nil
+}
+
+// log 输出日志的内部方法
+// 根据配置的级别过滤日志消息
+func (l *Logger) log(level int, format string, args ...interface{}) {
+	if level < l.level {
+		return
+	}
+
+	l.mu.Lock()
+	defer l.mu.Unlock()
+
+	// 检查是否需要轮转
+	if err := l.rotate(); err != nil {
+		fmt.Fprintf(os.Stderr, "日志轮转失败: %v\n", err)
+	}
+
+	levelName := "UNKNOWN"
+	if name, ok := levelNames[level]; ok {
+		levelName = name
+	}
+
+	msg := fmt.Sprintf(format, args...)
+	l.logger.Printf("[%s] %s", levelName, msg)
+}
+
+// Debug 输出调试级别的日志
+func (l *Logger) Debug(format string, args ...interface{}) {
+	l.log(LevelDebug, format, args...)
+}
+
+// Info 输出信息级别的日志
+func (l *Logger) Info(format string, args ...interface{}) {
+	l.log(LevelInfo, format, args...)
+}
+
+// Warn 输出警告级别的日志
+func (l *Logger) Warn(format string, args ...interface{}) {
+	l.log(LevelWarn, format, args...)
+}
+
+// Error 输出错误级别的日志
+func (l *Logger) Error(format string, args ...interface{}) {
+	l.log(LevelError, format, args...)
+}
+
+// Close 关闭日志文件句柄，释放资源
+func (l *Logger) Close() error {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+
+	if l.file != nil {
+		err := l.file.Close()
+		l.file = nil
+		return err
+	}
+	return nil
+}
+
+// SetLevel 动态设置日志级别
+func (l *Logger) SetLevel(level int) {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	l.level = level
+}
+
+// GetLevel 获取当前日志级别
+func (l *Logger) GetLevel() int {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	return l.level
+}
