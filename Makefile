@@ -6,7 +6,7 @@ VERSION := $(shell git describe --tags --always --dirty 2>/dev/null || echo "v0.
 LDFLAGS := -ldflags "-s -w -X main.version=$(VERSION)"
 
 # Go 相关
-GOCMD := /usr/lib/go-1.18/bin/go
+GOCMD := go
 GOBUILD := $(GOCMD) build
 GOTEST := $(GOCMD) test
 GOCLEAN := $(GOCMD) clean

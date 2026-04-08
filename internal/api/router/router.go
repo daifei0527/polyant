@@ -9,6 +9,7 @@ import (
 	"github.com/agentwiki/agentwiki/internal/api/handler"
 	"github.com/agentwiki/agentwiki/internal/api/middleware"
 	"github.com/agentwiki/agentwiki/internal/storage"
+	"github.com/agentwiki/agentwiki/pkg/config"
 )
 
 // Dependencies 路由依赖注入容器
@@ -27,17 +28,17 @@ type Dependencies struct {
 // NewRouter 创建并配置 HTTP 路由
 // 注册所有 API 端点，配置中间件链
 // 中间件执行顺序: RequestID -> Logging -> Recovery -> CORS -> [Auth] -> Handler
-func NewRouter(deps *Dependencies) http.Handler {
+func NewRouter(store *storage.Store, cfg *config.Config) (http.Handler, error) {
 	mux := http.NewServeMux()
 
 	// 创建各 handler
-	entryHandler := handler.NewEntryHandler(deps.EntryStore, deps.SearchEngine, deps.UserStore)
-	userHandler := handler.NewUserHandler(deps.UserStore, deps.EntryStore, deps.RatingStore)
-	categoryHandler := handler.NewCategoryHandler(deps.CategoryStore, deps.EntryStore)
-	nodeHandler := handler.NewNodeHandler(deps.NodeID, deps.NodeType, deps.Version, deps.EntryStore)
+	entryHandler := handler.NewEntryHandler(store.Entry, store.Search, store.User)
+	userHandler := handler.NewUserHandler(store.User, store.Entry, store.Rating)
+	categoryHandler := handler.NewCategoryHandler(store.Category, store.Entry)
+	nodeHandler := handler.NewNodeHandler("local-node-1", cfg.Node.Type, "v0.1.0-dev", store.Entry)
 
 	// 创建认证中间件
-	authMW := middleware.NewAuthMiddleware(deps.UserStore)
+	authMW := middleware.NewAuthMiddleware(store.User)
 
 	// 创建 CORS 中间件（开发环境配置）
 	corsMW := middleware.NewCORSMiddleware(middleware.DefaultCORSConfig())
@@ -55,7 +56,7 @@ func NewRouter(deps *Dependencies) http.Handler {
 	handler = middleware.LoggingMiddleware(handler)   // 请求日志
 	handler = middleware.RequestIDMiddleware(handler)  // 请求ID
 
-	return handler
+	return handler, nil
 }
 
 // registerPublicRoutes 注册公开路由（无需认证）
