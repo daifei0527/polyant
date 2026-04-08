@@ -112,3 +112,29 @@ type SearchResult struct {
 	HasMore    bool                    `json:"has_more"`
 	Entries    []*model.KnowledgeEntry `json:"entries"`
 }
+
+// Store 存储接口集合
+type Store struct {
+	Entry    EntryStore
+	User     UserStore
+	Rating   RatingStore
+	Category CategoryStore
+	Search   SearchEngine
+}
+
+// NewMemoryStore 创建内存存储实例
+func NewMemoryStore() (*Store, error) {
+	entryStore := NewMemoryEntryStore()
+	userStore := NewMemoryUserStore()
+	ratingStore := NewMemoryRatingStore()
+	categoryStore := NewMemoryCategoryStore()
+	searchEngine := NewMemorySearchEngine()
+
+	return &Store{
+		Entry:    entryStore,
+		User:     userStore,
+		Rating:   ratingStore,
+		Category: categoryStore,
+		Search:   searchEngine,
+	}, nil
+}

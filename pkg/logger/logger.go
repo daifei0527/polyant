@@ -228,3 +228,89 @@ func (l *Logger) GetLevel() int {
 	defer l.mu.Unlock()
 	return l.level
 }
+
+// ==================== 全局日志实例 ====================
+
+var (
+	// globalLogger 全局日志实例
+	globalLogger *Logger
+)
+
+// Init 初始化全局日志实例
+// dir: 日志目录
+// level: 日志级别（debug, info, warn, error）
+func Init(dir, level string) {
+	// 解析日志级别
+	levelMap := map[string]int{
+		"debug": LevelDebug,
+		"info":  LevelInfo,
+		"warn":  LevelWarn,
+		"error": LevelError,
+	}
+
+	logLevel, ok := levelMap[level]
+	if !ok {
+		logLevel = LevelInfo
+	}
+
+	// 创建日志文件路径
+	filePath := filepath.Join(dir, "agentwiki.log")
+
+	// 创建日志配置
+	config := &LoggerConfig{
+		Level:      logLevel,
+		FilePath:   filePath,
+		MaxSizeMB:  100,  // 100MB 轮转
+		MaxBackups: 5,     // 保留5个备份
+	}
+
+	// 初始化全局日志
+	globalLogger = NewLogger(config)
+
+	// 输出初始化信息
+	globalLogger.Info("日志系统初始化完成，级别: %s, 文件: %s", level, filePath)
+}
+
+// Close 关闭全局日志实例
+func Close() error {
+	if globalLogger != nil {
+		return globalLogger.Close()
+	}
+	return nil
+}
+
+// Debug 输出调试级别的全局日志
+func Debug(format string, args ...interface{}) {
+	if globalLogger != nil {
+		globalLogger.Debug(format, args...)
+	}
+}
+
+// Info 输出信息级别的全局日志
+func Info(format string, args ...interface{}) {
+	if globalLogger != nil {
+		globalLogger.Info(format, args...)
+	}
+}
+
+// Warn 输出警告级别的全局日志
+func Warn(format string, args ...interface{}) {
+	if globalLogger != nil {
+		globalLogger.Warn(format, args...)
+	}
+}
+
+// Error 输出错误级别的全局日志
+func Error(format string, args ...interface{}) {
+	if globalLogger != nil {
+		globalLogger.Error(format, args...)
+	}
+}
+
+// Fatal 输出错误级别的全局日志并退出程序
+func Fatalf(format string, args ...interface{}) {
+	if globalLogger != nil {
+		globalLogger.Error(format, args...)
+	}
+	os.Exit(1)
+}
