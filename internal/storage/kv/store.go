@@ -231,3 +231,27 @@ type storeError struct {
 func (e *storeError) Error() string {
 	return e.msg
 }
+
+// ==================== 工厂函数 ====================
+
+// StoreType 存储类型
+type StoreType string
+
+const (
+	// StoreTypeJSONFile JSON文件存储（适合开发和小规模使用）
+	StoreTypeJSONFile StoreType = "jsonfile"
+	// StoreTypeBadger BadgerDB持久化存储（生产环境推荐）
+	StoreTypeBadger StoreType = "badger"
+)
+
+// NewStore 根据类型创建存储实例
+func NewStore(storeType StoreType, path string) (Store, error) {
+	switch storeType {
+	case StoreTypeJSONFile:
+		return NewJSONFileStore(path)
+	case StoreTypeBadger:
+		return NewBadgerStore(path)
+	default:
+		return nil, &storeError{"unknown store type: " + string(storeType)}
+	}
+}

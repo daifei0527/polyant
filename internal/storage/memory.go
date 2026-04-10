@@ -588,3 +588,120 @@ func computeContentHash(title, content, category string) string {
 	h.Write([]byte(category))
 	return hex.EncodeToString(h.Sum(nil))
 }
+
+// MemoryBacklinkIndex 基于内存的反向链接索引实现
+type MemoryBacklinkIndex struct {
+	mu        sync.RWMutex
+	outlinks  map[string]map[string]bool // 正向链接: source entry ID -> set of linked entry IDs
+	backlinks map[string]map[string]bool // 反向链接: target entry ID -> set of source entry IDs
+}
+
+// NewMemoryBacklinkIndex 创建内存反向链接索引实例
+func NewMemoryBacklinkIndex() *MemoryBacklinkIndex {
+	return &MemoryBacklinkIndex{
+		outlinks:  make(map[string]map[string]bool),
+		backlinks: make(map[string]map[string]bool),
+	}
+}
+
+// UpdateIndex 更新条目链接索引：先删除旧索引，再添加新链接
+func (idx *MemoryBacklinkIndex) UpdateIndex(entryID string, linkedEntryIDs []string) error {
+	idx.mu.Lock()
+	defer idx.mu.Unlock()
+
+	// 第一步：移除旧的索引关系
+	oldLinkedIDs, exists := idx.outlinks[entryID]
+	if exists {
+		for linkedID := range oldLinkedIDs {
+			// 从反向链接中移除当前entryID
+			if backlinks, ok := idx.backlinks[linkedID]; ok {
+				delete(backlinks, entryID)
+				if len(backlinks) == 0 {
+					delete(idx.backlinks, linkedID)
+				}
+			}
+		}
+	}
+
+	// 第二步：添加新的链接关系
+	newLinkedSet := make(map[string]bool)
+	for _, linkedID := range linkedEntryIDs {
+		if linkedID == entryID {
+			continue // 避免自链接
+		}
+		newLinkedSet[linkedID] = true
+
+		// 在反向链接中添加当前entryID
+		if _, ok := idx.backlinks[linkedID]; !ok {
+			idx.backlinks[linkedID] = make(map[string]bool)
+		}
+		idx.backlinks[linkedID][entryID] = true
+	}
+
+	if len(newLinkedSet) > 0 {
+		idx.outlinks[entryID] = newLinkedSet
+	} else {
+		delete(idx.outlinks, entryID)
+	}
+
+	return nil
+}
+
+// DeleteIndex 删除条目索引，同时从被链接条目的反向链接中移除自身
+func (idx *MemoryBacklinkIndex) DeleteIndex(entryID string) error {
+	idx.mu.Lock()
+	defer idx.mu.Unlock()
+
+	// 从被链接条目的反向链接中移除自身
+	if oldLinkedIDs, exists := idx.outlinks[entryID]; exists {
+		for linkedID := range oldLinkedIDs {
+			if backlinks, ok := idx.backlinks[linkedID]; ok {
+				delete(backlinks, entryID)
+				if len(backlinks) == 0 {
+					delete(idx.backlinks, linkedID)
+				}
+			}
+		}
+	}
+
+	// 删除正向链接
+	delete(idx.outlinks, entryID)
+
+	// 如果其他页面链接到这个被删除的页面，不需要删除它们的正向链接
+	// 因为删除源条目已经在上游处理了，这里只需要清理自身数据
+	return nil
+}
+
+// GetBacklinks 获取指向目标条目的所有反向链接条目ID
+func (idx *MemoryBacklinkIndex) GetBacklinks(targetEntryID string) ([]string, error) {
+	idx.mu.RLock()
+	defer idx.mu.RUnlock()
+
+	backlinks, exists := idx.backlinks[targetEntryID]
+	if !exists || len(backlinks) == 0 {
+		return []string{}, nil
+	}
+
+	result := make([]string, 0, len(backlinks))
+	for id := range backlinks {
+		result = append(result, id)
+	}
+	return result, nil
+}
+
+// GetOutlinks 获取当前条目链接出去的所有正向链接条目ID
+func (idx *MemoryBacklinkIndex) GetOutlinks(sourceEntryID string) ([]string, error) {
+	idx.mu.RLock()
+	defer idx.mu.RUnlock()
+
+	outlinks, exists := idx.outlinks[sourceEntryID]
+	if !exists || len(outlinks) == 0 {
+		return []string{}, nil
+	}
+
+	result := make([]string, 0, len(outlinks))
+	for id := range outlinks {
+		result = append(result, id)
+	}
+	return result, nil
+}

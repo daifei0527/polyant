@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	awerrors "github.com/agentwiki/agentwiki/pkg/errors"
+	"github.com/agentwiki/agentwiki/internal/storage/linkparser"
 	"github.com/agentwiki/agentwiki/internal/storage/model"
 	"github.com/agentwiki/agentwiki/internal/storage"
 )
@@ -18,14 +19,16 @@ import (
 type EntryHandler struct {
 	entryStore   storage.EntryStore
 	searchEngine storage.SearchEngine
+	backlink     storage.BacklinkIndex
 	userStore    storage.UserStore
 }
 
 // NewEntryHandler 创建新的 EntryHandler 实例
-func NewEntryHandler(entryStore storage.EntryStore, searchEngine storage.SearchEngine, userStore storage.UserStore) *EntryHandler {
+func NewEntryHandler(entryStore storage.EntryStore, searchEngine storage.SearchEngine, backlinkIndex storage.BacklinkIndex, userStore storage.UserStore) *EntryHandler {
 	return &EntryHandler{
 		entryStore:   entryStore,
 		searchEngine: searchEngine,
+		backlink:     backlinkIndex,
 		userStore:    userStore,
 	}
 }
@@ -205,6 +208,12 @@ func (h *EntryHandler) CreateEntryHandler(w http.ResponseWriter, r *http.Request
 		_ = h.searchEngine.IndexEntry(created)
 	}
 
+	// 建立反向链接索引
+	if h.backlink != nil {
+		linkedEntryIDs := linkparser.ParseLinks(created.Content)
+		_ = h.backlink.UpdateIndex(created.ID, linkedEntryIDs)
+	}
+
 	writeJSON(w, http.StatusCreated, &APIResponse{
 		Code:    0,
 		Message: "success",
@@ -296,6 +305,12 @@ func (h *EntryHandler) UpdateEntryHandler(w http.ResponseWriter, r *http.Request
 		_ = h.searchEngine.UpdateIndex(updated)
 	}
 
+	// 更新反向链接索引
+	if h.backlink != nil {
+		linkedEntryIDs := linkparser.ParseLinks(updated.Content)
+		_ = h.backlink.UpdateIndex(updated.ID, linkedEntryIDs)
+	}
+
 	writeJSON(w, http.StatusOK, &APIResponse{
 		Code:    0,
 		Message: "success",
@@ -350,6 +365,11 @@ func (h *EntryHandler) DeleteEntryHandler(w http.ResponseWriter, r *http.Request
 		_ = h.searchEngine.DeleteIndex(id)
 	}
 
+	// 从反向链接索引中删除
+	if h.backlink != nil {
+		_ = h.backlink.DeleteIndex(id)
+	}
+
 	writeJSON(w, http.StatusOK, &APIResponse{
 		Code:    0,
 		Message: "success",
@@ -365,4 +385,84 @@ func computeContentHash(title, content, category string) string {
 	h.Write([]byte(content))
 	h.Write([]byte(category))
 	return hex.EncodeToString(h.Sum(nil))
+}
+
+// GetBacklinksHandler 获取条目的反向链接列表
+// GET /api/v1/entry/{id}/backlinks
+// 返回所有链接到该条目的条目ID列表
+func (h *EntryHandler) GetBacklinksHandler(w http.ResponseWriter, r *http.Request) {
+	id := extractPathVar(r, "id")
+	if id == "" {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	// 先检查条目是否存在
+	_, err := h.entryStore.Get(r.Context(), id)
+	if err != nil {
+		writeError(w, awerrors.ErrEntryNotFound)
+		return
+	}
+
+	if h.backlink == nil {
+		// 反向链接索引未启用，返回空列表
+		writeJSON(w, http.StatusOK, &APIResponse{
+			Code:    0,
+			Message: "success",
+			Data:    []string{},
+		})
+		return
+	}
+
+	backlinks, err := h.backlink.GetBacklinks(id)
+	if err != nil {
+		writeError(w, awerrors.Wrap(306, awerrors.CategoryStorage, "failed to get backlinks", 500, err))
+		return
+	}
+
+	writeJSON(w, http.StatusOK, &APIResponse{
+		Code:    0,
+		Message: "success",
+		Data:    backlinks,
+	})
+}
+
+// GetOutlinksHandler 获取条目的正向链接列表
+// GET /api/v1/entry/{id}/outlinks
+// 返回该条目链接出去的所有条目ID列表
+func (h *EntryHandler) GetOutlinksHandler(w http.ResponseWriter, r *http.Request) {
+	id := extractPathVar(r, "id")
+	if id == "" {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	// 先检查条目是否存在
+	_, err := h.entryStore.Get(r.Context(), id)
+	if err != nil {
+		writeError(w, awerrors.ErrEntryNotFound)
+		return
+	}
+
+	if h.backlink == nil {
+		// 反向链接索引未启用，返回空列表
+		writeJSON(w, http.StatusOK, &APIResponse{
+			Code:    0,
+			Message: "success",
+			Data:    []string{},
+		})
+		return
+	}
+
+	outlinks, err := h.backlink.GetOutlinks(id)
+	if err != nil {
+		writeError(w, awerrors.Wrap(306, awerrors.CategoryStorage, "failed to get outlinks", 500, err))
+		return
+	}
+
+	writeJSON(w, http.StatusOK, &APIResponse{
+		Code:    0,
+		Message: "success",
+		Data:    outlinks,
+	})
 }
