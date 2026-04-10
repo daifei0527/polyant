@@ -113,13 +113,27 @@ type SearchResult struct {
 	Entries    []*model.KnowledgeEntry `json:"entries"`
 }
 
+// BacklinkIndex 反向链接索引接口
+// 维护条目之间的链接关系，支持查询哪些页面链接到了当前页面
+type BacklinkIndex interface {
+	// UpdateIndex 更新条目链接索引：先删除旧索引，再添加新链接
+	UpdateIndex(entryID string, linkedEntryIDs []string) error
+	// DeleteIndex 删除条目索引，同时从被链接条目的反向链接中移除自身
+	DeleteIndex(entryID string) error
+	// GetBacklinks 获取指向目标条目的所有反向链接条目ID
+	GetBacklinks(targetEntryID string) ([]string, error)
+	// GetOutlinks 获取当前条目链接出去的所有正向链接条目ID
+	GetOutlinks(sourceEntryID string) ([]string, error)
+}
+
 // Store 存储接口集合
 type Store struct {
-	Entry    EntryStore
-	User     UserStore
-	Rating   RatingStore
-	Category CategoryStore
-	Search   SearchEngine
+	Entry        EntryStore
+	User         UserStore
+	Rating       RatingStore
+	Category     CategoryStore
+	Search       SearchEngine
+	Backlink     BacklinkIndex
 }
 
 // NewMemoryStore 创建内存存储实例
@@ -129,6 +143,7 @@ func NewMemoryStore() (*Store, error) {
 	ratingStore := NewMemoryRatingStore()
 	categoryStore := NewMemoryCategoryStore()
 	searchEngine := NewMemorySearchEngine()
+	backlinkIndex := NewMemoryBacklinkIndex()
 
 	return &Store{
 		Entry:    entryStore,
@@ -136,5 +151,6 @@ func NewMemoryStore() (*Store, error) {
 		Rating:   ratingStore,
 		Category: categoryStore,
 		Search:   searchEngine,
+		Backlink: backlinkIndex,
 	}, nil
 }

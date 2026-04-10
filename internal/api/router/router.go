@@ -20,6 +20,7 @@ type Dependencies struct {
 	RatingStore  storage.RatingStore
 	CategoryStore storage.CategoryStore
 	SearchEngine storage.SearchEngine
+	Backlink     storage.BacklinkIndex
 	NodeID       string
 	NodeType     string
 	Version      string
@@ -32,7 +33,7 @@ func NewRouter(store *storage.Store, cfg *config.Config) (http.Handler, error) {
 	mux := http.NewServeMux()
 
 	// 创建各 handler
-	entryHandler := handler.NewEntryHandler(store.Entry, store.Search, store.User)
+	entryHandler := handler.NewEntryHandler(store.Entry, store.Search, store.Backlink, store.User)
 	userHandler := handler.NewUserHandler(store.User, store.Entry, store.Rating)
 	categoryHandler := handler.NewCategoryHandler(store.Category, store.Entry)
 	nodeHandler := handler.NewNodeHandler("local-node-1", cfg.Node.Type, "v0.1.0-dev", store.Entry)
@@ -66,7 +67,26 @@ func registerPublicRoutes(mux *http.ServeMux, eh *handler.EntryHandler, uh *hand
 
 	// 获取条目详情
 	mux.HandleFunc("/api/v1/entry/", func(w http.ResponseWriter, r *http.Request) {
-		// 仅处理 GET 请求为公开路由
+		path := r.URL.Path
+		// 检查是否是反向链接请求: /api/v1/entry/{id}/backlinks
+		if strings.HasSuffix(path, "/backlinks") {
+			if r.Method == http.MethodGet {
+				eh.GetBacklinksHandler(w, r)
+			} else {
+				http.NotFound(w, r)
+			}
+			return
+		}
+		// 检查是否是正向链接请求: /api/v1/entry/{id}/outlinks
+		if strings.HasSuffix(path, "/outlinks") {
+			if r.Method == http.MethodGet {
+				eh.GetOutlinksHandler(w, r)
+			} else {
+				http.NotFound(w, r)
+			}
+			return
+		}
+		// 默认：获取条目详情
 		if r.Method == http.MethodGet {
 			eh.GetEntryHandler(w, r)
 		} else {
