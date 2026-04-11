@@ -1,9 +1,10 @@
 package kv
 
 import (
+	"context"
 	"fmt"
 
-	"github.com/agentwiki/agentwiki/internal/storage/model"
+	"github.com/daifei0527/agentwiki/internal/storage/model"
 )
 
 // UserStore 提供用户的CRUD操作
@@ -122,4 +123,26 @@ func paginateUsers(users []*model.User, offset, limit int) []*model.User {
 	}
 
 	return users[offset:end]
+}
+
+// GetByEmail 根据邮箱获取用户
+func (us *UserStore) GetByEmail(ctx context.Context, email string) (*model.User, error) {
+	users, err := ScanAndParse(us.store, PrefixUser, func(data []byte) (*model.User, error) {
+		user := &model.User{}
+		if err := user.FromJSON(data); err != nil {
+			return nil, err
+		}
+		return user, nil
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to list users: %w", err)
+	}
+
+	for _, user := range users {
+		if user.Email == email {
+			return user, nil
+		}
+	}
+
+	return nil, fmt.Errorf("user with email %s not found", email)
 }
