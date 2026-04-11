@@ -28,13 +28,14 @@ type SearchParams struct {
 
 // CreateEntryRequest 创建条目请求体
 type CreateEntryRequest struct {
-	Title    string                   `json:"title"`
-	Content  string                   `json:"content"`
-	JsonData []map[string]interface{} `json:"json_data,omitempty"`
-	Category string                   `json:"category"`
-	Tags     []string                 `json:"tags,omitempty"`
-	License  string                   `json:"license,omitempty"`
-	SourceRef string                  `json:"source_ref,omitempty"`
+	Title            string                   `json:"title"`
+	Content          string                   `json:"content"`
+	JsonData         []map[string]interface{} `json:"json_data,omitempty"`
+	Category         string                   `json:"category"`
+	Tags             []string                 `json:"tags,omitempty"`
+	License          string                   `json:"license,omitempty"`
+	SourceRef        string                   `json:"source_ref,omitempty"`
+	CreatorSignature string                   `json:"creator_signature"` // 条目内容签名
 }
 
 // UpdateEntryRequest 更新条目请求体
@@ -56,7 +57,12 @@ type RegisterRequest struct {
 // VerifyEmailRequest 邮箱验证请求体
 type VerifyEmailRequest struct {
 	Email string `json:"email"`
-	Token string `json:"token"`
+	Code  string `json:"code"` // 验证码
+}
+
+// SendVerificationCodeRequest 发送验证码请求体
+type SendVerificationCodeRequest struct {
+	Email string `json:"email"`
 }
 
 // RateEntryRequest 评分请求体
