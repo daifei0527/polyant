@@ -291,8 +291,9 @@ func Validate(config *Config) error {
 	}
 
 	// 验证节点配置
-	if config.Node.Type != "local" && config.Node.Type != "seed" {
-		return fmt.Errorf("无效的节点类型: %s，必须是 'local' 或 'seed'", config.Node.Type)
+	validNodeTypes := map[string]bool{"local": true, "seed": true, "user": true}
+	if !validNodeTypes[config.Node.Type] {
+		return fmt.Errorf("无效的节点类型: %s，必须是 'local'、'seed' 或 'user'", config.Node.Type)
 	}
 	if config.Node.Name == "" {
 		return fmt.Errorf("节点名称不能为空")

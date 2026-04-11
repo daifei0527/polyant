@@ -108,6 +108,13 @@ func NewSyncEngine(p2pHost *host.P2PHost, proto *protocol.Protocol, store *stora
 	}
 }
 
+// SetProtocol 设置协议处理器（用于解决循环依赖）
+func (se *SyncEngine) SetProtocol(proto *protocol.Protocol) {
+	se.mu.Lock()
+	defer se.mu.Unlock()
+	se.protocol = proto
+}
+
 func (se *SyncEngine) Start(ctx context.Context) error {
 	se.mu.Lock()
 	defer se.mu.Unlock()
