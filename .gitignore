@@ -4,8 +4,9 @@
 *.dll
 *.so
 *.dylib
-agentwiki
-awctl
+/agentwiki
+/awctl
+/bin/
 
 # Test binary
 *.test
