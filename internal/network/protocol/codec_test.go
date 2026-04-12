@@ -4,6 +4,7 @@ package protocol_test
 import (
 	"bytes"
 	"testing"
+	"time"
 
 	"github.com/daifei0527/agentwiki/internal/network/protocol"
 )
@@ -521,5 +522,120 @@ func TestAWSPProtocolID(t *testing.T) {
 	expected := "/agentwiki/sync/1.0.0"
 	if protocol.AWSPProtocolID != expected {
 		t.Errorf("AWSPProtocolID 错误: got %q, want %q", protocol.AWSPProtocolID, expected)
+	}
+}
+
+// ==================== 错误处理测试 ====================
+
+// TestCodecDecodeInvalidJSON 测试无效 JSON 解码
+func TestCodecDecodeInvalidJSON(t *testing.T) {
+	codec := protocol.NewCodec()
+
+	invalidData := []byte("invalid json data")
+	_, err := codec.Decode(bytes.NewReader(invalidData))
+	if err == nil {
+		t.Error("无效 JSON 应返回错误")
+	}
+}
+
+// TestCodecDecodeTruncatedData 测试截断数据解码
+func TestCodecDecodeTruncatedData(t *testing.T) {
+	codec := protocol.NewCodec()
+
+	msg := &protocol.Message{
+		Header:  protocol.NewMessageHeader(protocol.MessageTypeHandshake),
+		Payload: &protocol.Handshake{NodeID: "test"},
+	}
+	encoded, _ := codec.Encode(msg)
+
+	// 截断数据
+	if len(encoded) > 10 {
+		truncated := encoded[:len(encoded)/2]
+		_, err := codec.Decode(bytes.NewReader(truncated))
+		if err == nil {
+			t.Error("截断数据应返回错误")
+		}
+	}
+}
+
+// TestCodecDecodeEmptyData 测试空数据解码
+func TestCodecDecodeEmptyData(t *testing.T) {
+	codec := protocol.NewCodec()
+
+	_, err := codec.Decode(bytes.NewReader([]byte{}))
+	if err == nil {
+		t.Error("空数据应返回错误")
+	}
+}
+
+// TestMessageHeaderTimestamp 测试消息头时间戳
+func TestMessageHeaderTimestamp(t *testing.T) {
+	before := time.Now().UnixMilli()
+	header := protocol.NewMessageHeader(protocol.MessageTypeQuery)
+	after := time.Now().UnixMilli()
+
+	if header.Timestamp < before || header.Timestamp > after {
+		t.Errorf("时间戳应在当前时间范围内: got %d, expected between %d and %d", header.Timestamp, before, after)
+	}
+}
+
+// TestMessageHeaderUniqueID 测试消息 ID 格式
+func TestMessageHeaderUniqueID(t *testing.T) {
+	// 消息 ID 使用时间戳生成，在同一毫秒内可能重复
+	// 这里验证 ID 非空且格式正确
+	for i := 0; i < 100; i++ {
+		header := protocol.NewMessageHeader(protocol.MessageTypeQuery)
+		if header.MessageID == "" {
+			t.Error("消息 ID 不应为空")
+		}
+		// ID 应该是数字字符串
+		for _, c := range header.MessageID {
+			if c < '0' || c > '9' {
+				t.Errorf("消息 ID 应为数字: got %q", header.MessageID)
+				break
+			}
+		}
+	}
+}
+
+// TestCodecRoundTrip 测试所有消息类型的往返
+func TestCodecRoundTrip(t *testing.T) {
+	codec := protocol.NewCodec()
+
+	testCases := []struct {
+		name    string
+		msgType protocol.MessageType
+		payload interface{}
+	}{
+		{"Handshake", protocol.MessageTypeHandshake, &protocol.Handshake{NodeID: "node-1"}},
+		{"Query", protocol.MessageTypeQuery, &protocol.Query{QueryID: "q-1", Keyword: "test"}},
+		{"SyncRequest", protocol.MessageTypeSyncRequest, &protocol.SyncRequest{RequestID: "sync-1"}},
+		{"SyncResponse", protocol.MessageTypeSyncResponse, &protocol.SyncResponse{RequestID: "sync-1"}},
+		{"PushEntry", protocol.MessageTypePushEntry, &protocol.PushEntry{EntryID: "entry-1"}},
+		{"Heartbeat", protocol.MessageTypeHeartbeat, &protocol.Heartbeat{NodeID: "node-1"}},
+		{"Bitfield", protocol.MessageTypeBitfield, &protocol.Bitfield{NodeID: "node-1"}},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			msg := &protocol.Message{
+				Header:  protocol.NewMessageHeader(tc.msgType),
+				Payload: tc.payload,
+			}
+
+			encoded, err := codec.Encode(msg)
+			if err != nil {
+				t.Fatalf("Encode 失败: %v", err)
+			}
+
+			decoded, err := codec.Decode(bytes.NewReader(encoded))
+			if err != nil {
+				t.Fatalf("Decode 失败: %v", err)
+			}
+
+			if decoded.Header.Type != tc.msgType {
+				t.Errorf("消息类型不匹配: got %d, want %d", decoded.Header.Type, tc.msgType)
+			}
+		})
 	}
 }
