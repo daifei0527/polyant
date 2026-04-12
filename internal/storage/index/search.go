@@ -194,9 +194,12 @@ func (se *SimpleSearchEngine) Search(query string, categories []string, limit, o
 		}
 	}
 
-	// 按得分降序排列
+	// 按得分降序排列，相同得分按ID升序确保稳定排序
 	sort.Slice(results, func(i, j int) bool {
-		return results[i].score > results[j].score
+		if results[i].score != results[j].score {
+			return results[i].score > results[j].score
+		}
+		return results[i].entry.ID < results[j].entry.ID
 	})
 
 	// 应用分页
