@@ -57,8 +57,50 @@ func extractPathVar(r *http.Request, name string) string {
 	if name == "id" && len(parts) >= 5 {
 		// /api/v1/entry/{id} -> parts = ["", "api", "v1", "entry", "{id}"]
 		lastPart := parts[len(parts)-1]
-		if lastPart != "" && lastPart != "entries" && lastPart != "rate" && lastPart != "create" && lastPart != "update" && lastPart != "delete" {
+		excluded := []string{"entries", "rate", "create", "update", "delete", "backlinks", "outlinks"}
+		isExcluded := false
+		for _, ex := range excluded {
+			if lastPart == ex {
+				isExcluded = true
+				break
+			}
+		}
+		if !isExcluded && lastPart != "" {
 			return lastPart
+		}
+
+		// If last part is excluded (like "backlinks"), get the second to last
+		// /api/v1/entry/{id}/backlinks -> parts = ["", "api", "v1", "entry", "{id}", "backlinks"]
+		if isExcluded && len(parts) >= 6 {
+			idPart := parts[len(parts)-2]
+			if idPart != "" && idPart != "entry" {
+				return idPart
+			}
+		}
+	}
+
+	// 策略3: 对于 /api/v1/categories/{path}/entries 模式
+	// 提取 categories 和 entries 之间的部分
+	if name == "path" && len(parts) >= 5 {
+		// /api/v1/categories/{path}/entries
+		// 查找 categories 和 entries 的位置
+		categoriesIdx := -1
+		entriesIdx := -1
+		for i, part := range parts {
+			if part == "categories" {
+				categoriesIdx = i
+			}
+			if part == "entries" {
+				entriesIdx = i
+			}
+		}
+		// 如果找到了 categories 和 entries，返回它们之间的部分
+		if categoriesIdx >= 0 && entriesIdx > categoriesIdx+1 {
+			// 返回 categories 和 entries 之间的路径部分
+			// 对于 /api/v1/categories/programming/entries，返回 "programming"
+			// 对于 /api/v1/categories/tech/ai/entries，返回 "tech/ai"
+			pathParts := parts[categoriesIdx+1 : entriesIdx]
+			return strings.Join(pathParts, "/")
 		}
 	}
 

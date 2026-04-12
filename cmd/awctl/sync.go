@@ -61,22 +61,20 @@ var syncStatusCmd = &cobra.Command{
 // syncStartCmd 启动同步
 var syncStartCmd = &cobra.Command{
 	Use:   "start",
-	Short: "启动同步服务",
+	Short: "触发手动同步",
+	Long: `触发一次手动同步操作。
+
+需要认证才能执行此操作。`,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		seeds, _ := cmd.Flags().GetStringSlice("seeds")
-		full, _ := cmd.Flags().GetBool("full")
+		ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+		defer cancel()
 
-		// TODO: 实现启动同步 API
-		fmt.Println("启动同步服务...")
-		if full {
-			fmt.Println("  模式: 全量同步")
-		} else {
-			fmt.Println("  模式: 增量同步")
-		}
-		if len(seeds) > 0 {
-			fmt.Printf("  种子节点: %v\n", seeds)
+		if err := client.TriggerSync(ctx); err != nil {
+			return fmt.Errorf("触发同步失败: %w", err)
 		}
 
+		fmt.Println("同步已触发，正在后台执行...")
+		fmt.Println("使用 'awctl sync status' 查看同步状态")
 		return nil
 	},
 }
@@ -181,9 +179,6 @@ func init() {
 
 	syncCmd.AddCommand(syncStatusCmd)
 	syncCmd.AddCommand(syncStartCmd)
-	syncStartCmd.Flags().StringSlice("seeds", nil, "种子节点地址")
-	syncStartCmd.Flags().Bool("full", false, "全量同步")
-
 	syncCmd.AddCommand(syncStopCmd)
 	syncCmd.AddCommand(syncPeersCmd)
 	syncCmd.AddCommand(syncConnectCmd)

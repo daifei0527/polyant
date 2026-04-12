@@ -120,6 +120,10 @@ var entryGetCmd = &cobra.Command{
 var entryCreateCmd = &cobra.Command{
 	Use:   "create",
 	Short: "创建新条目",
+	Long: `创建新的知识条目。
+
+需要 Lv1 或更高等级的用户认证。
+请确保已运行 'awctl key generate' 生成密钥并注册用户。`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		title, _ := cmd.Flags().GetString("title")
 		content, _ := cmd.Flags().GetString("content")
@@ -127,16 +131,29 @@ var entryCreateCmd = &cobra.Command{
 		tags, _ := cmd.Flags().GetStringSlice("tags")
 
 		if title == "" {
-			return fmt.Errorf("标题不能为空")
+			return fmt.Errorf("标题不能为空，请使用 --title 指定")
 		}
 
-		// TODO: 实现实际的创建 API 调用
-		fmt.Printf("创建条目:\n")
-		fmt.Printf("  标题: %s\n", title)
-		fmt.Printf("  分类: %s\n", category)
-		fmt.Printf("  标签: %v\n", tags)
-		fmt.Printf("  内容长度: %d 字符\n", len(content))
-		fmt.Println("\n注意: 需要认证才能创建条目")
+		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+		defer cancel()
+
+		req := &CreateEntryRequest{
+			Title:    title,
+			Content:  content,
+			Category: category,
+			Tags:     tags,
+		}
+
+		entry, err := client.CreateEntry(ctx, req)
+		if err != nil {
+			return fmt.Errorf("创建条目失败: %w", err)
+		}
+
+		fmt.Println("条目创建成功!")
+		fmt.Printf("  ID: %s\n", entry.ID)
+		fmt.Printf("  标题: %s\n", entry.Title)
+		fmt.Printf("  分类: %s\n", entry.Category)
+		fmt.Printf("  创建时间: %s\n", time.UnixMilli(entry.CreatedAt).Format("2006-01-02 15:04:05"))
 
 		return nil
 	},
@@ -147,20 +164,35 @@ var entryUpdateCmd = &cobra.Command{
 	Use:   "update <id>",
 	Short: "更新条目",
 	Args:  cobra.ExactArgs(1),
+	Long: `更新现有知识条目。
+
+只有条目的创建者才能更新条目。`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		id := args[0]
 		title, _ := cmd.Flags().GetString("title")
 		content, _ := cmd.Flags().GetString("content")
+		category, _ := cmd.Flags().GetString("category")
+		tags, _ := cmd.Flags().GetStringSlice("tags")
 
-		// TODO: 实现实际的更新 API 调用
-		fmt.Printf("更新条目: %s\n", id)
-		if title != "" {
-			fmt.Printf("  新标题: %s\n", title)
+		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+		defer cancel()
+
+		req := &UpdateEntryRequest{
+			Title:    title,
+			Content:  content,
+			Category: category,
+			Tags:     tags,
 		}
-		if content != "" {
-			fmt.Printf("  内容已更新\n")
+
+		entry, err := client.UpdateEntry(ctx, id, req)
+		if err != nil {
+			return fmt.Errorf("更新条目失败: %w", err)
 		}
-		fmt.Println("\n注意: 需要认证才能更新条目")
+
+		fmt.Println("条目更新成功!")
+		fmt.Printf("  ID: %s\n", entry.ID)
+		fmt.Printf("  标题: %s\n", entry.Title)
+		fmt.Printf("  更新时间: %s\n", time.UnixMilli(entry.UpdatedAt).Format("2006-01-02 15:04:05"))
 
 		return nil
 	},
@@ -171,6 +203,10 @@ var entryDeleteCmd = &cobra.Command{
 	Use:   "delete <id>",
 	Short: "删除条目",
 	Args:  cobra.ExactArgs(1),
+	Long: `删除知识条目。
+
+只有条目的创建者才能删除条目。
+删除操作不可恢复，请谨慎操作。`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		id := args[0]
 		force, _ := cmd.Flags().GetBool("force")
@@ -185,9 +221,14 @@ var entryDeleteCmd = &cobra.Command{
 			}
 		}
 
-		// TODO: 实现实际的删除 API 调用
-		fmt.Printf("已删除条目: %s\n", id)
-		fmt.Println("注意: 需要认证才能删除条目")
+		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+		defer cancel()
+
+		if err := client.DeleteEntry(ctx, id); err != nil {
+			return fmt.Errorf("删除条目失败: %w", err)
+		}
+
+		fmt.Printf("条目 %s 已删除\n", id)
 		return nil
 	},
 }
@@ -250,6 +291,99 @@ var entrySearchCmd = &cobra.Command{
 	},
 }
 
+// entryRateCmd 为条目评分
+var entryRateCmd = &cobra.Command{
+	Use:   "rate <id>",
+	Short: "为条目评分",
+	Args:  cobra.ExactArgs(1),
+	Long: `为知识条目评分。
+
+需要 Lv1 或更高等级的用户认证。
+评分范围 0-5 分，可以为条目添加评论。`,
+	RunE: func(cmd *cobra.Command, args []string) error {
+		id := args[0]
+		score, _ := cmd.Flags().GetFloat64("score")
+		comment, _ := cmd.Flags().GetString("comment")
+
+		if score < 0 || score > 5 {
+			return fmt.Errorf("评分必须在 0-5 之间")
+		}
+
+		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+		defer cancel()
+
+		if err := client.RateEntry(ctx, id, score, comment); err != nil {
+			return fmt.Errorf("评分失败: %w", err)
+		}
+
+		fmt.Printf("已为条目 %s 评分: %.1f 分\n", id, score)
+		if comment != "" {
+			fmt.Printf("评论: %s\n", comment)
+		}
+		return nil
+	},
+}
+
+// entryBacklinksCmd 获取反向链接
+var entryBacklinksCmd = &cobra.Command{
+	Use:   "backlinks <id>",
+	Short: "获取条目的反向链接",
+	Args:  cobra.ExactArgs(1),
+	Long:  `获取引用了当前条目的其他条目列表。`,
+	RunE: func(cmd *cobra.Command, args []string) error {
+		id := args[0]
+
+		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+		defer cancel()
+
+		backlinks, err := client.GetBacklinks(ctx, id)
+		if err != nil {
+			return fmt.Errorf("获取反向链接失败: %w", err)
+		}
+
+		if len(backlinks) == 0 {
+			fmt.Println("暂无反向链接")
+			return nil
+		}
+
+		fmt.Printf("反向链接 (%d 条):\n", len(backlinks))
+		for _, link := range backlinks {
+			fmt.Printf("  - %s\n", link)
+		}
+		return nil
+	},
+}
+
+// entryOutlinksCmd 获取正向链接
+var entryOutlinksCmd = &cobra.Command{
+	Use:   "outlinks <id>",
+	Short: "获取条目的正向链接",
+	Args:  cobra.ExactArgs(1),
+	Long:  `获取当前条目引用的其他条目列表。`,
+	RunE: func(cmd *cobra.Command, args []string) error {
+		id := args[0]
+
+		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+		defer cancel()
+
+		outlinks, err := client.GetOutlinks(ctx, id)
+		if err != nil {
+			return fmt.Errorf("获取正向链接失败: %w", err)
+		}
+
+		if len(outlinks) == 0 {
+			fmt.Println("暂无正向链接")
+			return nil
+		}
+
+		fmt.Printf("正向链接 (%d 条):\n", len(outlinks))
+		for _, link := range outlinks {
+			fmt.Printf("  - %s\n", link)
+		}
+		return nil
+	},
+}
+
 func init() {
 	// entry 命令
 	rootCmd.AddCommand(entryCmd)
@@ -276,6 +410,8 @@ func init() {
 	entryCmd.AddCommand(entryUpdateCmd)
 	entryUpdateCmd.Flags().StringP("title", "t", "", "新标题")
 	entryUpdateCmd.Flags().StringP("content", "C", "", "新内容")
+	entryUpdateCmd.Flags().String("cat", "", "新分类")
+	entryUpdateCmd.Flags().StringSlice("tags", nil, "新标签")
 
 	// delete 子命令
 	entryCmd.AddCommand(entryDeleteCmd)
@@ -285,4 +421,15 @@ func init() {
 	entryCmd.AddCommand(entrySearchCmd)
 	entrySearchCmd.Flags().StringP("category", "c", "", "按分类过滤")
 	entrySearchCmd.Flags().IntP("limit", "l", 20, "结果数量限制")
+
+	// rate 子命令
+	entryCmd.AddCommand(entryRateCmd)
+	entryRateCmd.Flags().Float64P("score", "s", 0, "评分 (0-5)")
+	entryRateCmd.Flags().StringP("comment", "m", "", "评论内容")
+
+	// backlinks 子命令
+	entryCmd.AddCommand(entryBacklinksCmd)
+
+	// outlinks 子命令
+	entryCmd.AddCommand(entryOutlinksCmd)
 }

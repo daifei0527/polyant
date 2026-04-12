@@ -125,27 +125,171 @@ var userRegisterCmd = &cobra.Command{
 	Short: "注册新用户",
 	Long: `注册新的用户账户。
 
-需要提供公钥和可选的 Agent 名称。`,
+会自动使用当前密钥对中的公钥进行注册。
+如果密钥对不存在，会自动生成。
+
+注册后用户等级为 Lv0，验证邮箱后升级到 Lv1。`,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		pubKey, _ := cmd.Flags().GetString("public-key")
 		agentName, _ := cmd.Flags().GetString("name")
-		email, _ := cmd.Flags().GetString("email")
 
+		// 确保密钥已加载
+		if !client.HasKeys() {
+			keyDir := GetDefaultKeyDir()
+			if err := client.LoadOrGenerateKeys(keyDir); err != nil {
+				return fmt.Errorf("加载/生成密钥失败: %w", err)
+			}
+		}
+
+		pubKey := client.GetPublicKey()
 		if pubKey == "" {
-			return fmt.Errorf("必须提供公钥 (--public-key)")
+			return fmt.Errorf("无法获取公钥")
 		}
 
-		// TODO: 实现用户注册 API
-		fmt.Println("注册用户:")
-		fmt.Printf("  公钥: %s\n", pubKey[:min(32, len(pubKey))]+"...")
-		if agentName != "" {
-			fmt.Printf("  名称: %s\n", agentName)
-		}
-		if email != "" {
-			fmt.Printf("  邮箱: %s\n", email)
-		}
-		fmt.Println("\n请使用 Ed25519 密钥对签名请求来完成注册")
+		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+		defer cancel()
 
+		req := &RegisterRequest{
+			PublicKey: pubKey,
+			AgentName: agentName,
+		}
+
+		resp, err := client.RegisterUser(ctx, req)
+		if err != nil {
+			return fmt.Errorf("注册失败: %w", err)
+		}
+
+		fmt.Println("用户注册成功!")
+		fmt.Printf("  公钥: %s\n", resp.PublicKey)
+		if resp.AgentName != "" {
+			fmt.Printf("  名称: %s\n", resp.AgentName)
+		}
+		fmt.Printf("  等级: Lv%d\n", resp.UserLevel)
+		fmt.Printf("  注册时间: %s\n", time.UnixMilli(resp.CreatedAt).Format("2006-01-02 15:04:05"))
+		fmt.Println()
+		fmt.Println("提示: 验证邮箱可升级到 Lv1")
+		fmt.Println("  awctl user verify --email your@email.com")
+
+		return nil
+	},
+}
+
+// userInfoCmd 获取当前用户信息
+var userInfoCmd = &cobra.Command{
+	Use:   "info",
+	Short: "获取当前用户信息",
+	Long: `获取当前已认证用户的信息。
+
+需要先运行 'awctl key generate' 生成密钥并注册。`,
+	RunE: func(cmd *cobra.Command, args []string) error {
+		if !client.HasKeys() {
+			return fmt.Errorf("未找到密钥，请先运行 'awctl key generate'")
+		}
+
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
+
+		user, err := client.GetCurrentUserInfo(ctx)
+		if err != nil {
+			return fmt.Errorf("获取用户信息失败: %w", err)
+		}
+
+		fmt.Println("当前用户信息:")
+		fmt.Printf("  公钥: %s\n", user.PublicKey)
+		fmt.Printf("  Agent名称: %s\n", user.AgentName)
+		if user.Email != "" {
+			fmt.Printf("  邮箱: %s", user.Email)
+			if user.Email != "" {
+				fmt.Printf(" (已验证)")
+			}
+			fmt.Println()
+		}
+		fmt.Printf("  等级: Lv%d\n", user.UserLevel)
+		fmt.Printf("  贡献数: %d\n", user.ContribCount)
+		fmt.Printf("  评分数: %d\n", user.RatingCount)
+		fmt.Printf("  注册时间: %s\n", time.UnixMilli(user.CreatedAt).Format("2006-01-02 15:04:05"))
+		if user.LastActiveAt > 0 {
+			fmt.Printf("  最后活跃: %s\n", time.UnixMilli(user.LastActiveAt).Format("2006-01-02 15:04:05"))
+		}
+
+		return nil
+	},
+}
+
+// userUpdateCmd 更新用户信息
+var userUpdateCmd = &cobra.Command{
+	Use:   "update",
+	Short: "更新用户信息",
+	Long: `更新当前用户的 Agent 名称。
+
+需要先运行 'awctl key generate' 生成密钥并注册。`,
+	RunE: func(cmd *cobra.Command, args []string) error {
+		agentName, _ := cmd.Flags().GetString("name")
+
+		if agentName == "" {
+			return fmt.Errorf("请指定新的 Agent 名称 (--name)")
+		}
+
+		if !client.HasKeys() {
+			return fmt.Errorf("未找到密钥，请先运行 'awctl key generate'")
+		}
+
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
+
+		if err := client.UpdateUserInfo(ctx, agentName); err != nil {
+			return fmt.Errorf("更新用户信息失败: %w", err)
+		}
+
+		fmt.Printf("用户信息已更新，Agent 名称: %s\n", agentName)
+		return nil
+	},
+}
+
+// userVerifyCmd 验证邮箱
+var userVerifyCmd = &cobra.Command{
+	Use:   "verify",
+	Short: "验证邮箱",
+	Long: `验证邮箱地址。
+
+两步流程：
+1. 发送验证码到邮箱
+2. 使用验证码完成验证
+
+验证邮箱后，用户等级将升级到 Lv1。`,
+	RunE: func(cmd *cobra.Command, args []string) error {
+		email, _ := cmd.Flags().GetString("email")
+		code, _ := cmd.Flags().GetString("code")
+		sendOnly, _ := cmd.Flags().GetBool("send")
+
+		if email == "" {
+			return fmt.Errorf("请指定邮箱地址 (--email)")
+		}
+
+		if !client.HasKeys() {
+			return fmt.Errorf("未找到密钥，请先运行 'awctl key generate'")
+		}
+
+		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+		defer cancel()
+
+		// 如果只是发送验证码
+		if sendOnly || code == "" {
+			if err := client.SendVerificationCode(ctx, email); err != nil {
+				return fmt.Errorf("发送验证码失败: %w", err)
+			}
+			fmt.Printf("验证码已发送到 %s\n", email)
+			fmt.Println("请查收邮件并使用以下命令完成验证:")
+			fmt.Printf("  awctl user verify --email %s --code <验证码>\n", email)
+			return nil
+		}
+
+		// 使用验证码完成验证
+		if err := client.VerifyEmail(ctx, email, code); err != nil {
+			return fmt.Errorf("验证邮箱失败: %w", err)
+		}
+
+		fmt.Printf("邮箱 %s 验证成功！\n", email)
+		fmt.Println("用户等级已升级到 Lv1")
 		return nil
 	},
 }
@@ -181,10 +325,22 @@ func init() {
 	userCmd.AddCommand(userLevelCmd)
 	userCmd.AddCommand(userStatsCmd)
 
+	// register 子命令
 	userCmd.AddCommand(userRegisterCmd)
-	userRegisterCmd.Flags().String("public-key", "", "用户公钥")
 	userRegisterCmd.Flags().String("name", "", "Agent 名称")
-	userRegisterCmd.Flags().String("email", "", "邮箱地址")
+
+	// info 子命令
+	userCmd.AddCommand(userInfoCmd)
+
+	// update 子命令
+	userCmd.AddCommand(userUpdateCmd)
+	userUpdateCmd.Flags().String("name", "", "新的 Agent 名称")
+
+	// verify 子命令
+	userCmd.AddCommand(userVerifyCmd)
+	userVerifyCmd.Flags().String("email", "", "邮箱地址")
+	userVerifyCmd.Flags().String("code", "", "验证码")
+	userVerifyCmd.Flags().Bool("send", false, "仅发送验证码")
 }
 
 func min(a, b int) int {
