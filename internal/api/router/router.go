@@ -3,6 +3,7 @@
 package router
 
 import (
+	"context"
 	"net/http"
 	"strings"
 
@@ -10,8 +11,21 @@ import (
 	"github.com/daifei0527/agentwiki/internal/api/middleware"
 	"github.com/daifei0527/agentwiki/internal/core/email"
 	"github.com/daifei0527/agentwiki/internal/storage"
+	"github.com/daifei0527/agentwiki/internal/storage/model"
 	"github.com/daifei0527/agentwiki/pkg/config"
 )
+
+// RemoteQuerier 远程查询接口
+type RemoteQuerier interface {
+	// SearchWithRemote 执行搜索，本地结果不足时查询远程节点
+	SearchWithRemote(ctx context.Context, query storage.SearchQuery) (*storage.SearchResult, error)
+}
+
+// EntryPusher 条目推送接口
+type EntryPusher interface {
+	// PushEntry 推送条目到种子节点
+	PushEntry(entry *model.KnowledgeEntry, signature []byte) error
+}
 
 // Dependencies 路由依赖注入容器
 // 包含所有 handler 需要的存储和引擎实例
@@ -24,6 +38,8 @@ type Dependencies struct {
 	Backlink        storage.BacklinkIndex
 	EmailService    *email.Service
 	VerificationMgr *email.VerificationManager
+	RemoteQuerier   RemoteQuerier   // 远程查询服务
+	EntryPusher     EntryPusher     // 条目推送服务
 	NodeID          string
 	NodeType        string
 	Version         string
@@ -57,6 +73,12 @@ func NewRouterWithDeps(deps *Dependencies) (http.Handler, error) {
 
 	// 创建各 handler
 	entryHandler := handler.NewEntryHandler(deps.EntryStore, deps.SearchEngine, deps.Backlink, deps.UserStore)
+
+	// 设置远程查询服务
+	if deps.RemoteQuerier != nil {
+		entryHandler.SetRemoteQuerier(&remoteQuerierAdapter{deps.RemoteQuerier})
+	}
+
 	userHandler := handler.NewUserHandler(
 		deps.UserStore,
 		deps.EntryStore,
@@ -87,6 +109,15 @@ func NewRouterWithDeps(deps *Dependencies) (http.Handler, error) {
 	httpHandler = middleware.RequestIDMiddleware(httpHandler) // 请求ID
 
 	return httpHandler, nil
+}
+
+// remoteQuerierAdapter 适配 RemoteQuerier 到 handler.RemoteQuerier 接口
+type remoteQuerierAdapter struct {
+	querier RemoteQuerier
+}
+
+func (a *remoteQuerierAdapter) SearchWithRemote(ctx context.Context, query storage.SearchQuery) (*storage.SearchResult, error) {
+	return a.querier.SearchWithRemote(ctx, query)
 }
 
 // registerPublicRoutes 注册公开路由（无需认证）
