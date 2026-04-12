@@ -1,5 +1,8 @@
 // Package storage 提供基于内存的存储实现。
-// 适用于开发和测试环境，生产环境应替换为 Pebble KV 等持久化存储。
+// 适用于开发和测试环境。
+//
+// Deprecated: 生产环境应使用 NewPersistentStore 创建持久化存储。
+// 内存存储不会持久化数据，重启后数据丢失。
 package storage
 
 import (
@@ -12,6 +15,7 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/daifei0527/agentwiki/internal/storage/index"
 	"github.com/daifei0527/agentwiki/internal/storage/model"
 )
 
@@ -484,7 +488,7 @@ func (e *MemorySearchEngine) DeleteIndex(entryID string) error {
 
 // Search 执行全文搜索
 // 简单实现：在标题和内容中搜索关键词，支持分类过滤
-func (e *MemorySearchEngine) Search(ctx context.Context, query SearchQuery) (*SearchResult, error) {
+func (e *MemorySearchEngine) Search(ctx context.Context, query index.SearchQuery) (*index.SearchResult, error) {
 	e.mu.RLock()
 	defer e.mu.RUnlock()
 
@@ -554,7 +558,7 @@ func (e *MemorySearchEngine) Search(ctx context.Context, query SearchQuery) (*Se
 	// 分页
 	if query.Offset > 0 {
 		if query.Offset >= len(results) {
-			return &SearchResult{
+			return &index.SearchResult{
 				TotalCount: total,
 				HasMore:    false,
 				Entries:    nil,
@@ -568,7 +572,7 @@ func (e *MemorySearchEngine) Search(ctx context.Context, query SearchQuery) (*Se
 
 	hasMore := total > (query.Offset + len(results))
 
-	return &SearchResult{
+	return &index.SearchResult{
 		TotalCount: total,
 		HasMore:    hasMore,
 		Entries:    results,

@@ -11,6 +11,7 @@ import (
 	"github.com/daifei0527/agentwiki/internal/api/middleware"
 	"github.com/daifei0527/agentwiki/internal/core/email"
 	"github.com/daifei0527/agentwiki/internal/storage"
+	"github.com/daifei0527/agentwiki/internal/storage/index"
 	"github.com/daifei0527/agentwiki/internal/storage/model"
 	"github.com/daifei0527/agentwiki/pkg/config"
 )
@@ -18,7 +19,7 @@ import (
 // RemoteQuerier 远程查询接口
 type RemoteQuerier interface {
 	// SearchWithRemote 执行搜索，本地结果不足时查询远程节点
-	SearchWithRemote(ctx context.Context, query storage.SearchQuery) (*storage.SearchResult, error)
+	SearchWithRemote(ctx context.Context, query index.SearchQuery) (*index.SearchResult, error)
 }
 
 // EntryPusher 条目推送接口
@@ -34,7 +35,7 @@ type Dependencies struct {
 	UserStore       storage.UserStore
 	RatingStore     storage.RatingStore
 	CategoryStore   storage.CategoryStore
-	SearchEngine    storage.SearchEngine
+	SearchEngine    index.SearchEngine
 	Backlink        storage.BacklinkIndex
 	EmailService    *email.Service
 	VerificationMgr *email.VerificationManager
@@ -120,7 +121,7 @@ type remoteQuerierAdapter struct {
 	querier RemoteQuerier
 }
 
-func (a *remoteQuerierAdapter) SearchWithRemote(ctx context.Context, query storage.SearchQuery) (*storage.SearchResult, error) {
+func (a *remoteQuerierAdapter) SearchWithRemote(ctx context.Context, query index.SearchQuery) (*index.SearchResult, error) {
 	return a.querier.SearchWithRemote(ctx, query)
 }
 

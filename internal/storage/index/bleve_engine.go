@@ -12,7 +12,6 @@ import (
 	"github.com/blevesearch/bleve/v2/analysis/analyzer/keyword"
 	"github.com/blevesearch/bleve/v2/index/upsidedown"
 	"github.com/blevesearch/bleve/v2/index/upsidedown/store/boltdb"
-	"github.com/daifei0527/agentwiki/internal/storage"
 	"github.com/daifei0527/agentwiki/internal/storage/model"
 	"github.com/yanyiwu/gojieba"
 )
@@ -168,10 +167,10 @@ func (e *BleveEngine) DeleteIndex(entryID string) error {
 }
 
 // Search 执行全文搜索
-func (e *BleveEngine) Search(ctx context.Context, query storage.SearchQuery) (*storage.SearchResult, error) {
+func (e *BleveEngine) Search(ctx context.Context, query SearchQuery) (*SearchResult, error) {
 	// 空关键词返回空结果
 	if query.Keyword == "" {
-		return &storage.SearchResult{
+		return &SearchResult{
 			TotalCount: 0,
 			HasMore:    false,
 			Entries:    []*model.KnowledgeEntry{},
@@ -276,7 +275,7 @@ func (e *BleveEngine) Search(ctx context.Context, query storage.SearchQuery) (*s
 		entries = append(entries, entry)
 	}
 
-	return &storage.SearchResult{
+	return &SearchResult{
 		TotalCount: int(searchResult.Total),
 		HasMore:    int(searchResult.Total) > query.Offset+query.Limit,
 		Entries:    entries,

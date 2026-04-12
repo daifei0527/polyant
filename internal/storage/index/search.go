@@ -11,8 +11,9 @@ import (
 	"github.com/daifei0527/agentwiki/internal/storage/model"
 )
 
-// SearchEngine 定义了全文搜索引擎的接口
-type SearchEngine interface {
+// SimpleSearcher 定义了简单搜索引擎的接口
+// 用于 SimpleSearchEngine 的内部接口定义
+type SimpleSearcher interface {
 	// Index 将知识条目添加到搜索索引
 	Index(entry *model.KnowledgeEntry) error
 	// Remove 从搜索索引中移除指定条目

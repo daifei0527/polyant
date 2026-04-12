@@ -12,6 +12,7 @@ import (
 	"sort"
 	"sync"
 
+	"github.com/daifei0527/agentwiki/internal/storage/index"
 	"github.com/daifei0527/agentwiki/internal/storage/kv"
 	"github.com/daifei0527/agentwiki/internal/storage/model"
 )
@@ -276,7 +277,7 @@ func (e *BadgerSearchEngine) DeleteIndex(entryID string) error {
 	return nil
 }
 
-func (e *BadgerSearchEngine) Search(ctx context.Context, query SearchQuery) (*SearchResult, error) {
+func (e *BadgerSearchEngine) Search(ctx context.Context, query index.SearchQuery) (*index.SearchResult, error) {
 	e.mu.RLock()
 	defer e.mu.RUnlock()
 
@@ -327,7 +328,7 @@ func (e *BadgerSearchEngine) Search(ctx context.Context, query SearchQuery) (*Se
 	// 分页
 	if query.Offset > 0 {
 		if query.Offset >= len(results) {
-			return &SearchResult{TotalCount: total, HasMore: false, Entries: nil}, nil
+			return &index.SearchResult{TotalCount: total, HasMore: false, Entries: nil}, nil
 		}
 		results = results[query.Offset:]
 	}
@@ -337,7 +338,7 @@ func (e *BadgerSearchEngine) Search(ctx context.Context, query SearchQuery) (*Se
 
 	hasMore := total > (query.Offset + len(results))
 
-	return &SearchResult{
+	return &index.SearchResult{
 		TotalCount: total,
 		HasMore:    hasMore,
 		Entries:    results,

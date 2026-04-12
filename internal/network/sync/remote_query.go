@@ -11,6 +11,7 @@ import (
 	"github.com/daifei0527/agentwiki/internal/network/host"
 	"github.com/daifei0527/agentwiki/internal/network/protocol"
 	"github.com/daifei0527/agentwiki/internal/storage"
+	"github.com/daifei0527/agentwiki/internal/storage/index"
 	"github.com/daifei0527/agentwiki/internal/storage/model"
 	"github.com/libp2p/go-libp2p/core/peer"
 )
@@ -71,11 +72,11 @@ func (s *RemoteQueryService) SetProtocol(proto *protocol.Protocol) {
 }
 
 // SearchWithRemote 本地搜索并在结果不足时查询远程
-func (s *RemoteQueryService) SearchWithRemote(ctx context.Context, query storage.SearchQuery) (*storage.SearchResult, error) {
+func (s *RemoteQueryService) SearchWithRemote(ctx context.Context, query index.SearchQuery) (*index.SearchResult, error) {
 	// 1. 先执行本地搜索
 	localResult, err := s.store.Search.Search(ctx, query)
 	if err != nil {
-		localResult = &storage.SearchResult{}
+		localResult = &index.SearchResult{}
 	}
 
 	// 2. 检查是否需要远程查询
@@ -94,7 +95,7 @@ func (s *RemoteQueryService) SearchWithRemote(ctx context.Context, query storage
 		go s.cacheRemoteEntries(context.Background(), remoteEntries)
 	}
 
-	return &storage.SearchResult{
+	return &index.SearchResult{
 		TotalCount: len(merged),
 		HasMore:    len(merged) > query.Limit,
 		Entries:    merged,
@@ -102,7 +103,7 @@ func (s *RemoteQueryService) SearchWithRemote(ctx context.Context, query storage
 }
 
 // queryRemote 向远程节点发送查询请求
-func (s *RemoteQueryService) queryRemote(ctx context.Context, query storage.SearchQuery) []*model.KnowledgeEntry {
+func (s *RemoteQueryService) queryRemote(ctx context.Context, query index.SearchQuery) []*model.KnowledgeEntry {
 	s.mu.RLock()
 	proto := s.protocol
 	s.mu.RUnlock()
@@ -164,7 +165,7 @@ func (s *RemoteQueryService) queryRemote(ctx context.Context, query storage.Sear
 }
 
 // queryPeer 查询单个节点
-func (s *RemoteQueryService) queryPeer(ctx context.Context, peerID peer.ID, query storage.SearchQuery) []*model.KnowledgeEntry {
+func (s *RemoteQueryService) queryPeer(ctx context.Context, peerID peer.ID, query index.SearchQuery) []*model.KnowledgeEntry {
 	s.mu.RLock()
 	proto := s.protocol
 	s.mu.RUnlock()

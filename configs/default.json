@@ -6,6 +6,10 @@
     "log_dir": "./logs",
     "log_level": "info"
   },
+  "storage": {
+    "kv_type": "pebble",
+    "search_type": "bleve"
+  },
   "network": {
     "listen_port": 18530,
     "api_port": 18531,

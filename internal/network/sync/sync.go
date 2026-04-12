@@ -10,6 +10,7 @@ import (
 	"github.com/daifei0527/agentwiki/internal/network/host"
 	"github.com/daifei0527/agentwiki/internal/network/protocol"
 	"github.com/daifei0527/agentwiki/internal/storage"
+	"github.com/daifei0527/agentwiki/internal/storage/index"
 	"github.com/daifei0527/agentwiki/internal/storage/model"
 	"github.com/libp2p/go-libp2p/core/peer"
 )
@@ -565,7 +566,7 @@ func (se *SyncEngine) HandleHandshake(ctx context.Context, h *protocol.Handshake
 
 // HandleQuery 处理查询请求
 func (se *SyncEngine) HandleQuery(ctx context.Context, q *protocol.Query) (*protocol.QueryResult, error) {
-	filter := storage.SearchQuery{
+	filter := index.SearchQuery{
 		Keyword:    q.Keyword,
 		Categories: q.Categories,
 		Limit:      int(q.Limit),

@@ -4,6 +4,7 @@ import (
 	"context"
 	"testing"
 
+	"github.com/daifei0527/agentwiki/internal/storage/index"
 	"github.com/daifei0527/agentwiki/internal/storage/model"
 )
 
@@ -458,7 +459,7 @@ func TestMemorySearchEngine_Search(t *testing.T) {
 	ctx := context.Background()
 
 	// Test keyword search
-	result, err := engine.Search(ctx, SearchQuery{Keyword: "programming", Limit: 10})
+	result, err := engine.Search(ctx, index.SearchQuery{Keyword: "programming", Limit: 10})
 	if err != nil {
 		t.Fatalf("Search failed: %v", err)
 	}
@@ -467,19 +468,19 @@ func TestMemorySearchEngine_Search(t *testing.T) {
 	}
 
 	// Test category filter
-	result, _ = engine.Search(ctx, SearchQuery{Keyword: "", Categories: []string{"programming"}, Limit: 10})
+	result, _ = engine.Search(ctx, index.SearchQuery{Keyword: "", Categories: []string{"programming"}, Limit: 10})
 	if result.TotalCount != 2 {
 		t.Errorf("Expected 2 results for category 'programming', got %d", result.TotalCount)
 	}
 
 	// Test min score filter
-	result, _ = engine.Search(ctx, SearchQuery{Keyword: "", MinScore: 4.0, Limit: 10})
+	result, _ = engine.Search(ctx, index.SearchQuery{Keyword: "", MinScore: 4.0, Limit: 10})
 	if result.TotalCount != 2 {
 		t.Errorf("Expected 2 results with min score 4.0, got %d", result.TotalCount)
 	}
 
 	// Test pagination
-	result, _ = engine.Search(ctx, SearchQuery{Keyword: "", Limit: 2})
+	result, _ = engine.Search(ctx, index.SearchQuery{Keyword: "", Limit: 2})
 	if len(result.Entries) != 2 {
 		t.Errorf("Expected 2 entries with limit 2, got %d", len(result.Entries))
 	}

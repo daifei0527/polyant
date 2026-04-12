@@ -12,6 +12,7 @@ import (
 	"github.com/daifei0527/agentwiki/internal/network/protocol"
 	"github.com/daifei0527/agentwiki/internal/network/sync"
 	"github.com/daifei0527/agentwiki/internal/storage"
+	"github.com/daifei0527/agentwiki/internal/storage/index"
 	"github.com/daifei0527/agentwiki/internal/storage/model"
 )
 
@@ -1787,7 +1788,7 @@ func TestSearchWithRemote_LocalOnly(t *testing.T) {
 
 	svc := sync.NewRemoteQueryService(nil, nil, store, cfg)
 
-	query := storage.SearchQuery{
+	query := index.SearchQuery{
 		Keyword: "test",
 		Limit:   10,
 	}
@@ -2095,7 +2096,7 @@ func TestSearchWithRemote_EnoughLocalResults(t *testing.T) {
 
 	svc := sync.NewRemoteQueryService(nil, nil, store, cfg)
 
-	query := storage.SearchQuery{
+	query := index.SearchQuery{
 		Keyword: "test",
 		Limit:   10,
 	}
@@ -2123,7 +2124,7 @@ func TestSearchWithRemote_NeedRemote(t *testing.T) {
 	// 无 p2pHost 时，远程查询不会执行
 	svc := sync.NewRemoteQueryService(nil, nil, store, cfg)
 
-	query := storage.SearchQuery{
+	query := index.SearchQuery{
 		Keyword: "test",
 		Limit:   10,
 	}
@@ -2151,7 +2152,7 @@ func TestSearchWithRemote_CacheResults(t *testing.T) {
 
 	svc := sync.NewRemoteQueryService(nil, nil, store, cfg)
 
-	query := storage.SearchQuery{
+	query := index.SearchQuery{
 		Keyword: "test",
 		Limit:   10,
 	}
@@ -2493,7 +2494,7 @@ func TestSearchWithRemote_DisabledRemoteQuery(t *testing.T) {
 
 	svc := sync.NewRemoteQueryService(nil, nil, store, cfg)
 
-	query := storage.SearchQuery{
+	query := index.SearchQuery{
 		Keyword: "test",
 		Limit:   10,
 	}
@@ -2519,7 +2520,7 @@ func TestSearchWithRemote_SearchError(t *testing.T) {
 
 	svc := sync.NewRemoteQueryService(nil, nil, store, cfg)
 
-	query := storage.SearchQuery{
+	query := index.SearchQuery{
 		Keyword: "test",
 		Limit:   10,
 	}

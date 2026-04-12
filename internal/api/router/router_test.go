@@ -9,6 +9,7 @@ import (
 
 	"github.com/daifei0527/agentwiki/internal/core/email"
 	"github.com/daifei0527/agentwiki/internal/storage"
+	"github.com/daifei0527/agentwiki/internal/storage/index"
 	"github.com/daifei0527/agentwiki/internal/storage/model"
 	"github.com/daifei0527/agentwiki/pkg/config"
 )
@@ -356,10 +357,10 @@ func TestRouter_CORS(t *testing.T) {
 
 func TestRemoteQuerierAdapter(t *testing.T) {
 	// Mock implementation
-	mock := &mockRemoteQuerier{result: &storage.SearchResult{}}
+	mock := &mockRemoteQuerier{result: &index.SearchResult{}}
 	adapter := &remoteQuerierAdapter{querier: mock}
 
-	result, err := adapter.SearchWithRemote(context.Background(), storage.SearchQuery{})
+	result, err := adapter.SearchWithRemote(context.Background(), index.SearchQuery{})
 	if err != nil {
 		t.Fatalf("SearchWithRemote failed: %v", err)
 	}
@@ -372,11 +373,11 @@ func TestRemoteQuerierAdapter(t *testing.T) {
 // Mock implementations
 
 type mockRemoteQuerier struct {
-	result *storage.SearchResult
+	result *index.SearchResult
 	err    error
 }
 
-func (m *mockRemoteQuerier) SearchWithRemote(ctx context.Context, query storage.SearchQuery) (*storage.SearchResult, error) {
+func (m *mockRemoteQuerier) SearchWithRemote(ctx context.Context, query index.SearchQuery) (*index.SearchResult, error) {
 	return m.result, m.err
 }
 

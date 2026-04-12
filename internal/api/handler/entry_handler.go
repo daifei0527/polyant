@@ -11,27 +11,28 @@ import (
 
 	awerrors "github.com/daifei0527/agentwiki/pkg/errors"
 	"github.com/daifei0527/agentwiki/internal/storage"
+	"github.com/daifei0527/agentwiki/internal/storage/index"
 	"github.com/daifei0527/agentwiki/internal/storage/linkparser"
 	"github.com/daifei0527/agentwiki/internal/storage/model"
 )
 
 // RemoteQuerier 远程查询接口
 type RemoteQuerier interface {
-	SearchWithRemote(ctx context.Context, query storage.SearchQuery) (*storage.SearchResult, error)
+	SearchWithRemote(ctx context.Context, query index.SearchQuery) (*index.SearchResult, error)
 }
 
 // EntryHandler 知识条目 HTTP 处理器
 // 负责处理知识条目的 CRUD 操作和搜索
 type EntryHandler struct {
 	entryStore    storage.EntryStore
-	searchEngine  storage.SearchEngine
+	searchEngine  index.SearchEngine
 	backlink      storage.BacklinkIndex
 	userStore     storage.UserStore
 	remoteQuerier RemoteQuerier
 }
 
 // NewEntryHandler 创建新的 EntryHandler 实例
-func NewEntryHandler(entryStore storage.EntryStore, searchEngine storage.SearchEngine, backlinkIndex storage.BacklinkIndex, userStore storage.UserStore) *EntryHandler {
+func NewEntryHandler(entryStore storage.EntryStore, searchEngine index.SearchEngine, backlinkIndex storage.BacklinkIndex, userStore storage.UserStore) *EntryHandler {
 	return &EntryHandler{
 		entryStore:   entryStore,
 		searchEngine: searchEngine,
@@ -105,7 +106,7 @@ func (h *EntryHandler) SearchHandler(w http.ResponseWriter, r *http.Request) {
 		categories = []string{category}
 	}
 
-	query := storage.SearchQuery{
+	query := index.SearchQuery{
 		Keyword:    q,
 		Categories: categories,
 		Tags:       tags,
@@ -115,7 +116,7 @@ func (h *EntryHandler) SearchHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// 执行搜索
-	var result *storage.SearchResult
+	var result *index.SearchResult
 	var err error
 
 	if queryType == "remote" && h.remoteQuerier != nil {

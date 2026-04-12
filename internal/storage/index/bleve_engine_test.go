@@ -5,7 +5,6 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/daifei0527/agentwiki/internal/storage"
 	"github.com/daifei0527/agentwiki/internal/storage/model"
 )
 
@@ -35,7 +34,7 @@ func TestBleveEngine_IndexAndSearch(t *testing.T) {
 	}
 
 	// 搜索
-	result, err := engine.Search(context.Background(), storage.SearchQuery{
+	result, err := engine.Search(context.Background(), SearchQuery{
 		Keyword: "Go 语言",
 		Limit:   10,
 	})
@@ -70,7 +69,7 @@ func TestBleveEngine_SearchWithCategory(t *testing.T) {
 	}
 
 	// 搜索并按分类过滤
-	result, err := engine.Search(context.Background(), storage.SearchQuery{
+	result, err := engine.Search(context.Background(), SearchQuery{
 		Keyword:    "编程",
 		Categories: []string{"tech"},
 		Limit:      10,
@@ -111,7 +110,7 @@ func TestBleveEngine_UpdateIndex(t *testing.T) {
 	}
 
 	// 搜索更新后的内容
-	result, err := engine.Search(context.Background(), storage.SearchQuery{
+	result, err := engine.Search(context.Background(), SearchQuery{
 		Keyword: "更新",
 		Limit:   10,
 	})
@@ -148,7 +147,7 @@ func TestBleveEngine_DeleteIndex(t *testing.T) {
 	}
 
 	// 搜索不应找到已删除条目
-	result, err := engine.Search(context.Background(), storage.SearchQuery{
+	result, err := engine.Search(context.Background(), SearchQuery{
 		Keyword: "测试条目",
 		Limit:   10,
 	})
@@ -187,7 +186,7 @@ func TestBleveEngine_Persistence(t *testing.T) {
 	}
 	defer engine2.Close()
 
-	result, err := engine2.Search(context.Background(), storage.SearchQuery{
+	result, err := engine2.Search(context.Background(), SearchQuery{
 		Keyword: "持久化",
 		Limit:   10,
 	})
@@ -232,7 +231,7 @@ func TestBleveEngine_ChineseSearch(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		result, err := engine.Search(context.Background(), storage.SearchQuery{
+		result, err := engine.Search(context.Background(), SearchQuery{
 			Keyword: tt.keyword,
 			Limit:   10,
 		})
@@ -268,7 +267,7 @@ func TestBleveEngine_MinScore(t *testing.T) {
 	}
 
 	// 搜索并过滤低评分
-	result, err := engine.Search(context.Background(), storage.SearchQuery{
+	result, err := engine.Search(context.Background(), SearchQuery{
 		Keyword:  "文章",
 		MinScore: 3.5,
 		Limit:    10,
@@ -307,7 +306,7 @@ func TestBleveEngine_Pagination(t *testing.T) {
 	}
 
 	// 测试分页
-	result1, err := engine.Search(context.Background(), storage.SearchQuery{
+	result1, err := engine.Search(context.Background(), SearchQuery{
 		Keyword: "测试",
 		Limit:   5,
 		Offset:  0,
@@ -324,7 +323,7 @@ func TestBleveEngine_Pagination(t *testing.T) {
 	}
 
 	// 第二页
-	result2, err := engine.Search(context.Background(), storage.SearchQuery{
+	result2, err := engine.Search(context.Background(), SearchQuery{
 		Keyword: "测试",
 		Limit:   5,
 		Offset:  5,
@@ -363,7 +362,7 @@ func TestBleveEngine_EmptyQuery(t *testing.T) {
 	engine.IndexEntry(entry)
 
 	// 空关键词搜索
-	result, err := engine.Search(context.Background(), storage.SearchQuery{
+	result, err := engine.Search(context.Background(), SearchQuery{
 		Keyword: "",
 		Limit:   10,
 	})

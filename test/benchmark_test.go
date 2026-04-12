@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/daifei0527/agentwiki/internal/storage"
+	"github.com/daifei0527/agentwiki/internal/storage/index"
 	"github.com/daifei0527/agentwiki/internal/storage/model"
 )
 
@@ -135,7 +136,7 @@ func BenchmarkSearch(b *testing.B) {
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		store.Search.Search(ctx, storage.SearchQuery{
+		store.Search.Search(ctx, index.SearchQuery{
 			Keyword: "编程",
 			Limit:   10,
 		})
@@ -163,7 +164,7 @@ func BenchmarkSearchWithFilter(b *testing.B) {
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		store.Search.Search(ctx, storage.SearchQuery{
+		store.Search.Search(ctx, index.SearchQuery{
 			Categories: []string{"cat-1", "cat-2"},
 			MinScore:   3.0,
 			Limit:      20,
@@ -394,7 +395,7 @@ func BenchmarkSearchParallel(b *testing.B) {
 	b.RunParallel(func(pb *testing.PB) {
 		i := 0
 		for pb.Next() {
-			store.Search.Search(ctx, storage.SearchQuery{
+			store.Search.Search(ctx, index.SearchQuery{
 				Keyword: keywords[i%len(keywords)],
 				Limit:   10,
 			})

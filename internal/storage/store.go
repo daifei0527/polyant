@@ -4,7 +4,10 @@ package storage
 
 import (
 	"context"
+	"fmt"
 
+	"github.com/daifei0527/agentwiki/internal/storage/index"
+	"github.com/daifei0527/agentwiki/internal/storage/kv"
 	"github.com/daifei0527/agentwiki/internal/storage/model"
 )
 
@@ -82,37 +85,6 @@ type CategoryStore interface {
 	ListAll(ctx context.Context) ([]*model.Category, error)
 }
 
-// SearchEngine 搜索引擎接口
-type SearchEngine interface {
-	// IndexEntry 将条目加入全文索引
-	IndexEntry(entry *model.KnowledgeEntry) error
-	// UpdateIndex 更新条目索引
-	UpdateIndex(entry *model.KnowledgeEntry) error
-	// DeleteIndex 从索引中删除条目
-	DeleteIndex(entryID string) error
-	// Search 执行全文搜索
-	Search(ctx context.Context, query SearchQuery) (*SearchResult, error)
-	// Close 关闭搜索引擎
-	Close() error
-}
-
-// SearchQuery 搜索查询参数
-type SearchQuery struct {
-	Keyword    string
-	Categories []string
-	Tags       []string
-	Limit      int
-	Offset     int
-	MinScore   float64
-}
-
-// SearchResult 搜索结果
-type SearchResult struct {
-	TotalCount int                     `json:"total_count"`
-	HasMore    bool                    `json:"has_more"`
-	Entries    []*model.KnowledgeEntry `json:"entries"`
-}
-
 // BacklinkIndex 反向链接索引接口
 // 维护条目之间的链接关系，支持查询哪些页面链接到了当前页面
 type BacklinkIndex interface {
@@ -128,12 +100,12 @@ type BacklinkIndex interface {
 
 // Store 存储接口集合
 type Store struct {
-	Entry        EntryStore
-	User         UserStore
-	Rating       RatingStore
-	Category     CategoryStore
-	Search       SearchEngine
-	Backlink     BacklinkIndex
+	Entry    EntryStore
+	User     UserStore
+	Rating   RatingStore
+	Category CategoryStore
+	Search   index.SearchEngine
+	Backlink BacklinkIndex
 }
 
 // NewMemoryStore 创建内存存储实例
@@ -153,4 +125,66 @@ func NewMemoryStore() (*Store, error) {
 		Search:   searchEngine,
 		Backlink: backlinkIndex,
 	}, nil
+}
+
+// StoreConfig 存储配置
+type StoreConfig struct {
+	// KV 存储类型: memory, badger, pebble
+	KVType string
+	// KV 存储路径
+	KVPath string
+	// 搜索引擎类型: memory, bleve
+	SearchType string
+	// 搜索引擎索引路径
+	SearchPath string
+}
+
+// NewPersistentStore 创建持久化存储实例
+func NewPersistentStore(cfg *StoreConfig) (*Store, error) {
+	var kvStore kv.Store
+	var err error
+
+	// 创建 KV 存储
+	switch cfg.KVType {
+	case "pebble":
+		kvStore, err = kv.NewPebbleStore(cfg.KVPath)
+	case "badger":
+		kvStore, err = kv.NewBadgerStore(cfg.KVPath)
+	default:
+		kvStore, err = kv.NewPebbleStore(cfg.KVPath)
+	}
+	if err != nil {
+		return nil, fmt.Errorf("failed to create kv store: %w", err)
+	}
+
+	// 创建搜索引擎
+	var searchEngine index.SearchEngine
+	switch cfg.SearchType {
+	case "bleve":
+		searchEngine, err = index.NewBleveEngine(cfg.SearchPath)
+	default:
+		searchEngine, err = index.NewBleveEngine(cfg.SearchPath)
+	}
+	if err != nil {
+		kvStore.Close()
+		return nil, fmt.Errorf("failed to create search engine: %w", err)
+	}
+
+	// 使用适配器组装存储
+	return &Store{
+		Entry:    NewBadgerEntryStore(kvStore),
+		User:     NewBadgerUserStore(kvStore),
+		Rating:   NewBadgerRatingStore(kvStore),
+		Category: NewBadgerCategoryStore(kvStore),
+		Search:   searchEngine,
+		Backlink: NewMemoryBacklinkIndex(), // 反向链接仍使用内存实现
+	}, nil
+}
+
+// Close 关闭存储
+func (s *Store) Close() error {
+	if s.Search != nil {
+		s.Search.Close()
+	}
+	return nil
 }
