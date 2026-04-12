@@ -44,7 +44,6 @@ type AgentWiki struct {
 	config       *config.Config
 	logger       *zap.Logger
 	store        *storage.Store
-	storeCloser  *storage.BadgerStoreWrapper
 	p2pHost      *host.P2PHost
 	dhtNode      *dht.DHTNode
 	syncEngine   *sync.SyncEngine
@@ -236,12 +235,33 @@ func (app *AgentWiki) initStorage(ctx context.Context) error {
 		if dataDir == "" {
 			dataDir = "./data"
 		}
-		app.storeCloser, err = storage.NewBadgerStoreWithCloser(dataDir + "/db")
+
+		// 构建存储配置
+		storeCfg := &storage.StoreConfig{
+			KVType:     app.config.Storage.KVType,
+			KVPath:     dataDir + "/kv",
+			SearchType: app.config.Storage.SearchType,
+			SearchPath: dataDir + "/search.bleve",
+		}
+
+		// 如果未配置存储类型，使用默认值
+		if storeCfg.KVType == "" {
+			storeCfg.KVType = "pebble"
+		}
+		if storeCfg.SearchType == "" {
+			storeCfg.SearchType = "bleve"
+		}
+
+		app.store, err = storage.NewPersistentStore(storeCfg)
 		if err != nil {
 			return fmt.Errorf("初始化存储失败: %w", err)
 		}
-		app.store = &app.storeCloser.Store
-		app.logger.Info("存储层初始化完成", zap.String("path", dataDir+"/db"))
+		app.logger.Info("存储层初始化完成",
+			zap.String("kv_type", storeCfg.KVType),
+			zap.String("kv_path", storeCfg.KVPath),
+			zap.String("search_type", storeCfg.SearchType),
+			zap.String("search_path", storeCfg.SearchPath),
+		)
 	}
 
 	return nil
@@ -456,8 +476,8 @@ func (app *AgentWiki) cleanup() {
 	if app.cancel != nil {
 		app.cancel()
 	}
-	if app.storeCloser != nil {
-		if err := app.storeCloser.Close(); err != nil {
+	if app.store != nil {
+		if err := app.store.Close(); err != nil {
 			app.logger.Warn("关闭存储失败", zap.Error(err))
 		}
 	}
