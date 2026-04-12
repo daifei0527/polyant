@@ -95,6 +95,9 @@ func NewRouterWithDeps(deps *Dependencies) (http.Handler, error) {
 	// 创建 CORS 中间件（开发环境配置）
 	corsMW := middleware.NewCORSMiddleware(middleware.DefaultCORSConfig())
 
+	// 创建速率限制中间件
+	rateLimitMW := middleware.NewRateLimitMiddleware(middleware.DefaultRateLimitConfig())
+
 	// 注册公开路由（无需认证）
 	registerPublicRoutes(mux, entryHandler, userHandler, categoryHandler, nodeHandler)
 
@@ -104,6 +107,7 @@ func NewRouterWithDeps(deps *Dependencies) (http.Handler, error) {
 	// 应用中间件链
 	var httpHandler http.Handler = mux
 	httpHandler = corsMW.Middleware(httpHandler)              // CORS
+	httpHandler = rateLimitMW.Middleware(httpHandler)         // 速率限制
 	httpHandler = middleware.RecoveryMiddleware(httpHandler)  // 异常恢复
 	httpHandler = middleware.LoggingMiddleware(httpHandler)   // 请求日志
 	httpHandler = middleware.RequestIDMiddleware(httpHandler) // 请求ID
