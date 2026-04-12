@@ -36,7 +36,7 @@ var (
 )
 
 const (
-	Version = "0.1.0-dev"
+	Version = "1.0.0"
 )
 
 // AgentWiki 应用主结构
