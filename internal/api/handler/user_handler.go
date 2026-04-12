@@ -276,17 +276,41 @@ func (h *UserHandler) GetUserInfoHandler(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
+	// 计算公钥哈希
+	pubKeyBytes, err := base64.StdEncoding.DecodeString(user.PublicKey)
+	if err != nil {
+		writeError(w, awerrors.ErrInvalidSignature)
+		return
+	}
+	pubKeyHashBytes := sha256.Sum256(pubKeyBytes)
+	pubKeyHash := hex.EncodeToString(pubKeyHashBytes[:])
+
 	// 从存储中获取最新的用户信息
-	latest, err := h.userStore.Get(r.Context(), user.PublicKey)
+	latest, err := h.userStore.Get(r.Context(), pubKeyHash)
 	if err != nil {
 		writeError(w, awerrors.ErrUserNotFound)
 		return
 	}
 
+	// 构造响应数据
+	respData := map[string]interface{}{
+		"public_key":       latest.PublicKey,
+		"public_key_hash":  pubKeyHash,
+		"agent_name":       latest.AgentName,
+		"user_level":       latest.UserLevel,
+		"email":            latest.Email,
+		"email_verified":   latest.EmailVerified,
+		"registered_at":    latest.RegisteredAt,
+		"last_active":      latest.LastActive,
+		"contribution_cnt": latest.ContributionCnt,
+		"rating_cnt":       latest.RatingCnt,
+		"status":           latest.Status,
+	}
+
 	writeJSON(w, http.StatusOK, &APIResponse{
 		Code:    0,
 		Message: "success",
-		Data:    latest,
+		Data:    respData,
 	})
 }
 

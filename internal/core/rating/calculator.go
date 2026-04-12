@@ -56,9 +56,11 @@ func (rc *RatingCalculator) SubmitRating(ctx context.Context, entryID string, ra
 		return nil, ErrPermissionDenied
 	}
 
+	// Calculate rater hash for consistent comparison
+	raterHash := user.HashPublicKey(rater.PublicKey)
+
 	existing, err := rc.store.Rating.ListByEntry(ctx, entryID)
 	if err == nil {
-		raterHash := user.HashPublicKey(rater.PublicKey)
 		for _, r := range existing {
 			if r.RaterPubkey == raterHash {
 				return nil, ErrDuplicateRating
@@ -70,7 +72,7 @@ func (rc *RatingCalculator) SubmitRating(ctx context.Context, entryID string, ra
 	rating := &model.Rating{
 		ID:            fmt.Sprintf("%d", time.Now().UnixNano()),
 		EntryId:       entryID,
-		RaterPubkey:   rater.PublicKey,
+		RaterPubkey:   raterHash, // Use hash consistently
 		Score:         score,
 		Weight:        weight,
 		WeightedScore: score * weight,
