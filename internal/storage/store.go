@@ -106,6 +106,7 @@ type Store struct {
 	Category CategoryStore
 	Search   index.SearchEngine
 	Backlink BacklinkIndex
+	kvStore  kv.Store // underlying KV store for cleanup
 }
 
 // NewMemoryStore 创建内存存储实例
@@ -178,13 +179,25 @@ func NewPersistentStore(cfg *StoreConfig) (*Store, error) {
 		Category: NewBadgerCategoryStore(kvStore),
 		Search:   searchEngine,
 		Backlink: NewMemoryBacklinkIndex(), // 反向链接仍使用内存实现
+		kvStore:  kvStore,                  // Store reference for cleanup
 	}, nil
 }
 
 // Close 关闭存储
 func (s *Store) Close() error {
+	var errs []error
 	if s.Search != nil {
-		s.Search.Close()
+		if err := s.Search.Close(); err != nil {
+			errs = append(errs, err)
+		}
+	}
+	if s.kvStore != nil {
+		if err := s.kvStore.Close(); err != nil {
+			errs = append(errs, err)
+		}
+	}
+	if len(errs) > 0 {
+		return fmt.Errorf("close errors: %v", errs)
 	}
 	return nil
 }

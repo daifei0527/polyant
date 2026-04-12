@@ -70,6 +70,12 @@ type APIConfig struct {
 	CORS    bool `json:"cors"`    // 是否启用 CORS
 }
 
+// StorageConfig 存储配置
+type StorageConfig struct {
+	KVType     string `json:"kv_type"`     // KV 存储类型: pebble, badger
+	SearchType string `json:"search_type"` // 搜索引擎类型: bleve, memory
+}
+
 // Config 顶层配置结构体
 // 包含所有子模块的配置
 type Config struct {
@@ -80,6 +86,7 @@ type Config struct {
 	User    UserConfig    `json:"user"`
 	SMTP    SMTPConfig    `json:"smtp"`
 	API     APIConfig     `json:"api"`
+	Storage StorageConfig `json:"storage"`
 }
 
 // ==================== 配置管理函数 ====================
@@ -129,6 +136,10 @@ func DefaultConfig() *Config {
 		API: APIConfig{
 			Enabled: true,
 			CORS:    true,
+		},
+		Storage: StorageConfig{
+			KVType:     "pebble",
+			SearchType: "bleve",
 		},
 	}
 }
