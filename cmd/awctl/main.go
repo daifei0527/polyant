@@ -17,17 +17,13 @@ var (
 	dataDir string
 	// API 服务器地址
 	serverAddr string
+	// 密钥目录
+	keyDir string
 	// 全局客户端
 	client *Client
 )
 
 func main() {
-	// 初始化客户端
-	if serverAddr == "" {
-		serverAddr = "http://localhost:8080"
-	}
-	client = NewClient(serverAddr)
-
 	if err := rootCmd.Execute(); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
@@ -42,16 +38,28 @@ var rootCmd = &cobra.Command{
 用于管理知识库条目、用户、同步、镜像等功能。
 
 示例:
+  awctl key generate              生成密钥对
+  awctl user register --name "my-agent"  注册用户
   awctl status                    查看服务器状态
   awctl search "人工智能"          搜索条目
-  awctl entry get <id>            获取条目详情
-  awctl user list                 列出用户
-  awctl service install           安装系统服务`,
+  awctl entry get <id>            获取条目详情`,
 	Version: version,
+	PersistentPreRun: func(cmd *cobra.Command, args []string) {
+		// 初始化客户端
+		client = NewClient(serverAddr)
+
+		// 尝试加载密钥（静默失败，某些命令不需要密钥）
+		keyPath := keyDir
+		if keyPath == "" {
+			keyPath = GetDefaultKeyDir()
+		}
+		_ = client.LoadOrGenerateKeys(keyPath) // 静默忽略错误
+	},
 }
 
 func init() {
 	rootCmd.PersistentFlags().StringVarP(&configPath, "config", "c", "", "配置文件路径")
 	rootCmd.PersistentFlags().StringVarP(&dataDir, "data", "d", "", "数据目录")
 	rootCmd.PersistentFlags().StringVarP(&serverAddr, "server", "s", "http://localhost:8080", "API 服务器地址")
+	rootCmd.PersistentFlags().StringVar(&keyDir, "key-dir", "", "密钥目录 (默认 ~/.agentwiki/keys)")
 }

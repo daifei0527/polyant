@@ -105,25 +105,84 @@ var categoryGetCmd = &cobra.Command{
 var categoryCreateCmd = &cobra.Command{
 	Use:   "create",
 	Short: "创建新分类",
+	Long: `创建新的知识分类。
+
+需要 Lv2 或更高等级的用户认证。`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		name, _ := cmd.Flags().GetString("name")
-		desc, _ := cmd.Flags().GetString("description")
+		path, _ := cmd.Flags().GetString("path")
 		parent, _ := cmd.Flags().GetString("parent")
 
 		if name == "" {
 			return fmt.Errorf("必须指定 --name")
 		}
+		if path == "" {
+			return fmt.Errorf("必须指定 --path")
+		}
 
-		// TODO: 实现创建分类 API
-		fmt.Printf("创建分类:\n")
-		fmt.Printf("  名称: %s\n", name)
-		if desc != "" {
-			fmt.Printf("  描述: %s\n", desc)
+		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+		defer cancel()
+
+		cat, err := client.CreateCategory(ctx, path, name, parent)
+		if err != nil {
+			return fmt.Errorf("创建分类失败: %w", err)
 		}
-		if parent != "" {
-			fmt.Printf("  父分类: %s\n", parent)
+
+		fmt.Println("分类创建成功!")
+		fmt.Printf("  ID: %s\n", cat.ID)
+		fmt.Printf("  名称: %s\n", cat.Name)
+		if cat.ParentID != "" {
+			fmt.Printf("  父分类: %s\n", cat.ParentID)
 		}
-		fmt.Println("\n注意: 需要管理员权限才能创建分类")
+		fmt.Printf("  创建时间: %s\n", time.UnixMilli(cat.CreatedAt).Format("2006-01-02 15:04:05"))
+
+		return nil
+	},
+}
+
+// categoryEntriesCmd 列出分类下的条目
+var categoryEntriesCmd = &cobra.Command{
+	Use:   "entries <path>",
+	Short: "列出分类下的条目",
+	Args:  cobra.ExactArgs(1),
+	Long:  `获取指定分类路径下的所有条目。`,
+	RunE: func(cmd *cobra.Command, args []string) error {
+		path := args[0]
+		limit, _ := cmd.Flags().GetInt("limit")
+		offset, _ := cmd.Flags().GetInt("offset")
+
+		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+		defer cancel()
+
+		entries, total, err := client.GetCategoryEntries(ctx, path, limit, offset)
+		if err != nil {
+			return fmt.Errorf("获取条目失败: %w", err)
+		}
+
+		if len(entries) == 0 {
+			fmt.Printf("分类 %s 下暂无条目\n", path)
+			return nil
+		}
+
+		fmt.Printf("分类 %s 下的条目 (共 %d 条):\n\n", path, total)
+
+		w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
+		fmt.Fprintln(w, "ID\t标题\t评分\t创建时间")
+		fmt.Fprintln(w, "--\t----\t----\t--------")
+
+		for _, e := range entries {
+			id := e.ID
+			if len(id) > 8 {
+				id = id[:8]
+			}
+			title := e.Title
+			if len(title) > 30 {
+				title = title[:27] + "..."
+			}
+			createdAt := time.UnixMilli(e.CreatedAt).Format("2006-01-02")
+			fmt.Fprintf(w, "%s\t%s\t%.1f\t%s\n", id, title, e.Score, createdAt)
+		}
+		w.Flush()
 
 		return nil
 	},
@@ -274,8 +333,13 @@ func init() {
 	categoryCmd.AddCommand(categoryGetCmd)
 	categoryCmd.AddCommand(categoryCreateCmd)
 	categoryCreateCmd.Flags().String("name", "", "分类名称")
-	categoryCreateCmd.Flags().String("description", "", "分类描述")
+	categoryCreateCmd.Flags().String("path", "", "分类路径 (如: tech/ai)")
 	categoryCreateCmd.Flags().String("parent", "", "父分类ID")
+
+	// entries 子命令
+	categoryCmd.AddCommand(categoryEntriesCmd)
+	categoryEntriesCmd.Flags().IntP("limit", "l", 20, "结果数量限制")
+	categoryEntriesCmd.Flags().Int("offset", 0, "结果偏移量")
 
 	// 配置命令
 	rootCmd.AddCommand(configCmd)
