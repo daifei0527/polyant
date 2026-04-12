@@ -242,6 +242,8 @@ const (
 	StoreTypeJSONFile StoreType = "jsonfile"
 	// StoreTypeBadger BadgerDB持久化存储（生产环境推荐）
 	StoreTypeBadger StoreType = "badger"
+	// StoreTypePebble Pebble持久化存储（高性能生产环境推荐）
+	StoreTypePebble StoreType = "pebble"
 )
 
 // NewStore 根据类型创建存储实例
@@ -251,6 +253,8 @@ func NewStore(storeType StoreType, path string) (Store, error) {
 		return NewJSONFileStore(path)
 	case StoreTypeBadger:
 		return NewBadgerStore(path)
+	case StoreTypePebble:
+		return NewPebbleStore(path)
 	default:
 		return nil, &storeError{"unknown store type: " + string(storeType)}
 	}

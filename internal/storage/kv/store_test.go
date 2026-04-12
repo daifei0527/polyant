@@ -890,3 +890,35 @@ func TestNewStoreUnknownType(t *testing.T) {
 		t.Error("未知存储类型应返回错误")
 	}
 }
+
+// TestNewStorePebble 测试工厂函数创建 Pebble 存储
+func TestNewStorePebble(t *testing.T) {
+	tmpDir, err := os.MkdirTemp("", "kv-pebble-factory-test-")
+	if err != nil {
+		t.Fatalf("创建临时目录失败: %v", err)
+	}
+	defer os.RemoveAll(tmpDir)
+
+	store, err := kv.NewStore(kv.StoreTypePebble, tmpDir)
+	if err != nil {
+		t.Fatalf("NewStore 失败: %v", err)
+	}
+	defer store.Close()
+
+	// 测试基本操作
+	key := []byte("factory-test-key")
+	value := []byte("factory-test-value")
+
+	if err := store.Put(key, value); err != nil {
+		t.Fatalf("Put 失败: %v", err)
+	}
+
+	got, err := store.Get(key)
+	if err != nil {
+		t.Fatalf("Get 失败: %v", err)
+	}
+
+	if string(got) != string(value) {
+		t.Errorf("Get 返回错误值: got %q, want %q", got, value)
+	}
+}
