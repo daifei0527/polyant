@@ -9,9 +9,9 @@ import (
 	"strconv"
 	"strings"
 
-	awerrors "github.com/agentwiki/agentwiki/pkg/errors"
-	"github.com/agentwiki/agentwiki/internal/api/middleware"
-	"github.com/agentwiki/agentwiki/internal/storage/model"
+	"github.com/daifei0527/agentwiki/internal/api/middleware"
+	"github.com/daifei0527/agentwiki/internal/storage/model"
+	awerrors "github.com/daifei0527/agentwiki/pkg/errors"
 )
 
 // writeJSON 写入 JSON 响应

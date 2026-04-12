@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"context"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
@@ -8,19 +9,25 @@ import (
 	"strconv"
 	"strings"
 
-	awerrors "github.com/agentwiki/agentwiki/pkg/errors"
-	"github.com/agentwiki/agentwiki/internal/storage/linkparser"
-	"github.com/agentwiki/agentwiki/internal/storage/model"
-	"github.com/agentwiki/agentwiki/internal/storage"
+	awerrors "github.com/daifei0527/agentwiki/pkg/errors"
+	"github.com/daifei0527/agentwiki/internal/storage"
+	"github.com/daifei0527/agentwiki/internal/storage/linkparser"
+	"github.com/daifei0527/agentwiki/internal/storage/model"
 )
+
+// RemoteQuerier 远程查询接口
+type RemoteQuerier interface {
+	SearchWithRemote(ctx context.Context, query storage.SearchQuery) (*storage.SearchResult, error)
+}
 
 // EntryHandler 知识条目 HTTP 处理器
 // 负责处理知识条目的 CRUD 操作和搜索
 type EntryHandler struct {
-	entryStore   storage.EntryStore
-	searchEngine storage.SearchEngine
-	backlink     storage.BacklinkIndex
-	userStore    storage.UserStore
+	entryStore    storage.EntryStore
+	searchEngine  storage.SearchEngine
+	backlink      storage.BacklinkIndex
+	userStore     storage.UserStore
+	remoteQuerier RemoteQuerier
 }
 
 // NewEntryHandler 创建新的 EntryHandler 实例
@@ -33,9 +40,15 @@ func NewEntryHandler(entryStore storage.EntryStore, searchEngine storage.SearchE
 	}
 }
 
+// SetRemoteQuerier 设置远程查询服务
+func (h *EntryHandler) SetRemoteQuerier(rq RemoteQuerier) {
+	h.remoteQuerier = rq
+}
+
 // SearchHandler 搜索知识条目
 // GET /api/v1/search?q=keyword&cat=category&limit=10&offset=0
 // 支持按关键词、分类、标签搜索，返回分页结果
+// 支持远程查询：本地结果不足时查询种子节点
 func (h *EntryHandler) SearchHandler(w http.ResponseWriter, r *http.Request) {
 	q := r.URL.Query().Get("q")
 	if q == "" {
@@ -79,6 +92,13 @@ func (h *EntryHandler) SearchHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	// 解析查询类型参数
+	// local=只查本地, remote=包含远程查询
+	queryType := r.URL.Query().Get("type")
+	if queryType == "" {
+		queryType = "remote" // 默认启用远程查询
+	}
+
 	// 构建搜索查询
 	var categories []string
 	if category != "" {
@@ -95,7 +115,17 @@ func (h *EntryHandler) SearchHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// 执行搜索
-	result, err := h.searchEngine.Search(r.Context(), query)
+	var result *storage.SearchResult
+	var err error
+
+	if queryType == "remote" && h.remoteQuerier != nil {
+		// 启用远程查询
+		result, err = h.remoteQuerier.SearchWithRemote(r.Context(), query)
+	} else {
+		// 仅本地查询
+		result, err = h.searchEngine.Search(r.Context(), query)
+	}
+
 	if err != nil {
 		writeError(w, awerrors.Wrap(600, awerrors.CategorySearch, "search failed", 500, err))
 		return

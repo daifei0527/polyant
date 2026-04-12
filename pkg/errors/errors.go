@@ -117,7 +117,10 @@ var (
 	ErrRatingNotFound = New(700, CategoryRating, "rating not found", 404)
 
 	// 用户错误 (8xxxx)
-	ErrUserAlreadyExists = New(800, CategoryUser, "user already exists", 409)
-	ErrEmailNotVerified  = New(801, CategoryUser, "email not verified", 403)
-	ErrInvalidEmailToken = New(802, CategoryUser, "invalid email token", 400)
+	ErrUserAlreadyExists   = New(800, CategoryUser, "user already exists", 409)
+	ErrEmailNotVerified    = New(801, CategoryUser, "email not verified", 403)
+	ErrInvalidEmailToken   = New(802, CategoryUser, "invalid email token", 400)
+	ErrVerificationExpired = New(803, CategoryUser, "verification code expired", 400)
+	ErrVerificationSent    = New(804, CategoryUser, "verification code already sent, please check your email", 429)
+	ErrEmailAlreadyUsed    = New(805, CategoryUser, "email already used by another user", 409)
 )

@@ -1,4 +1,4 @@
-module github.com/agentwiki/agentwiki
+module github.com/daifei0527/agentwiki
 
 go 1.25.7
 

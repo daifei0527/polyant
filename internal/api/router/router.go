@@ -6,40 +6,69 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/agentwiki/agentwiki/internal/api/handler"
-	"github.com/agentwiki/agentwiki/internal/api/middleware"
-	"github.com/agentwiki/agentwiki/internal/storage"
-	"github.com/agentwiki/agentwiki/pkg/config"
+	"github.com/daifei0527/agentwiki/internal/api/handler"
+	"github.com/daifei0527/agentwiki/internal/api/middleware"
+	"github.com/daifei0527/agentwiki/internal/core/email"
+	"github.com/daifei0527/agentwiki/internal/storage"
+	"github.com/daifei0527/agentwiki/pkg/config"
 )
 
 // Dependencies 路由依赖注入容器
 // 包含所有 handler 需要的存储和引擎实例
 type Dependencies struct {
-	EntryStore   storage.EntryStore
-	UserStore    storage.UserStore
-	RatingStore  storage.RatingStore
-	CategoryStore storage.CategoryStore
-	SearchEngine storage.SearchEngine
-	Backlink     storage.BacklinkIndex
-	NodeID       string
-	NodeType     string
-	Version      string
+	EntryStore      storage.EntryStore
+	UserStore       storage.UserStore
+	RatingStore     storage.RatingStore
+	CategoryStore   storage.CategoryStore
+	SearchEngine    storage.SearchEngine
+	Backlink        storage.BacklinkIndex
+	EmailService    *email.Service
+	VerificationMgr *email.VerificationManager
+	NodeID          string
+	NodeType        string
+	Version         string
 }
 
 // NewRouter 创建并配置 HTTP 路由
 // 注册所有 API 端点，配置中间件链
 // 中间件执行顺序: RequestID -> Logging -> Recovery -> CORS -> [Auth] -> Handler
 func NewRouter(store *storage.Store, cfg *config.Config) (http.Handler, error) {
+	return NewRouterWithDeps(&Dependencies{
+		EntryStore:    store.Entry,
+		UserStore:     store.User,
+		RatingStore:   store.Rating,
+		CategoryStore: store.Category,
+		SearchEngine:  store.Search,
+		Backlink:      store.Backlink,
+		NodeID:        "local-node-1",
+		NodeType:      cfg.Node.Type,
+		Version:       "v0.1.0-dev",
+	})
+}
+
+// NewRouterWithDeps 使用依赖容器创建路由
+func NewRouterWithDeps(deps *Dependencies) (http.Handler, error) {
 	mux := http.NewServeMux()
 
+	// 创建验证码管理器
+	if deps.VerificationMgr == nil {
+		deps.VerificationMgr = email.NewVerificationManager()
+	}
+
 	// 创建各 handler
-	entryHandler := handler.NewEntryHandler(store.Entry, store.Search, store.Backlink, store.User)
-	userHandler := handler.NewUserHandler(store.User, store.Entry, store.Rating)
-	categoryHandler := handler.NewCategoryHandler(store.Category, store.Entry)
-	nodeHandler := handler.NewNodeHandler("local-node-1", cfg.Node.Type, "v0.1.0-dev", store.Entry)
+	entryHandler := handler.NewEntryHandler(deps.EntryStore, deps.SearchEngine, deps.Backlink, deps.UserStore)
+	userHandler := handler.NewUserHandler(
+		deps.UserStore,
+		deps.EntryStore,
+		deps.RatingStore,
+		deps.EmailService,
+		deps.VerificationMgr,
+	)
+	categoryHandler := handler.NewCategoryHandler(deps.CategoryStore, deps.EntryStore)
+	nodeHandler := handler.NewNodeHandler(deps.NodeID, deps.NodeType, deps.Version, deps.EntryStore)
 
 	// 创建认证中间件
-	authMW := middleware.NewAuthMiddleware(store.User)
+	authMW := middleware.NewAuthMiddleware(deps.UserStore)
 
 	// 创建 CORS 中间件（开发环境配置）
 	corsMW := middleware.NewCORSMiddleware(middleware.DefaultCORSConfig())
@@ -51,13 +80,13 @@ func NewRouter(store *storage.Store, cfg *config.Config) (http.Handler, error) {
 	registerAuthRoutes(mux, authMW, entryHandler, userHandler, categoryHandler, nodeHandler)
 
 	// 应用中间件链
-	var handler http.Handler = mux
-	handler = corsMW.Middleware(handler)       // CORS
-	handler = middleware.RecoveryMiddleware(handler) // 异常恢复
-	handler = middleware.LoggingMiddleware(handler)   // 请求日志
-	handler = middleware.RequestIDMiddleware(handler)  // 请求ID
+	var httpHandler http.Handler = mux
+	httpHandler = corsMW.Middleware(httpHandler)              // CORS
+	httpHandler = middleware.RecoveryMiddleware(httpHandler)  // 异常恢复
+	httpHandler = middleware.LoggingMiddleware(httpHandler)   // 请求日志
+	httpHandler = middleware.RequestIDMiddleware(httpHandler) // 请求ID
 
-	return handler, nil
+	return httpHandler, nil
 }
 
 // registerPublicRoutes 注册公开路由（无需认证）
@@ -118,9 +147,6 @@ func registerPublicRoutes(mux *http.ServeMux, eh *handler.EntryHandler, uh *hand
 
 	// 用户注册
 	mux.HandleFunc("/api/v1/user/register", uh.RegisterHandler)
-
-	// 邮箱验证
-	mux.HandleFunc("/api/v1/user/verify-email", uh.VerifyEmailHandler)
 }
 
 // registerAuthRoutes 注册需要认证的路由
@@ -143,9 +169,21 @@ func registerAuthRoutes(mux *http.ServeMux, authMW *middleware.AuthMiddleware, e
 		uh.RateEntryHandler(w, r)
 	})))
 
+	// 发送邮箱验证码（POST /api/v1/user/send-verification）
+	mux.Handle("/api/v1/user/send-verification", authMW.Middleware(http.HandlerFunc(uh.SendVerificationCodeHandler)))
+
+	// 邮箱验证（POST /api/v1/user/verify-email）- 需要认证
+	mux.Handle("/api/v1/user/verify-email", authMW.Middleware(http.HandlerFunc(uh.VerifyEmailHandler)))
+
 	// 获取用户信息（GET /api/v1/user/info）
 	mux.Handle("/api/v1/user/info", authMW.Middleware(http.HandlerFunc(uh.GetUserInfoHandler)))
 
-	// 触发同步（GET /api/v1/node/sync）
+	// 更新用户信息（PUT /api/v1/user/info）
+	mux.Handle("/api/v1/user/update", authMW.Middleware(http.HandlerFunc(uh.UpdateUserInfoHandler)))
+
+	// 创建分类（POST /api/v1/categories）- 需要 Lv2+ 权限
+	mux.Handle("/api/v1/categories/create", authMW.Middleware(http.HandlerFunc(ch.CreateCategoryHandler)))
+
+	// 触发同步（POST /api/v1/node/sync）
 	mux.Handle("/api/v1/node/sync", authMW.Middleware(http.HandlerFunc(nh.TriggerSyncHandler)))
 }

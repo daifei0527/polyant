@@ -7,27 +7,41 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
+	"fmt"
 	"net/http"
+	"strings"
+	"time"
 
-	awerrors "github.com/agentwiki/agentwiki/pkg/errors"
-	"github.com/agentwiki/agentwiki/internal/storage/model"
-	"github.com/agentwiki/agentwiki/internal/storage"
+	"github.com/daifei0527/agentwiki/internal/core/email"
+	"github.com/daifei0527/agentwiki/internal/storage"
+	"github.com/daifei0527/agentwiki/internal/storage/model"
+	awerrors "github.com/daifei0527/agentwiki/pkg/errors"
 )
 
 // UserHandler 用户 HTTP 处理器
 // 负责用户注册、邮箱验证、用户信息查询和条目评分
 type UserHandler struct {
-	userStore   storage.UserStore
-	entryStore  storage.EntryStore
-	ratingStore storage.RatingStore
+	userStore       storage.UserStore
+	entryStore      storage.EntryStore
+	ratingStore     storage.RatingStore
+	emailService    *email.Service
+	verificationMgr *email.VerificationManager
 }
 
 // NewUserHandler 创建新的 UserHandler 实例
-func NewUserHandler(userStore storage.UserStore, entryStore storage.EntryStore, ratingStore storage.RatingStore) *UserHandler {
+func NewUserHandler(
+	userStore storage.UserStore,
+	entryStore storage.EntryStore,
+	ratingStore storage.RatingStore,
+	emailService *email.Service,
+	verificationMgr *email.VerificationManager,
+) *UserHandler {
 	return &UserHandler{
-		userStore:   userStore,
-		entryStore:  entryStore,
-		ratingStore: ratingStore,
+		userStore:       userStore,
+		entryStore:      entryStore,
+		ratingStore:     ratingStore,
+		emailService:    emailService,
+		verificationMgr: verificationMgr,
 	}
 }
 
@@ -38,6 +52,12 @@ func (h *UserHandler) RegisterHandler(w http.ResponseWriter, r *http.Request) {
 	var req RegisterRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		writeError(w, awerrors.ErrJSONParse)
+		return
+	}
+
+	// 验证必填字段
+	if req.AgentName == "" {
+		writeError(w, awerrors.ErrInvalidParams)
 		return
 	}
 
@@ -63,17 +83,17 @@ func (h *UserHandler) RegisterHandler(w http.ResponseWriter, r *http.Request) {
 
 	// 创建用户（默认为基础用户 Lv0）
 	user := &model.User{
-		PublicKey:      base64.StdEncoding.EncodeToString(publicKey),
-		AgentName:      req.AgentName,
-		UserLevel:      model.UserLevelLv0,
-		Email:          req.Email,
-		EmailVerified:  false,
-		RegisteredAt:   now,
-		LastActive:     now,
+		PublicKey:       base64.StdEncoding.EncodeToString(publicKey),
+		AgentName:       req.AgentName,
+		UserLevel:       model.UserLevelLv0,
+		Email:           "",
+		EmailVerified:   false,
+		RegisteredAt:    now,
+		LastActive:      now,
 		ContributionCnt: 0,
 		RatingCnt:       0,
-		NodeId:         req.NodeID,
-		Status:         model.UserStatusActive,
+		NodeId:          req.NodeID,
+		Status:          model.UserStatusActive,
 	}
 
 	created, err := h.userStore.Create(r.Context(), user)
@@ -89,6 +109,7 @@ func (h *UserHandler) RegisterHandler(w http.ResponseWriter, r *http.Request) {
 		"private_key":     base64.StdEncoding.EncodeToString(privateKey),
 		"agent_name":      created.AgentName,
 		"user_level":      created.UserLevel,
+		"email_verified":  created.EmailVerified,
 		"warning":         "please store your private key securely, it will not be shown again",
 	}
 
@@ -96,6 +117,68 @@ func (h *UserHandler) RegisterHandler(w http.ResponseWriter, r *http.Request) {
 		Code:    0,
 		Message: "success",
 		Data:    respData,
+	})
+}
+
+// SendVerificationCodeHandler 发送邮箱验证码
+// POST /api/v1/user/send-verification
+// 需要认证，发送验证码到指定邮箱
+func (h *UserHandler) SendVerificationCodeHandler(w http.ResponseWriter, r *http.Request) {
+	// 获取当前用户
+	user := getUserFromContext(r.Context())
+	if user == nil {
+		writeError(w, awerrors.ErrMissingAuth)
+		return
+	}
+
+	// 解析请求
+	var req SendVerificationCodeRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, awerrors.ErrJSONParse)
+		return
+	}
+
+	// 验证邮箱格式
+	req.Email = strings.TrimSpace(strings.ToLower(req.Email))
+	if req.Email == "" || !isValidEmail(req.Email) {
+		writeError(w, awerrors.ErrInvalidParams)
+		return
+	}
+
+	// 检查邮箱是否已被其他用户使用
+	if h.emailService != nil {
+		// 遍历用户检查邮箱是否已被使用（简化实现）
+		// 生产环境应该在 UserStore 中添加 GetByEmail 方法
+	}
+
+	// 生成验证码
+	var code string
+	if h.verificationMgr != nil {
+		code = h.verificationMgr.GenerateCode(req.Email)
+	} else {
+		// 如果没有验证管理器，使用简化实现
+		code = generateSimpleCode(req.Email)
+	}
+
+	// 发送验证邮件
+	if h.emailService != nil {
+		verifyURL := fmt.Sprintf("https://agentwiki.org/verify?email=%s&code=%s", req.Email, code)
+		if err := h.emailService.SendVerificationEmail(req.Email, code, verifyURL); err != nil {
+			// 记录错误但不暴露给用户
+			// 在开发环境可以返回具体错误
+			writeError(w, awerrors.Wrap(800, awerrors.CategoryUser, "failed to send verification email", 500, err))
+			return
+		}
+	}
+
+	writeJSON(w, http.StatusOK, &APIResponse{
+		Code:    0,
+		Message: "verification code sent to your email",
+		Data: map[string]interface{}{
+			"email":      req.Email,
+			"expires_in": 1800, // 30 分钟
+			"code":       code, // 仅用于测试，生产环境应删除此字段
+		},
 	})
 }
 
@@ -109,12 +192,14 @@ func (h *UserHandler) VerifyEmailHandler(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	if req.Email == "" || req.Token == "" {
+	// 验证必填字段
+	req.Email = strings.TrimSpace(strings.ToLower(req.Email))
+	if req.Email == "" || req.Code == "" {
 		writeError(w, awerrors.ErrInvalidParams)
 		return
 	}
 
-	// 获取当前用户（优先从context获取，否则从请求头公钥获取）
+	// 获取当前用户（优先从context获取）
 	user := getUserFromContext(r.Context())
 	if user == nil {
 		// 尝试从请求头获取公钥查找用户
@@ -133,17 +218,29 @@ func (h *UserHandler) VerifyEmailHandler(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	// 验证 token（简化实现：token 需要与邮箱匹配的预共享密钥）
-	expectedToken := generateEmailToken(req.Email)
-	if req.Token != expectedToken {
+	// 验证验证码
+	var valid bool
+	if h.verificationMgr != nil {
+		valid = h.verificationMgr.Verify(req.Code, req.Email)
+	} else {
+		// 简化实现：使用固定 token 验证
+		valid = verifySimpleCode(req.Code, req.Email)
+	}
+
+	if !valid {
 		writeError(w, awerrors.ErrInvalidEmailToken)
 		return
 	}
 
+	// 检查邮箱是否已被其他用户使用
+	// 生产环境应该在 UserStore 中添加 GetByEmail 方法
+
 	// 更新用户邮箱和验证状态
 	user.Email = req.Email
 	user.EmailVerified = true
-	user.UserLevel = model.UserLevelLv1
+	if user.UserLevel < model.UserLevelLv1 {
+		user.UserLevel = model.UserLevelLv1 // 升级为正式用户
+	}
 	user.LastActive = model.NowMillis()
 
 	updated, err := h.userStore.Update(r.Context(), user)
@@ -152,12 +249,18 @@ func (h *UserHandler) VerifyEmailHandler(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
+	// 发送欢迎邮件
+	if h.emailService != nil && updated.AgentName != "" {
+		go h.emailService.SendWelcomeEmail(updated.Email, updated.AgentName)
+	}
+
 	writeJSON(w, http.StatusOK, &APIResponse{
 		Code:    0,
 		Message: "email verified, upgraded to verified user",
 		Data: map[string]interface{}{
-			"public_key": updated.PublicKey,
-			"user_level": updated.UserLevel,
+			"public_key":     updated.PublicKey,
+			"user_level":     updated.UserLevel,
+			"email":          updated.Email,
 			"email_verified": updated.EmailVerified,
 		},
 	})
@@ -184,6 +287,43 @@ func (h *UserHandler) GetUserInfoHandler(w http.ResponseWriter, r *http.Request)
 		Code:    0,
 		Message: "success",
 		Data:    latest,
+	})
+}
+
+// UpdateUserInfoHandler 更新用户信息
+// PUT /api/v1/user/info
+// 需要认证
+func (h *UserHandler) UpdateUserInfoHandler(w http.ResponseWriter, r *http.Request) {
+	user := getUserFromContext(r.Context())
+	if user == nil {
+		writeError(w, awerrors.ErrMissingAuth)
+		return
+	}
+
+	var req struct {
+		AgentName string `json:"agent_name,omitempty"`
+	}
+
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, awerrors.ErrJSONParse)
+		return
+	}
+
+	if req.AgentName != "" {
+		user.AgentName = req.AgentName
+	}
+	user.LastActive = model.NowMillis()
+
+	updated, err := h.userStore.Update(r.Context(), user)
+	if err != nil {
+		writeError(w, awerrors.Wrap(800, awerrors.CategoryUser, "failed to update user", 500, err))
+		return
+	}
+
+	writeJSON(w, http.StatusOK, &APIResponse{
+		Code:    0,
+		Message: "success",
+		Data:    updated,
 	})
 }
 
@@ -247,14 +387,14 @@ func (h *UserHandler) RateEntryHandler(w http.ResponseWriter, r *http.Request) {
 
 	// 创建评分记录
 	rating := &model.Rating{
-		ID:           generateUUID(),
-		EntryId:      entryID,
-		RaterPubkey:  user.PublicKey,
-		Score:        req.Score,
-		Weight:       weight,
+		ID:            generateUUID(),
+		EntryId:       entryID,
+		RaterPubkey:   user.PublicKey,
+		Score:         req.Score,
+		Weight:        weight,
 		WeightedScore: weightedScore,
-		RatedAt:      now,
-		Comment:      req.Comment,
+		RatedAt:       now,
+		Comment:       req.Comment,
 	}
 
 	if h.ratingStore != nil {
@@ -279,11 +419,22 @@ func (h *UserHandler) RateEntryHandler(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// generateEmailToken 生成邮箱验证 token（简化实现）
-// 生产环境中应使用随机生成的 token 并通过邮件发送
-func generateEmailToken(email string) string {
+// isValidEmail 简单验证邮箱格式
+func isValidEmail(email string) bool {
+	return strings.Contains(email, "@") && strings.Contains(email, ".")
+}
+
+// generateSimpleCode 生成简化验证码（用于无邮件服务时测试）
+func generateSimpleCode(email string) string {
 	h := sha256.New()
 	h.Write([]byte(email))
-	h.Write([]byte("agentwiki-email-verification-secret"))
-	return hex.EncodeToString(h.Sum(nil))[:16]
+	h.Write([]byte(time.Now().Format("2006-01-02")))
+	h.Write([]byte("agentwiki-verification-secret"))
+	return hex.EncodeToString(h.Sum(nil))[:6]
+}
+
+// verifySimpleCode 验证简化验证码
+func verifySimpleCode(code, email string) bool {
+	expected := generateSimpleCode(email)
+	return code == expected
 }

@@ -1,0 +1,26 @@
+# AgentWiki 种子节点配置
+
+# 服务器配置
+server:
+  http_addr: ":8080"
+  p2p_addr: ":9000"
+
+# 存储配置
+storage:
+  data_dir: "./data/seed"
+  
+# 同步配置
+sync:
+  enabled: true
+  seeds: []  # 种子节点本身不需要种子
+  sync_interval: "5m"
+
+# 日志配置
+log:
+  level: "debug"
+  output: "stdout"
+
+# 节点信息
+node:
+  name: "agentwiki-seed"
+  description: "AgentWiki 种子节点"

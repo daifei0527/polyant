@@ -6,9 +6,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/agentwiki/agentwiki/internal/storage"
-	"github.com/agentwiki/agentwiki/internal/storage/model"
-	"github.com/agentwiki/agentwiki/internal/core/user"
+	"github.com/daifei0527/agentwiki/internal/storage"
+	"github.com/daifei0527/agentwiki/internal/storage/model"
+	"github.com/daifei0527/agentwiki/internal/core/user"
 )
 
 var (

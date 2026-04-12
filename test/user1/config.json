@@ -1,0 +1,25 @@
+{
+  "node": {
+    "name": "user-node-1",
+    "type": "full"
+  },
+  "network": {
+    "listen_port": 9200,
+    "api_port": 8200,
+    "seed_nodes": ["/ip4/127.0.0.1/tcp/9100"],
+    "dht_enabled": true,
+    "mdns_enabled": false
+  },
+  "storage": {
+    "data_dir": "/home/daifei/agentwiki/test/user1/data"
+  },
+  "sync": {
+    "auto_sync": true,
+    "interval_seconds": 10,
+    "mirror_categories": ["tech"],
+    "max_local_size_mb": 512
+  },
+  "log": {
+    "level": "debug"
+  }
+}

@@ -1,6 +1,6 @@
 [Unit]
 Description=AgentWiki - Decentralized Knowledge Base
-Documentation=https://github.com/agentwiki/agentwiki
+Documentation=https://github.com/daifei0527/agentwiki
 After=network.target
 
 [Service]

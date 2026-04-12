@@ -5,7 +5,7 @@ package storage
 import (
 	"context"
 
-	"github.com/agentwiki/agentwiki/internal/storage/model"
+	"github.com/daifei0527/agentwiki/internal/storage/model"
 )
 
 // EntryStore 知识条目存储接口

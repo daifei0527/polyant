@@ -8,7 +8,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/agentwiki/agentwiki/internal/storage/model"
+	"github.com/daifei0527/agentwiki/internal/storage/model"
 )
 
 // SearchEngine 定义了全文搜索引擎的接口

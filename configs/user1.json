@@ -1,0 +1,45 @@
+{
+  "node": {
+    "type": "local",
+    "name": "agentwiki-user-node-1",
+    "data_dir": "./data/user1",
+    "log_dir": "./logs",
+    "log_level": "debug"
+  },
+  "network": {
+    "listen_port": 9001,
+    "api_port": 8081,
+    "seed_nodes": ["/ip4/127.0.0.1/tcp/9000/p2p/12D3KooWDJQJD6AMnu5mXTt7sP7ErnkWsmtnfcBR4cBLGRU8C2yG"],
+    "dht_enabled": true,
+    "mdns_enabled": false
+  },
+  "sync": {
+    "auto_sync": true,
+    "interval_seconds": 30,
+    "mirror_categories": [],
+    "max_local_size_mb": 512,
+    "compression": "gzip"
+  },
+  "sharing": {
+    "allow_mirror": true,
+    "bandwidth_limit_mb": 50,
+    "max_concurrent": 5
+  },
+  "user": {
+    "private_key_path": "",
+    "email": "",
+    "auto_register": false
+  },
+  "smtp": {
+    "enabled": false,
+    "host": "",
+    "port": 587,
+    "username": "",
+    "password": "",
+    "from": ""
+  },
+  "api": {
+    "enabled": true,
+    "cors": true
+  }
+}

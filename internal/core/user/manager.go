@@ -8,9 +8,9 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/agentwiki/agentwiki/internal/auth/ed25519"
-	"github.com/agentwiki/agentwiki/internal/storage"
-	"github.com/agentwiki/agentwiki/internal/storage/model"
+	"github.com/daifei0527/agentwiki/internal/auth/ed25519"
+	"github.com/daifei0527/agentwiki/internal/storage"
+	"github.com/daifei0527/agentwiki/internal/storage/model"
 )
 
 var (

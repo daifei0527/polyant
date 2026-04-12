@@ -1,0 +1,45 @@
+{
+  "node": {
+    "type": "seed",
+    "name": "agentwiki-seed-node",
+    "data_dir": "./data/seed",
+    "log_dir": "./logs",
+    "log_level": "debug"
+  },
+  "network": {
+    "listen_port": 9000,
+    "api_port": 8080,
+    "seed_nodes": [],
+    "dht_enabled": true,
+    "mdns_enabled": false
+  },
+  "sync": {
+    "auto_sync": true,
+    "interval_seconds": 60,
+    "mirror_categories": [],
+    "max_local_size_mb": 1024,
+    "compression": "gzip"
+  },
+  "sharing": {
+    "allow_mirror": true,
+    "bandwidth_limit_mb": 100,
+    "max_concurrent": 10
+  },
+  "user": {
+    "private_key_path": "",
+    "email": "",
+    "auto_register": false
+  },
+  "smtp": {
+    "enabled": false,
+    "host": "",
+    "port": 587,
+    "username": "",
+    "password": "",
+    "from": ""
+  },
+  "api": {
+    "enabled": true,
+    "cors": true
+  }
+}

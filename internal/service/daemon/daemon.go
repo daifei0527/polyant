@@ -6,7 +6,7 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/agentwiki/agentwiki/pkg/config"
+	"github.com/daifei0527/agentwiki/pkg/config"
 	"github.com/kardianos/service"
 )
 

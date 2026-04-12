@@ -1,11 +1,14 @@
 package handler
 
 import (
+	"encoding/json"
 	"net/http"
+	"strings"
+	"time"
 
-	awerrors "github.com/agentwiki/agentwiki/pkg/errors"
-	"github.com/agentwiki/agentwiki/internal/storage/model"
-	"github.com/agentwiki/agentwiki/internal/storage"
+	"github.com/daifei0527/agentwiki/internal/storage"
+	"github.com/daifei0527/agentwiki/internal/storage/model"
+	awerrors "github.com/daifei0527/agentwiki/pkg/errors"
 )
 
 // CategoryHandler 分类 HTTP 处理器
@@ -146,4 +149,87 @@ func buildCategoryTree(categories []*model.Category) []*CategoryTreeNode {
 	}
 
 	return roots
+}
+
+// CreateCategoryRequest 创建分类请求体
+type CreateCategoryRequest struct {
+	Path     string `json:"path"`                // 分类路径，如 "tech/programming/rust"
+	Name     string `json:"name"`                // 分类显示名
+	ParentID string `json:"parent_id,omitempty"` // 父分类ID（可选）
+}
+
+// CreateCategoryHandler 创建新分类
+// POST /api/v1/categories/create
+// 需要认证（Lv2及以上权限）
+func (h *CategoryHandler) CreateCategoryHandler(w http.ResponseWriter, r *http.Request) {
+	// 获取当前用户
+	user := getUserFromContext(r.Context())
+	if user == nil {
+		writeError(w, awerrors.ErrMissingAuth)
+		return
+	}
+
+	// 检查权限（Lv2及以上可创建分类）
+	if user.UserLevel < model.UserLevelLv2 {
+		writeError(w, awerrors.ErrBasicUserDenied)
+		return
+	}
+
+	// 解析请求
+	var req CreateCategoryRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, awerrors.ErrJSONParse)
+		return
+	}
+
+	// 验证必填字段
+	req.Path = strings.TrimSpace(req.Path)
+	req.Name = strings.TrimSpace(req.Name)
+	if req.Path == "" || req.Name == "" {
+		writeError(w, awerrors.ErrInvalidParams)
+		return
+	}
+
+	// 检查分类是否已存在
+	existing, _ := h.categoryStore.Get(r.Context(), req.Path)
+	if existing != nil {
+		writeError(w, awerrors.New(304, awerrors.CategoryStorage, "category already exists", 409))
+		return
+	}
+
+	// 计算层级
+	level := int32(0)
+	if req.ParentID != "" {
+		parent, err := h.categoryStore.Get(r.Context(), req.ParentID)
+		if err == nil {
+			level = parent.Level + 1
+		}
+	} else {
+		// 从路径计算层级
+		level = int32(strings.Count(req.Path, "/"))
+	}
+
+	// 创建分类
+	category := &model.Category{
+		ID:          generateUUID(),
+		Path:        req.Path,
+		Name:        req.Name,
+		ParentId:    req.ParentID,
+		Level:       level,
+		SortOrder:   0,
+		IsBuiltin:   false,
+		CreatedAt:   time.Now().Unix(),
+	}
+
+	created, err := h.categoryStore.Create(r.Context(), category)
+	if err != nil {
+		writeError(w, awerrors.Wrap(302, awerrors.CategoryStorage, "failed to create category", 500, err))
+		return
+	}
+
+	writeJSON(w, http.StatusCreated, &APIResponse{
+		Code:    0,
+		Message: "success",
+		Data:    created,
+	})
 }

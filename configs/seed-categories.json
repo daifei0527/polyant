@@ -1,0 +1,274 @@
+{
+  "categories": [
+    {
+      "id": "cat-001",
+      "path": "computer-science",
+      "name": "计算机科学",
+      "parent_id": "",
+      "level": 0,
+      "sort_order": 1,
+      "is_builtin": true
+    },
+    {
+      "id": "cat-002",
+      "path": "computer-science/programming-languages",
+      "name": "编程语言",
+      "parent_id": "cat-001",
+      "level": 1,
+      "sort_order": 1,
+      "is_builtin": true
+    },
+    {
+      "id": "cat-003",
+      "path": "computer-science/programming-languages/go",
+      "name": "Go",
+      "parent_id": "cat-002",
+      "level": 2,
+      "sort_order": 1,
+      "is_builtin": true
+    },
+    {
+      "id": "cat-004",
+      "path": "computer-science/programming-languages/python",
+      "name": "Python",
+      "parent_id": "cat-002",
+      "level": 2,
+      "sort_order": 2,
+      "is_builtin": true
+    },
+    {
+      "id": "cat-005",
+      "path": "computer-science/programming-languages/rust",
+      "name": "Rust",
+      "parent_id": "cat-002",
+      "level": 2,
+      "sort_order": 3,
+      "is_builtin": true
+    },
+    {
+      "id": "cat-006",
+      "path": "computer-science/programming-languages/javascript",
+      "name": "JavaScript",
+      "parent_id": "cat-002",
+      "level": 2,
+      "sort_order": 4,
+      "is_builtin": true
+    },
+    {
+      "id": "cat-007",
+      "path": "computer-science/programming-languages/java",
+      "name": "Java",
+      "parent_id": "cat-002",
+      "level": 2,
+      "sort_order": 5,
+      "is_builtin": true
+    },
+    {
+      "id": "cat-008",
+      "path": "computer-science/algorithms",
+      "name": "算法与数据结构",
+      "parent_id": "cat-001",
+      "level": 1,
+      "sort_order": 2,
+      "is_builtin": true
+    },
+    {
+      "id": "cat-009",
+      "path": "computer-science/operating-systems",
+      "name": "操作系统",
+      "parent_id": "cat-001",
+      "level": 1,
+      "sort_order": 3,
+      "is_builtin": true
+    },
+    {
+      "id": "cat-010",
+      "path": "computer-science/network-protocols",
+      "name": "网络协议",
+      "parent_id": "cat-001",
+      "level": 1,
+      "sort_order": 4,
+      "is_builtin": true
+    },
+    {
+      "id": "cat-011",
+      "path": "computer-science/databases",
+      "name": "数据库",
+      "parent_id": "cat-001",
+      "level": 1,
+      "sort_order": 5,
+      "is_builtin": true
+    },
+    {
+      "id": "cat-012",
+      "path": "artificial-intelligence",
+      "name": "人工智能",
+      "parent_id": "",
+      "level": 0,
+      "sort_order": 2,
+      "is_builtin": true
+    },
+    {
+      "id": "cat-013",
+      "path": "artificial-intelligence/machine-learning",
+      "name": "机器学习",
+      "parent_id": "cat-012",
+      "level": 1,
+      "sort_order": 1,
+      "is_builtin": true
+    },
+    {
+      "id": "cat-014",
+      "path": "artificial-intelligence/nlp",
+      "name": "自然语言处理",
+      "parent_id": "cat-012",
+      "level": 1,
+      "sort_order": 2,
+      "is_builtin": true
+    },
+    {
+      "id": "cat-015",
+      "path": "artificial-intelligence/computer-vision",
+      "name": "计算机视觉",
+      "parent_id": "cat-012",
+      "level": 1,
+      "sort_order": 3,
+      "is_builtin": true
+    },
+    {
+      "id": "cat-016",
+      "path": "artificial-intelligence/prompt-engineering",
+      "name": "提示工程",
+      "parent_id": "cat-012",
+      "level": 1,
+      "sort_order": 4,
+      "is_builtin": true
+    },
+    {
+      "id": "cat-017",
+      "path": "artificial-intelligence/llm",
+      "name": "大语言模型",
+      "parent_id": "cat-012",
+      "level": 1,
+      "sort_order": 5,
+      "is_builtin": true
+    },
+    {
+      "id": "cat-018",
+      "path": "general-knowledge",
+      "name": "通用知识",
+      "parent_id": "",
+      "level": 0,
+      "sort_order": 3,
+      "is_builtin": true
+    },
+    {
+      "id": "cat-019",
+      "path": "general-knowledge/mathematics",
+      "name": "数学",
+      "parent_id": "cat-018",
+      "level": 1,
+      "sort_order": 1,
+      "is_builtin": true
+    },
+    {
+      "id": "cat-020",
+      "path": "general-knowledge/physics",
+      "name": "物理",
+      "parent_id": "cat-018",
+      "level": 1,
+      "sort_order": 2,
+      "is_builtin": true
+    },
+    {
+      "id": "cat-021",
+      "path": "general-knowledge/history",
+      "name": "历史",
+      "parent_id": "cat-018",
+      "level": 1,
+      "sort_order": 3,
+      "is_builtin": true
+    },
+    {
+      "id": "cat-022",
+      "path": "general-knowledge/languages",
+      "name": "语言",
+      "parent_id": "cat-018",
+      "level": 1,
+      "sort_order": 4,
+      "is_builtin": true
+    },
+    {
+      "id": "cat-023",
+      "path": "life-skills",
+      "name": "生活技能",
+      "parent_id": "",
+      "level": 0,
+      "sort_order": 4,
+      "is_builtin": true
+    },
+    {
+      "id": "cat-024",
+      "path": "life-skills/cooking",
+      "name": "烹饪",
+      "parent_id": "cat-023",
+      "level": 1,
+      "sort_order": 1,
+      "is_builtin": true
+    },
+    {
+      "id": "cat-025",
+      "path": "life-skills/health",
+      "name": "健康",
+      "parent_id": "cat-023",
+      "level": 1,
+      "sort_order": 2,
+      "is_builtin": true
+    },
+    {
+      "id": "cat-026",
+      "path": "life-skills/finance",
+      "name": "财务",
+      "parent_id": "cat-023",
+      "level": 1,
+      "sort_order": 3,
+      "is_builtin": true
+    },
+    {
+      "id": "cat-027",
+      "path": "tools",
+      "name": "工具使用",
+      "parent_id": "",
+      "level": 0,
+      "sort_order": 5,
+      "is_builtin": true
+    },
+    {
+      "id": "cat-028",
+      "path": "tools/dev-tools",
+      "name": "开发工具",
+      "parent_id": "cat-027",
+      "level": 1,
+      "sort_order": 1,
+      "is_builtin": true
+    },
+    {
+      "id": "cat-029",
+      "path": "tools/office-software",
+      "name": "办公软件",
+      "parent_id": "cat-027",
+      "level": 1,
+      "sort_order": 2,
+      "is_builtin": true
+    },
+    {
+      "id": "cat-030",
+      "path": "tools/system-administration",
+      "name": "系统管理",
+      "parent_id": "cat-027",
+      "level": 1,
+      "sort_order": 3,
+      "is_builtin": true
+    }
+  ]
+}

@@ -236,3 +236,55 @@ func (p *Protocol) SendSyncRequest(ctx context.Context, peerID peer.ID, r *SyncR
 
 	return resp.Payload.(*SyncResponse), nil
 }
+
+func (p *Protocol) SendPushEntry(ctx context.Context, peerID peer.ID, e *PushEntry) (*PushAck, error) {
+	s, err := p.host.NewStream(ctx, peerID, AWSPProtocolID)
+	if err != nil {
+		return nil, fmt.Errorf("new stream: %w", err)
+	}
+	defer s.Close()
+
+	writer := NewStreamWriter(s)
+	reader := NewStreamReader(s)
+
+	msg := &Message{
+		Header:  NewMessageHeader(MessageTypePushEntry),
+		Payload: e,
+	}
+	if err := writer.WriteMessage(msg); err != nil {
+		return nil, err
+	}
+
+	resp, err := reader.ReadMessage()
+	if err != nil {
+		return nil, err
+	}
+
+	return resp.Payload.(*PushAck), nil
+}
+
+func (p *Protocol) SendRatingPush(ctx context.Context, peerID peer.ID, r *RatingPush) (*RatingAck, error) {
+	s, err := p.host.NewStream(ctx, peerID, AWSPProtocolID)
+	if err != nil {
+		return nil, fmt.Errorf("new stream: %w", err)
+	}
+	defer s.Close()
+
+	writer := NewStreamWriter(s)
+	reader := NewStreamReader(s)
+
+	msg := &Message{
+		Header:  NewMessageHeader(MessageTypeRatingPush),
+		Payload: r,
+	}
+	if err := writer.WriteMessage(msg); err != nil {
+		return nil, err
+	}
+
+	resp, err := reader.ReadMessage()
+	if err != nil {
+		return nil, err
+	}
+
+	return resp.Payload.(*RatingAck), nil
+}

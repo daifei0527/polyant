@@ -12,7 +12,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/agentwiki/agentwiki/internal/storage/model"
+	"github.com/daifei0527/agentwiki/internal/storage/model"
 )
 
 // MemoryEntryStore 基于内存的知识条目存储实现

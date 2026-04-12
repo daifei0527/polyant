@@ -1,0 +1,25 @@
+{
+  "node": {
+    "name": "seed-node-1",
+    "type": "seed"
+  },
+  "network": {
+    "listen_port": 9100,
+    "api_port": 8100,
+    "seed_nodes": [],
+    "dht_enabled": true,
+    "mdns_enabled": false
+  },
+  "storage": {
+    "data_dir": "/home/daifei/agentwiki/test/seed/data"
+  },
+  "sync": {
+    "auto_sync": true,
+    "interval_seconds": 30,
+    "mirror_categories": [],
+    "max_local_size_mb": 1024
+  },
+  "log": {
+    "level": "debug"
+  }
+}
