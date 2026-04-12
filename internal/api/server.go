@@ -3,12 +3,16 @@ package api
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 	"strconv"
 	"time"
 
 	"github.com/gorilla/mux"
 )
+
+// ErrNotFound 资源未找到错误
+var ErrNotFound = errors.New("resource not found")
 
 // Server API 服务器
 type Server struct {
