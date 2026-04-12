@@ -21,21 +21,38 @@ import (
 	"github.com/daifei0527/agentwiki/internal/network/host"
 	"github.com/daifei0527/agentwiki/internal/network/protocol"
 	"github.com/daifei0527/agentwiki/internal/network/sync"
+	"github.com/daifei0527/agentwiki/internal/service/daemon"
 	"github.com/daifei0527/agentwiki/internal/storage"
 	"github.com/daifei0527/agentwiki/pkg/config"
 	"go.uber.org/zap"
 )
 
 var (
-	configFile   = flag.String("config", "", "配置文件路径 (JSON)")
-	showVersion  = flag.Bool("version", false, "显示版本信息")
-	initSeed     = flag.Bool("init-seed", false, "初始化种子数据并退出")
-	useMemoryDB  = flag.Bool("memory", false, "使用内存存储（仅用于测试）")
+	configFile  = flag.String("config", "", "配置文件路径 (JSON)")
+	showVersion = flag.Bool("version", false, "显示版本信息")
+	initSeed    = flag.Bool("init-seed", false, "初始化种子数据并退出")
+	useMemoryDB = flag.Bool("memory", false, "使用内存存储（仅用于测试）")
+	runAsService = flag.Bool("service", false, "作为系统服务运行")
 )
 
 const (
 	Version = "0.1.0-dev"
 )
+
+// AgentWiki 应用主结构
+type AgentWiki struct {
+	config       *config.Config
+	logger       *zap.Logger
+	store        *storage.Store
+	storeCloser  *storage.BadgerStoreWrapper
+	p2pHost      *host.P2PHost
+	dhtNode      *dht.DHTNode
+	syncEngine   *sync.SyncEngine
+	pushService  *sync.PushService
+	httpServer   *http.Server
+	levelChecker *user.LevelUpgradeChecker
+	cancel       context.CancelFunc
+}
 
 func main() {
 	flag.Parse()
@@ -45,31 +62,134 @@ func main() {
 		os.Exit(0)
 	}
 
-	// 初始化日志
-	logger, err := zap.NewProduction()
-	if err != nil {
-		log.Fatalf("初始化日志失败: %v", err)
-	}
-	defer logger.Sync()
-
 	// 加载配置
+	cfg, err := loadConfig()
+	if err != nil {
+		log.Fatalf("加载配置失败: %v", err)
+	}
+
+	// 检查是否作为系统服务运行
+	if len(os.Args) > 1 && isServiceCommand(os.Args[1]) {
+		runServiceCommand(cfg)
+		return
+	}
+
+	if *runAsService {
+		runAsSystemService(cfg)
+		return
+	}
+
+	// 直接运行
+	app, err := NewAgentWiki(cfg)
+	if err != nil {
+		log.Fatalf("初始化失败: %v", err)
+	}
+
+	if err := app.Run(); err != nil {
+		log.Fatalf("运行失败: %v", err)
+	}
+}
+
+// loadConfig 加载配置
+func loadConfig() (*config.Config, error) {
 	var cfg *config.Config
+	var err error
+
 	if *configFile != "" {
 		cfg, err = config.Load(*configFile)
 		if err != nil {
-			log.Fatalf("加载配置文件失败: %v", err)
+			return nil, err
 		}
 	} else {
 		cfg = config.DefaultConfig()
-		logger.Info("使用默认配置")
 	}
 
-	// 应用环境变量覆盖
 	cfg = config.LoadWithEnv(cfg)
-
-	// 验证配置
 	if err := config.Validate(cfg); err != nil {
-		log.Fatalf("配置验证失败: %v", err)
+		return nil, err
+	}
+
+	return cfg, nil
+}
+
+// isServiceCommand 检查是否为服务管理命令
+func isServiceCommand(cmd string) bool {
+	serviceCmds := []string{"install", "uninstall", "start", "stop", "restart", "status"}
+	for _, c := range serviceCmds {
+		if cmd == c {
+			return true
+		}
+	}
+	return false
+}
+
+// runServiceCommand 执行服务管理命令
+func runServiceCommand(cfg *config.Config) {
+	d, err := daemon.NewDaemon(cfg, nil, nil)
+	if err != nil {
+		log.Fatalf("创建服务失败: %v", err)
+	}
+
+	cmd := os.Args[1]
+	switch cmd {
+	case "install":
+		err = d.Install()
+	case "uninstall":
+		_ = d.Stop()
+		err = d.Uninstall()
+	case "start":
+		err = d.Start()
+	case "stop":
+		err = d.Stop()
+	case "restart":
+		_ = d.Stop()
+		err = d.Start()
+	case "status":
+		status, serr := d.Status()
+		if serr != nil {
+			log.Fatalf("获取状态失败: %v", serr)
+		}
+		fmt.Printf("服务状态: %s\n", status)
+		return
+	}
+
+	if err != nil {
+		log.Fatalf("执行命令失败: %v", err)
+	}
+	fmt.Printf("✓ 命令 %s 执行成功\n", cmd)
+}
+
+// runAsSystemService 作为系统服务运行
+func runAsSystemService(cfg *config.Config) {
+	var app *AgentWiki
+
+	startFn := func() error {
+		var err error
+		app, err = NewAgentWiki(cfg)
+		if err != nil {
+			return err
+		}
+		return app.Start()
+	}
+
+	stopFn := func() error {
+		if app != nil {
+			return app.Stop()
+		}
+		return nil
+	}
+
+	if err := daemon.RunAsService(cfg, startFn, stopFn); err != nil {
+		log.Fatalf("服务运行失败: %v", err)
+	}
+}
+
+// NewAgentWiki 创建应用实例
+func NewAgentWiki(cfg *config.Config) (*AgentWiki, error) {
+	// 初始化日志
+	logger, err := zap.NewProduction()
+	if err != nil {
+		return nil, fmt.Errorf("初始化日志失败: %w", err)
 	}
 
 	logger.Info("启动 AgentWiki 节点",
@@ -79,177 +199,189 @@ func main() {
 
 	// 创建上下文
 	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+
+	app := &AgentWiki{
+		config: cfg,
+		logger: logger,
+		cancel: cancel,
+	}
 
 	// 初始化存储层
-	var store *storage.Store
+	if err := app.initStorage(ctx); err != nil {
+		app.cleanup()
+		return nil, err
+	}
+
+	// 初始化分类和种子数据
+	if err := app.initData(ctx); err != nil {
+		app.cleanup()
+		return nil, err
+	}
+
+	return app, nil
+}
+
+// initStorage 初始化存储层
+func (app *AgentWiki) initStorage(ctx context.Context) error {
+	var err error
+
 	if *useMemoryDB {
-		// 使用内存存储（用于测试）
-		store, err = storage.NewMemoryStore()
+		app.store, err = storage.NewMemoryStore()
 		if err != nil {
-			logger.Fatal("初始化内存存储失败", zap.Error(err))
+			return fmt.Errorf("初始化内存存储失败: %w", err)
 		}
-		logger.Info("使用内存存储")
+		app.logger.Info("使用内存存储")
 	} else {
-		// 使用 BadgerDB 持久化存储
-		dataDir := cfg.Node.DataDir
+		dataDir := app.config.Node.DataDir
 		if dataDir == "" {
 			dataDir = "./data"
 		}
-		storeWrapper, err := storage.NewBadgerStoreWithCloser(dataDir + "/db")
+		app.storeCloser, err = storage.NewBadgerStoreWithCloser(dataDir + "/db")
 		if err != nil {
-			logger.Fatal("初始化存储失败", zap.Error(err))
+			return fmt.Errorf("初始化存储失败: %w", err)
 		}
-		defer func() {
-			if err := storeWrapper.Close(); err != nil {
-				logger.Warn("关闭存储失败", zap.Error(err))
-			}
-		}()
-		store = &storeWrapper.Store
-		logger.Info("存储层初始化完成", zap.String("path", dataDir+"/db"))
+		app.store = &app.storeCloser.Store
+		app.logger.Info("存储层初始化完成", zap.String("path", dataDir+"/db"))
 	}
 
+	return nil
+}
+
+// initData 初始化数据
+func (app *AgentWiki) initData(ctx context.Context) error {
 	// 初始化分类
-	categoryInit := category.NewCategoryInitializer(store.Category, cfg.Node.DataDir)
+	categoryInit := category.NewCategoryInitializer(app.store.Category, app.config.Node.DataDir)
 	if err := categoryInit.Initialize(ctx); err != nil {
-		logger.Warn("分类初始化警告", zap.Error(err))
+		app.logger.Warn("分类初始化警告", zap.Error(err))
 	}
 
-	// 初始化种子数据（种子节点或明确要求）
-	if cfg.Node.Type == "seed" || *initSeed {
-		seedInit := seed.NewSeedDataInitializer(store, cfg.Node.DataDir+"/seed-data")
+	// 初始化种子数据
+	if app.config.Node.Type == "seed" || *initSeed {
+		seedInit := seed.NewSeedDataInitializer(app.store, app.config.Node.DataDir+"/seed-data")
 		if err := seedInit.Initialize(ctx); err != nil {
-			logger.Warn("种子数据初始化警告", zap.Error(err))
+			app.logger.Warn("种子数据初始化警告", zap.Error(err))
 		}
 	}
+
+	return nil
+}
+
+// Start 启动服务
+func (app *AgentWiki) Start() error {
+	ctx := context.Background()
 
 	// 启动用户层级升级检查器
-	levelChecker := user.NewLevelUpgradeChecker(store, time.Hour)
-	if err := levelChecker.Start(ctx); err != nil {
-		logger.Warn("用户层级检查器启动失败", zap.Error(err))
+	app.levelChecker = user.NewLevelUpgradeChecker(app.store, time.Hour)
+	if err := app.levelChecker.Start(ctx); err != nil {
+		app.logger.Warn("用户层级检查器启动失败", zap.Error(err))
 	}
-	defer levelChecker.Stop()
 
 	// 构建 P2P 监听地址
-	listenAddr := fmt.Sprintf("/ip4/0.0.0.0/tcp/%d", cfg.Network.ListenPort)
+	listenAddr := fmt.Sprintf("/ip4/0.0.0.0/tcp/%d", app.config.Network.ListenPort)
 
 	// 创建 P2P Host 配置
 	hostCfg := &host.HostConfig{
 		ListenAddrs: []string{listenAddr},
-		SeedPeers:   cfg.Network.SeedNodes,
-		EnableDHT:   cfg.Network.DHTEnabled,
-		EnableMDNS:  cfg.Network.MDNSEnabled,
+		SeedPeers:   app.config.Network.SeedNodes,
+		EnableDHT:   app.config.Network.DHTEnabled,
+		EnableMDNS:  app.config.Network.MDNSEnabled,
 		EnableNAT:   true,
 		EnableRelay: true,
-		PrivateKey:  nil, // 将自动生成
+		PrivateKey:  nil,
 	}
 
 	// 创建 P2P Host
-	p2pHost, err := host.NewHost(ctx, hostCfg)
+	var err error
+	app.p2pHost, err = host.NewHost(ctx, hostCfg)
 	if err != nil {
-		logger.Fatal("创建 P2P Host 失败", zap.Error(err))
+		return fmt.Errorf("创建 P2P Host 失败: %w", err)
 	}
-	defer p2pHost.Close()
 
-	// 输出节点信息
-	logger.Info("P2P 节点启动成功",
-		zap.String("node_id", p2pHost.NodeID()),
-		zap.String("node_type", p2pHost.NodeType()),
+	app.logger.Info("P2P 节点启动成功",
+		zap.String("node_id", app.p2pHost.NodeID()),
+		zap.String("node_type", app.p2pHost.NodeType()),
 	)
-	for _, addr := range p2pHost.Addrs() {
-		logger.Info("监听地址", zap.String("addr", fmt.Sprintf("%s/p2p/%s", addr, p2pHost.ID().String())))
-	}
 
-	// 初始化 DHT 路由发现
-	var dhtNode *dht.DHTNode
-	if cfg.Network.DHTEnabled {
-		dhtNode, err = dht.NewDHTNode(p2pHost.Host, cfg)
+	// 初始化 DHT
+	if app.config.Network.DHTEnabled {
+		app.dhtNode, err = dht.NewDHTNode(app.p2pHost.Host, app.config)
 		if err != nil {
-			logger.Fatal("初始化 DHT 失败", zap.Error(err))
+			return fmt.Errorf("初始化 DHT 失败: %w", err)
 		}
-		defer dhtNode.Close()
 
-		if err := dhtNode.Bootstrap(ctx); err != nil {
-			logger.Warn("DHT bootstrap 警告", zap.Error(err))
+		if err := app.dhtNode.Bootstrap(ctx); err != nil {
+			app.logger.Warn("DHT bootstrap 警告", zap.Error(err))
 		}
-		logger.Info("DHT 路由初始化完成")
-	}
-
-	// 创建同步配置
-	syncCfg := &sync.SyncConfig{
-		AutoSync:         cfg.Sync.AutoSync,
-		IntervalSeconds:  cfg.Sync.IntervalSeconds,
-		MirrorCategories: cfg.Sync.MirrorCategories,
-		MaxLocalSizeMB:   cfg.Sync.MaxLocalSizeMB,
-		BatchSize:        100,
+		app.logger.Info("DHT 路由初始化完成")
 	}
 
 	// 创建同步引擎
-	syncEngine := sync.NewSyncEngine(p2pHost, nil, store, syncCfg)
+	syncCfg := &sync.SyncConfig{
+		AutoSync:         app.config.Sync.AutoSync,
+		IntervalSeconds:  app.config.Sync.IntervalSeconds,
+		MirrorCategories: app.config.Sync.MirrorCategories,
+		MaxLocalSizeMB:   app.config.Sync.MaxLocalSizeMB,
+		BatchSize:        100,
+	}
+	app.syncEngine = sync.NewSyncEngine(app.p2pHost, nil, app.store, syncCfg)
 
 	// 创建协议处理器
-	proto := protocol.NewProtocol(p2pHost.Host, syncEngine)
-	syncEngine.SetProtocol(proto) // 解决循环依赖
-	logger.Info("AWSP 协议层初始化完成")
+	proto := protocol.NewProtocol(app.p2pHost.Host, app.syncEngine)
+	app.syncEngine.SetProtocol(proto)
+	app.logger.Info("AWSP 协议层初始化完成")
 
 	// 创建远程查询服务
-	remoteQueryService := sync.NewRemoteQueryService(p2pHost, proto, store, nil)
+	remoteQueryService := sync.NewRemoteQueryService(app.p2pHost, proto, app.store, nil)
 	remoteQueryService.SetProtocol(proto)
-	logger.Info("远程查询服务初始化完成")
+	app.logger.Info("远程查询服务初始化完成")
 
 	// 创建推送服务
-	pushService := sync.NewPushService(p2pHost, nil)
-	pushService.SetProtocol(proto)
-
-	// 启动推送服务
-	if err := pushService.Start(ctx); err != nil {
-		logger.Warn("推送服务启动失败", zap.Error(err))
+	app.pushService = sync.NewPushService(app.p2pHost, nil)
+	app.pushService.SetProtocol(proto)
+	if err := app.pushService.Start(ctx); err != nil {
+		app.logger.Warn("推送服务启动失败", zap.Error(err))
 	} else {
-		logger.Info("推送服务启动完成")
+		app.logger.Info("推送服务启动完成")
 	}
-	defer pushService.Stop()
 
 	// 启动同步引擎
-	if err := syncEngine.Start(ctx); err != nil {
-		logger.Fatal("启动同步引擎失败", zap.Error(err))
+	if err := app.syncEngine.Start(ctx); err != nil {
+		return fmt.Errorf("启动同步引擎失败: %w", err)
 	}
-	defer syncEngine.Stop()
-	logger.Info("同步引擎启动完成")
+	app.logger.Info("同步引擎启动完成")
 
 	// 连接到种子节点
-	if len(cfg.Network.SeedNodes) > 0 {
-		for _, seedAddr := range cfg.Network.SeedNodes {
-			if err := p2pHost.ConnectToPeer(ctx, seedAddr); err != nil {
-				logger.Warn("连接种子节点失败", zap.String("addr", seedAddr), zap.Error(err))
+	if len(app.config.Network.SeedNodes) > 0 {
+		for _, seedAddr := range app.config.Network.SeedNodes {
+			if err := app.p2pHost.ConnectToPeer(ctx, seedAddr); err != nil {
+				app.logger.Warn("连接种子节点失败", zap.String("addr", seedAddr), zap.Error(err))
 			} else {
-				logger.Info("已连接种子节点", zap.String("addr", seedAddr))
+				app.logger.Info("已连接种子节点", zap.String("addr", seedAddr))
 			}
 		}
 	}
 
 	// 创建 API 路由
 	apiHandler, err := router.NewRouterWithDeps(&router.Dependencies{
-		EntryStore:    store.Entry,
-		UserStore:     store.User,
-		RatingStore:   store.Rating,
-		CategoryStore: store.Category,
-		SearchEngine:  store.Search,
-		Backlink:      store.Backlink,
+		EntryStore:    app.store.Entry,
+		UserStore:     app.store.User,
+		RatingStore:   app.store.Rating,
+		CategoryStore: app.store.Category,
+		SearchEngine:  app.store.Search,
+		Backlink:      app.store.Backlink,
 		RemoteQuerier: remoteQueryService,
-		EntryPusher:   pushService,
-		NodeID:        p2pHost.NodeID(),
-		NodeType:      cfg.Node.Type,
+		EntryPusher:   app.pushService,
+		NodeID:        app.p2pHost.NodeID(),
+		NodeType:      app.config.Node.Type,
 		Version:       Version,
 	})
 	if err != nil {
-		logger.Fatal("创建 API 路由失败", zap.Error(err))
+		return fmt.Errorf("创建 API 路由失败: %w", err)
 	}
 
-	// 构建 HTTP 监听地址
-	httpAddr := fmt.Sprintf(":%d", cfg.Network.APIPort)
-
 	// 启动 HTTP 服务器
-	server := &http.Server{
+	httpAddr := fmt.Sprintf(":%d", app.config.Network.APIPort)
+	app.httpServer = &http.Server{
 		Addr:         httpAddr,
 		Handler:      apiHandler,
 		ReadTimeout:  15 * time.Second,
@@ -257,27 +389,76 @@ func main() {
 		IdleTimeout:  60 * time.Second,
 	}
 
-	// 优雅关机处理
 	go func() {
-		logger.Info("HTTP API 服务器启动", zap.String("addr", httpAddr))
-		if err := server.ListenAndServe(); err != http.ErrServerClosed {
-			logger.Fatal("HTTP 服务器启动失败", zap.Error(err))
+		app.logger.Info("HTTP API 服务器启动", zap.String("addr", httpAddr))
+		if err := app.httpServer.ListenAndServe(); err != http.ErrServerClosed {
+			app.logger.Fatal("HTTP 服务器启动失败", zap.Error(err))
 		}
 	}()
+
+	return nil
+}
+
+// Run 运行应用（阻塞）
+func (app *AgentWiki) Run() error {
+	// 启动服务
+	if err := app.Start(); err != nil {
+		return err
+	}
 
 	// 等待中断信号
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
 	<-sigChan
 
-	logger.Info("收到关闭信号，开始优雅关机...")
+	app.logger.Info("收到关闭信号，开始优雅关机...")
+
+	// 停止服务
+	return app.Stop()
+}
+
+// Stop 停止服务
+func (app *AgentWiki) Stop() error {
+	app.logger.Info("正在停止服务...")
 
 	// 关闭 HTTP 服务器
-	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer shutdownCancel()
-	if err := server.Shutdown(shutdownCtx); err != nil {
-		logger.Warn("HTTP 服务器关闭超时", zap.Error(err))
+	if app.httpServer != nil {
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
+		if err := app.httpServer.Shutdown(ctx); err != nil {
+			app.logger.Warn("HTTP 服务器关闭超时", zap.Error(err))
+		}
 	}
 
-	logger.Info("AgentWiki 节点已关闭")
+	// 停止各组件
+	if app.pushService != nil {
+		app.pushService.Stop()
+	}
+	if app.syncEngine != nil {
+		app.syncEngine.Stop()
+	}
+	if app.levelChecker != nil {
+		app.levelChecker.Stop()
+	}
+	if app.p2pHost != nil {
+		app.p2pHost.Close()
+	}
+
+	// 清理资源
+	app.cleanup()
+
+	app.logger.Info("AgentWiki 节点已关闭")
+	return nil
+}
+
+// cleanup 清理资源
+func (app *AgentWiki) cleanup() {
+	if app.cancel != nil {
+		app.cancel()
+	}
+	if app.storeCloser != nil {
+		if err := app.storeCloser.Close(); err != nil {
+			app.logger.Warn("关闭存储失败", zap.Error(err))
+		}
+	}
 }
