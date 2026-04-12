@@ -192,6 +192,23 @@ func main() {
 	syncEngine.SetProtocol(proto) // 解决循环依赖
 	logger.Info("AWSP 协议层初始化完成")
 
+	// 创建远程查询服务
+	remoteQueryService := sync.NewRemoteQueryService(p2pHost, proto, store, nil)
+	remoteQueryService.SetProtocol(proto)
+	logger.Info("远程查询服务初始化完成")
+
+	// 创建推送服务
+	pushService := sync.NewPushService(p2pHost, nil)
+	pushService.SetProtocol(proto)
+
+	// 启动推送服务
+	if err := pushService.Start(ctx); err != nil {
+		logger.Warn("推送服务启动失败", zap.Error(err))
+	} else {
+		logger.Info("推送服务启动完成")
+	}
+	defer pushService.Stop()
+
 	// 启动同步引擎
 	if err := syncEngine.Start(ctx); err != nil {
 		logger.Fatal("启动同步引擎失败", zap.Error(err))
@@ -211,7 +228,19 @@ func main() {
 	}
 
 	// 创建 API 路由
-	apiHandler, err := router.NewRouter(store, cfg)
+	apiHandler, err := router.NewRouterWithDeps(&router.Dependencies{
+		EntryStore:    store.Entry,
+		UserStore:     store.User,
+		RatingStore:   store.Rating,
+		CategoryStore: store.Category,
+		SearchEngine:  store.Search,
+		Backlink:      store.Backlink,
+		RemoteQuerier: remoteQueryService,
+		EntryPusher:   pushService,
+		NodeID:        p2pHost.NodeID(),
+		NodeType:      cfg.Node.Type,
+		Version:       Version,
+	})
 	if err != nil {
 		logger.Fatal("创建 API 路由失败", zap.Error(err))
 	}
