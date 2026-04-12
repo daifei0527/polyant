@@ -66,6 +66,21 @@ func TestPebbleStore_Delete(t *testing.T) {
 	}
 }
 
+func TestPebbleStore_DeleteNotFound(t *testing.T) {
+	dir := t.TempDir()
+	store, err := NewPebbleStore(dir)
+	if err != nil {
+		t.Fatalf("NewPebbleStore failed: %v", err)
+	}
+	defer store.Close()
+
+	// Delete non-existent key should NOT error (idempotent behavior)
+	err = store.Delete([]byte("nonexistent"))
+	if err != nil {
+		t.Errorf("Delete nonexistent key should not error, got: %v", err)
+	}
+}
+
 func TestPebbleStore_Scan(t *testing.T) {
 	dir := t.TempDir()
 	store, err := NewPebbleStore(dir)

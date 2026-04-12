@@ -53,12 +53,9 @@ func (s *PebbleStore) Get(key []byte) ([]byte, error) {
 }
 
 // Delete 根据键删除键值对
+// Pebble 的 Delete 是幂等的，删除不存在的键不会返回错误
 func (s *PebbleStore) Delete(key []byte) error {
-	err := s.db.Delete(key, pebble.Sync)
-	if err == pebble.ErrNotFound {
-		return ErrKeyNotFound
-	}
-	return err
+	return s.db.Delete(key, pebble.Sync)
 }
 
 // Scan 扫描指定前缀的所有键值对
