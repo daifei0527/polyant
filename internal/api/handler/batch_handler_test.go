@@ -488,3 +488,110 @@ func TestBatchDeleteHandler_EmptyIDs(t *testing.T) {
 		t.Errorf("Expected status %d for empty IDs, got %d", http.StatusBadRequest, rr.Code)
 	}
 }
+
+// ========== Permission Tests ==========
+
+func TestBatchUpdateHandler_Unauthorized(t *testing.T) {
+	handler, _ := newTestBatchHandler(t)
+
+	newTitle := "Updated"
+	entries := []BatchUpdateEntry{{ID: "id1", Title: &newTitle}}
+	reqBody := BatchUpdateRequest{Entries: entries}
+	body, _ := json.Marshal(reqBody)
+
+	req := httptest.NewRequest(http.MethodPut, "/api/v1/entries/batch", bytes.NewReader(body))
+	rr := httptest.NewRecorder()
+	handler.BatchUpdateHandler(rr, req)
+
+	if rr.Code != http.StatusUnauthorized {
+		t.Errorf("Expected status %d, got %d", http.StatusUnauthorized, rr.Code)
+	}
+}
+
+func TestBatchUpdateHandler_InsufficientPermission(t *testing.T) {
+	handler, store := newTestBatchHandler(t)
+
+	// Lv0 user cannot update entries
+	user := &model.User{PublicKey: "test-pk", UserLevel: model.UserLevelLv0, Status: model.UserStatusActive}
+	store.User.Create(context.Background(), user)
+
+	newTitle := "Updated"
+	entries := []BatchUpdateEntry{{ID: "id1", Title: &newTitle}}
+	reqBody := BatchUpdateRequest{Entries: entries}
+	body, _ := json.Marshal(reqBody)
+
+	req := httptest.NewRequest(http.MethodPut, "/api/v1/entries/batch", bytes.NewReader(body))
+	req = req.WithContext(setUserInContext(req.Context(), user))
+
+	rr := httptest.NewRecorder()
+	handler.BatchUpdateHandler(rr, req)
+
+	if rr.Code != http.StatusForbidden {
+		t.Errorf("Expected status %d, got %d", http.StatusForbidden, rr.Code)
+	}
+}
+
+func TestBatchUpdateHandler_EntryNotFound(t *testing.T) {
+	handler, store := newTestBatchHandler(t)
+
+	user := &model.User{PublicKey: "test-pk", UserLevel: model.UserLevelLv1, Status: model.UserStatusActive}
+	store.User.Create(context.Background(), user)
+
+	// Update non-existent entry
+	newTitle := "Updated"
+	entries := []BatchUpdateEntry{{ID: "nonexistent-id", Title: &newTitle}}
+	reqBody := BatchUpdateRequest{Entries: entries}
+	body, _ := json.Marshal(reqBody)
+
+	req := httptest.NewRequest(http.MethodPut, "/api/v1/entries/batch", bytes.NewReader(body))
+	req = req.WithContext(setUserInContext(req.Context(), user))
+
+	rr := httptest.NewRecorder()
+	handler.BatchUpdateHandler(rr, req)
+
+	if rr.Code != http.StatusBadRequest {
+		t.Errorf("Expected status %d, got %d", http.StatusBadRequest, rr.Code)
+	}
+
+	var resp BatchResponse
+	json.Unmarshal(rr.Body.Bytes(), &resp)
+	if resp.Success {
+		t.Error("Expected failure")
+	}
+}
+
+func TestBatchDeleteHandler_Unauthorized(t *testing.T) {
+	handler, _ := newTestBatchHandler(t)
+
+	reqBody := BatchDeleteRequest{IDs: []string{"id1"}}
+	body, _ := json.Marshal(reqBody)
+
+	req := httptest.NewRequest(http.MethodDelete, "/api/v1/entries/batch", bytes.NewReader(body))
+	rr := httptest.NewRecorder()
+	handler.BatchDeleteHandler(rr, req)
+
+	if rr.Code != http.StatusUnauthorized {
+		t.Errorf("Expected status %d, got %d", http.StatusUnauthorized, rr.Code)
+	}
+}
+
+func TestBatchDeleteHandler_InsufficientPermission(t *testing.T) {
+	handler, store := newTestBatchHandler(t)
+
+	// Lv0 user cannot delete entries
+	user := &model.User{PublicKey: "test-pk", UserLevel: model.UserLevelLv0, Status: model.UserStatusActive}
+	store.User.Create(context.Background(), user)
+
+	reqBody := BatchDeleteRequest{IDs: []string{"id1"}}
+	body, _ := json.Marshal(reqBody)
+
+	req := httptest.NewRequest(http.MethodDelete, "/api/v1/entries/batch", bytes.NewReader(body))
+	req = req.WithContext(setUserInContext(req.Context(), user))
+
+	rr := httptest.NewRecorder()
+	handler.BatchDeleteHandler(rr, req)
+
+	if rr.Code != http.StatusForbidden {
+		t.Errorf("Expected status %d, got %d", http.StatusForbidden, rr.Code)
+	}
+}
