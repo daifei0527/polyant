@@ -10,6 +10,7 @@ import (
 
 	"github.com/daifei0527/agentwiki/internal/storage"
 	"github.com/daifei0527/agentwiki/internal/storage/model"
+	"github.com/daifei0527/agentwiki/pkg/logger"
 )
 
 // Manifest 导出文件元数据
@@ -128,7 +129,7 @@ func (e *Exporter) Export(opts ExportOptions) ([]byte, error) {
 		for _, entry := range entries {
 			ratings, err := e.store.Rating.ListByEntry(nil, entry.ID)
 			if err != nil {
-				// 跳过获取评分失败的条目
+				logger.Warn("failed to list ratings for entry %s: %v", entry.ID, err)
 				continue
 			}
 			allRatings = append(allRatings, ratings...)
