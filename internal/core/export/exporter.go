@@ -119,11 +119,18 @@ func (e *Exporter) Export(opts ExportOptions) ([]byte, error) {
 
 	// 导出评分
 	if opts.IncludeRatings {
-		// 评分需要通过条目ID获取
-		entries, _, _ := e.store.Entry.List(nil, storage.EntryFilter{Limit: 100000})
+		entries, _, err := e.store.Entry.List(nil, storage.EntryFilter{Limit: 100000})
+		if err != nil {
+			zipWriter.Close()
+			return nil, fmt.Errorf("failed to list entries for ratings: %w", err)
+		}
 		var allRatings []*model.Rating
 		for _, entry := range entries {
-			ratings, _ := e.store.Rating.ListByEntry(nil, entry.ID)
+			ratings, err := e.store.Rating.ListByEntry(nil, entry.ID)
+			if err != nil {
+				// 跳过获取评分失败的条目
+				continue
+			}
 			allRatings = append(allRatings, ratings...)
 		}
 		if err := e.writeJSONToZip(zipWriter, "ratings.json", allRatings); err != nil {
