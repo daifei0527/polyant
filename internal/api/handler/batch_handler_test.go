@@ -372,3 +372,119 @@ func TestBatchDeleteHandler_EntryNotFound(t *testing.T) {
 		t.Errorf("Expected status %d, got %d", http.StatusBadRequest, rr.Code)
 	}
 }
+
+// ========== Additional Boundary Tests ==========
+
+func TestBatchCreateHandler_EmptyEntries(t *testing.T) {
+	handler, store := newTestBatchHandler(t)
+
+	user := &model.User{PublicKey: "test-pk", UserLevel: model.UserLevelLv1, Status: model.UserStatusActive}
+	store.User.Create(context.Background(), user)
+
+	// Empty entries list
+	reqBody := BatchCreateRequest{Entries: []BatchEntry{}}
+	body, _ := json.Marshal(reqBody)
+
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/entries/batch", bytes.NewReader(body))
+	req = req.WithContext(setUserInContext(req.Context(), user))
+
+	rr := httptest.NewRecorder()
+	handler.BatchCreateHandler(rr, req)
+
+	if rr.Code != http.StatusBadRequest {
+		t.Errorf("Expected status %d for empty entries, got %d", http.StatusBadRequest, rr.Code)
+	}
+}
+
+func TestBatchUpdateHandler_TooManyEntries(t *testing.T) {
+	handler, store := newTestBatchHandler(t)
+
+	user := &model.User{PublicKey: "test-pk", UserLevel: model.UserLevelLv1, Status: model.UserStatusActive}
+	store.User.Create(context.Background(), user)
+
+	// Create 101 update entries (exceeds limit)
+	entries := make([]BatchUpdateEntry, 101)
+	newTitle := "Updated"
+	for i := range entries {
+		entries[i] = BatchUpdateEntry{ID: "id", Title: &newTitle}
+	}
+	reqBody := BatchUpdateRequest{Entries: entries}
+	body, _ := json.Marshal(reqBody)
+
+	req := httptest.NewRequest(http.MethodPut, "/api/v1/entries/batch", bytes.NewReader(body))
+	req = req.WithContext(setUserInContext(req.Context(), user))
+
+	rr := httptest.NewRecorder()
+	handler.BatchUpdateHandler(rr, req)
+
+	if rr.Code != http.StatusBadRequest {
+		t.Errorf("Expected status %d for too many entries, got %d", http.StatusBadRequest, rr.Code)
+	}
+}
+
+func TestBatchUpdateHandler_EmptyEntries(t *testing.T) {
+	handler, store := newTestBatchHandler(t)
+
+	user := &model.User{PublicKey: "test-pk", UserLevel: model.UserLevelLv1, Status: model.UserStatusActive}
+	store.User.Create(context.Background(), user)
+
+	// Empty entries list
+	reqBody := BatchUpdateRequest{Entries: []BatchUpdateEntry{}}
+	body, _ := json.Marshal(reqBody)
+
+	req := httptest.NewRequest(http.MethodPut, "/api/v1/entries/batch", bytes.NewReader(body))
+	req = req.WithContext(setUserInContext(req.Context(), user))
+
+	rr := httptest.NewRecorder()
+	handler.BatchUpdateHandler(rr, req)
+
+	if rr.Code != http.StatusBadRequest {
+		t.Errorf("Expected status %d for empty entries, got %d", http.StatusBadRequest, rr.Code)
+	}
+}
+
+func TestBatchDeleteHandler_TooManyEntries(t *testing.T) {
+	handler, store := newTestBatchHandler(t)
+
+	user := &model.User{PublicKey: "test-pk", UserLevel: model.UserLevelLv1, Status: model.UserStatusActive}
+	store.User.Create(context.Background(), user)
+
+	// Create 101 IDs (exceeds limit)
+	ids := make([]string, 101)
+	for i := range ids {
+		ids[i] = "id"
+	}
+	reqBody := BatchDeleteRequest{IDs: ids}
+	body, _ := json.Marshal(reqBody)
+
+	req := httptest.NewRequest(http.MethodDelete, "/api/v1/entries/batch", bytes.NewReader(body))
+	req = req.WithContext(setUserInContext(req.Context(), user))
+
+	rr := httptest.NewRecorder()
+	handler.BatchDeleteHandler(rr, req)
+
+	if rr.Code != http.StatusBadRequest {
+		t.Errorf("Expected status %d for too many IDs, got %d", http.StatusBadRequest, rr.Code)
+	}
+}
+
+func TestBatchDeleteHandler_EmptyIDs(t *testing.T) {
+	handler, store := newTestBatchHandler(t)
+
+	user := &model.User{PublicKey: "test-pk", UserLevel: model.UserLevelLv1, Status: model.UserStatusActive}
+	store.User.Create(context.Background(), user)
+
+	// Empty IDs list
+	reqBody := BatchDeleteRequest{IDs: []string{}}
+	body, _ := json.Marshal(reqBody)
+
+	req := httptest.NewRequest(http.MethodDelete, "/api/v1/entries/batch", bytes.NewReader(body))
+	req = req.WithContext(setUserInContext(req.Context(), user))
+
+	rr := httptest.NewRecorder()
+	handler.BatchDeleteHandler(rr, req)
+
+	if rr.Code != http.StatusBadRequest {
+		t.Errorf("Expected status %d for empty IDs, got %d", http.StatusBadRequest, rr.Code)
+	}
+}
