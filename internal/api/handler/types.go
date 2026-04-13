@@ -96,3 +96,85 @@ type NodeStatusResponse struct {
 	Uptime     int64  `json:"uptime"`
 	LastSync   int64  `json:"last_sync"`
 }
+
+// ==================== 批量操作类型 ====================
+
+const MaxBatchSize = 100
+
+// BatchCreateRequest 批量创建请求
+type BatchCreateRequest struct {
+	Entries []BatchEntry `json:"entries"`
+	Options BatchOptions `json:"options,omitempty"`
+}
+
+// BatchUpdateRequest 批量更新请求
+type BatchUpdateRequest struct {
+	Entries []BatchUpdateEntry `json:"entries"`
+}
+
+// BatchDeleteRequest 批量删除请求
+type BatchDeleteRequest struct {
+	IDs []string `json:"ids"`
+}
+
+// BatchEntry 批量创建条目
+type BatchEntry struct {
+	Title     string                   `json:"title"`
+	Content   string                   `json:"content"`
+	JsonData  []map[string]interface{} `json:"json_data,omitempty"`
+	Category  string                   `json:"category"`
+	Tags      []string                 `json:"tags,omitempty"`
+	License   string                   `json:"license,omitempty"`
+	SourceRef string                   `json:"source_ref,omitempty"`
+}
+
+// BatchUpdateEntry 批量更新条目
+type BatchUpdateEntry struct {
+	ID       string                   `json:"id"`
+	Title    *string                  `json:"title,omitempty"`
+	Content  *string                  `json:"content,omitempty"`
+	JsonData []map[string]interface{} `json:"json_data,omitempty"`
+	Category *string                  `json:"category,omitempty"`
+	Tags     *[]string                `json:"tags,omitempty"`
+}
+
+// BatchOptions 批量操作选项
+type BatchOptions struct {
+	SkipDuplicates bool `json:"skip_duplicates"`
+	UpdateExisting bool `json:"update_existing"`
+}
+
+// BatchResponse 批量操作响应
+type BatchResponse struct {
+	Success bool          `json:"success"`
+	Summary BatchSummary  `json:"summary"`
+	Results []BatchResult `json:"results"`
+	Errors  []BatchError  `json:"errors,omitempty"`
+}
+
+// BatchSummary 批量操作汇总
+type BatchSummary struct {
+	Total    int `json:"total"`
+	Created  int `json:"created,omitempty"`
+	Updated  int `json:"updated,omitempty"`
+	Deleted  int `json:"deleted,omitempty"`
+	Skipped  int `json:"skipped,omitempty"`
+	Failed   int `json:"failed,omitempty"`
+	NotFound int `json:"not_found,omitempty"`
+}
+
+// BatchResult 单个条目操作结果
+type BatchResult struct {
+	Index   int    `json:"index"`
+	ID      string `json:"id"`
+	Status  string `json:"status"`
+	Reason  string `json:"reason,omitempty"`
+	Version int64  `json:"version,omitempty"`
+}
+
+// BatchError 批量操作错误
+type BatchError struct {
+	Index   int    `json:"index"`
+	Field   string `json:"field,omitempty"`
+	Message string `json:"message"`
+}
