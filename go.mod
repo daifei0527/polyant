@@ -20,6 +20,7 @@ require (
 	github.com/blevesearch/bleve/v2 v2.5.7
 	github.com/cockroachdb/pebble v1.1.5
 	github.com/dgraph-io/badger/v4 v4.9.1
+	google.golang.org/protobuf v1.36.11
 )
 
 require (
@@ -168,6 +169,5 @@ require (
 	golang.org/x/time v0.12.0 // indirect
 	golang.org/x/tools v0.43.0 // indirect
 	gonum.org/v1/gonum v0.17.0 // indirect
-	google.golang.org/protobuf v1.36.11 // indirect
 	lukechampine.com/blake3 v1.4.1 // indirect
 )

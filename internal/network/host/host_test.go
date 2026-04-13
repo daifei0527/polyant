@@ -326,7 +326,7 @@ func TestPermissiveACL(t *testing.T) {
 
 // TestAWSPProtocolID 测试协议 ID
 func TestAWSPProtocolID(t *testing.T) {
-	expected := "/agentwiki/sync/1.0.0"
+	expected := "/agentwiki/sync/2.0.0"
 	if AWSPProtocolID != expected {
 		t.Errorf("AWSPProtocolID = %q, want %q", AWSPProtocolID, expected)
 	}

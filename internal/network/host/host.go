@@ -17,6 +17,7 @@ import (
 	"github.com/libp2p/go-libp2p/core/peerstore"
 	"github.com/libp2p/go-libp2p/p2p/protocol/circuitv2/relay"
 	"github.com/libp2p/go-libp2p/p2p/security/noise"
+	libp2pquic "github.com/libp2p/go-libp2p/p2p/transport/quic"
 	"github.com/libp2p/go-libp2p/p2p/transport/tcp"
 	"github.com/libp2p/go-libp2p/p2p/transport/websocket"
 	"github.com/multiformats/go-multiaddr"
@@ -73,6 +74,10 @@ type HostConfig struct {
 	EnableAutoRelay bool
 	// EnableWebSocket 是否启用WebSocket传输（有助于穿透防火墙）
 	EnableWebSocket bool
+	// EnableQUIC 是否启用 QUIC 传输
+	EnableQUIC bool
+	// QUICListenPort QUIC 监听端口 (UDP)，0 表示随机
+	QUICListenPort int
 	// EnableHolePunching 是否启用打洞功能
 	EnableHolePunching bool
 	// PrivateKey 节点私钥
@@ -95,6 +100,8 @@ func DefaultHostConfig() *HostConfig {
 		EnableRelay:        true,
 		EnableAutoRelay:    true,
 		EnableWebSocket:    true,
+		EnableQUIC:         true,
+		QUICListenPort:     0,
 		EnableHolePunching: true,
 		ConnectionTimeout:  30 * time.Second,
 	}
@@ -141,7 +148,19 @@ func NewHost(ctx context.Context, cfg *HostConfig) (*P2PHost, error) {
 		transports = append(transports, libp2p.Transport(websocket.New))
 	}
 
+	// 添加 QUIC 传输
+	if cfg.EnableQUIC {
+		transports = append(transports, libp2p.Transport(libp2pquic.NewTransport))
+	}
+
 	opts = append(opts, transports...)
+
+	// 添加 QUIC 监听地址（如果指定了端口）
+	if cfg.EnableQUIC && cfg.QUICListenPort > 0 {
+		opts = append(opts, libp2p.ListenAddrStrings(
+			fmt.Sprintf("/ip4/0.0.0.0/udp/%d/quic-v1", cfg.QUICListenPort),
+		))
+	}
 
 	// NAT端口映射
 	if cfg.EnableNAT {
