@@ -117,6 +117,15 @@ type User struct {
 	RatingCnt      int32  `json:"ratingCnt"`      // 评分数量
 	NodeId         string `json:"nodeId"`         // 所属节点ID
 	Status         string `json:"status"`         // 用户状态
+	// 管理员相关字段
+	BanReason         string `json:"banReason,omitempty"`         // 封禁原因
+	BannedAt          int64  `json:"bannedAt,omitempty"`          // 封禁时间
+	BannedBy          string `json:"bannedBy,omitempty"`          // 封禁操作者公钥
+	UnbannedAt        int64  `json:"unbannedAt,omitempty"`        // 解封时间
+	UnbannedBy        string `json:"unbannedBy,omitempty"`        // 解封操作者公钥
+	LevelChangeReason string `json:"levelChangeReason,omitempty"` // 等级变更原因
+	LevelChangedAt    int64  `json:"levelChangedAt,omitempty"`    // 等级变更时间
+	LevelChangedBy    string `json:"levelChangedBy,omitempty"`    // 等级变更操作者公钥
 }
 
 // ToJSON 将用户序列化为JSON字节数组
@@ -127,6 +136,21 @@ func (u *User) ToJSON() ([]byte, error) {
 // FromJSON 从JSON字节数组反序列化为用户
 func (u *User) FromJSON(data []byte) error {
 	return json.Unmarshal(data, u)
+}
+
+// UserStats 用户统计信息
+type UserStats struct {
+	TotalUsers    int64 `json:"totalUsers"`    // 总用户数
+	Lv0Count      int64 `json:"lv0Count"`      // Lv0 用户数
+	Lv1Count      int64 `json:"lv1Count"`      // Lv1 用户数
+	Lv2Count      int64 `json:"lv2Count"`      // Lv2 用户数
+	Lv3Count      int64 `json:"lv3Count"`      // Lv3 用户数
+	Lv4Count      int64 `json:"lv4Count"`      // Lv4 用户数
+	Lv5Count      int64 `json:"lv5Count"`      // Lv5 用户数
+	ActiveUsers   int64 `json:"activeUsers"`   // 活跃用户数（30天内）
+	BannedCount   int64 `json:"bannedCount"`   // 被封禁用户数
+	TotalContribs int64 `json:"totalContribs"` // 总贡献数
+	TotalRatings  int64 `json:"totalRatings"`  // 总评分数
 }
 
 // ==================== 评分 ====================

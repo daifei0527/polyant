@@ -50,13 +50,14 @@ type UserStore interface {
 	// Update 更新用户信息
 	Update(ctx context.Context, user *model.User) (*model.User, error)
 	// List 列出用户
-	List(ctx context.Context, filter UserFilter) ([]*model.User, int, error)
+	List(ctx context.Context, filter UserFilter) ([]*model.User, int64, error)
 }
 
 // UserFilter 用户查询过滤器
 type UserFilter struct {
 	Level  int32
 	Status string
+	Search string
 	Limit  int
 	Offset int
 }

@@ -136,7 +136,7 @@ func (s *BadgerUserStore) Update(ctx context.Context, user *model.User) (*model.
 	return user, nil
 }
 
-func (s *BadgerUserStore) List(ctx context.Context, filter UserFilter) ([]*model.User, int, error) {
+func (s *BadgerUserStore) List(ctx context.Context, filter UserFilter) ([]*model.User, int64, error) {
 	users, err := s.store.ListUsers(filter.Offset, filter.Limit)
 	if err != nil {
 		return nil, 0, err
@@ -154,7 +154,7 @@ func (s *BadgerUserStore) List(ctx context.Context, filter UserFilter) ([]*model
 		filtered = append(filtered, u)
 	}
 
-	return filtered, len(filtered), nil
+	return filtered, int64(len(filtered)), nil
 }
 
 // BadgerRatingStore 适配 kv.RatingStore 到 storage.RatingStore 接口
