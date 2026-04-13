@@ -5,7 +5,7 @@ All notable changes to AgentWiki will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [1.0.0] - 2026-04-12
+## [1.0.0] - 2026-04-13
 
 ### Added
 
@@ -26,11 +26,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Incremental sync with mirror support
 - Push notification for entries and ratings
 
-#### Storage
-- BadgerDB-based persistent storage
+#### Storage (Phase 6a)
+- **Pebble KV 存储** - CockroachDB 团队开发的高性能嵌入式存储
+- **Bleve 全文索引** - 纯 Go 实现的持久化搜索引擎
+- 数据持久化支持，重启不丢失
+- 支持中英文混合搜索
 - In-memory storage for testing
-- TF-IDF based search index
-- Backlink index for knowledge graph
 
 #### User System
 - Multi-level user roles (Lv0-Lv3)
@@ -55,15 +56,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 #### Dependencies
 - go-libp2p for P2P networking
-- BadgerDB for embedded storage
+- Pebble (CockroachDB) for embedded KV storage
+- Bleve for full-text search
 - gojieba for Chinese text processing
 - testify for testing
 
-#### Performance
-- Entry creation: ~2.6μs/op
-- Entry retrieval: ~0.9μs/op
-- Search query: ~4.8ms/op (1000 entries)
-- Concurrent operations supported
+#### Test Coverage
+- Total coverage: **62.3%**
+- protocol module: 76.5%
+- daemon module: 81.6%
+- storage/index: 83.4%
+- auth: 90.6%
 
 ### Security
 - Ed25519 digital signatures for content integrity
