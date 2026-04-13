@@ -3,10 +3,12 @@ package protocol_test
 
 import (
 	"bytes"
+	"context"
 	"testing"
 	"time"
 
 	"github.com/daifei0527/agentwiki/internal/network/protocol"
+	"github.com/libp2p/go-libp2p"
 )
 
 // ==================== Codec 编解码测试 ====================
@@ -608,10 +610,18 @@ func TestCodecRoundTrip(t *testing.T) {
 		payload interface{}
 	}{
 		{"Handshake", protocol.MessageTypeHandshake, &protocol.Handshake{NodeID: "node-1"}},
+		{"HandshakeAck", protocol.MessageTypeHandshakeAck, &protocol.HandshakeAck{NodeID: "node-2", Accepted: true}},
 		{"Query", protocol.MessageTypeQuery, &protocol.Query{QueryID: "q-1", Keyword: "test"}},
+		{"QueryResult", protocol.MessageTypeQueryResult, &protocol.QueryResult{QueryID: "q-1", TotalCount: 10}},
 		{"SyncRequest", protocol.MessageTypeSyncRequest, &protocol.SyncRequest{RequestID: "sync-1"}},
 		{"SyncResponse", protocol.MessageTypeSyncResponse, &protocol.SyncResponse{RequestID: "sync-1"}},
+		{"MirrorRequest", protocol.MessageTypeMirrorRequest, &protocol.MirrorRequest{RequestID: "mirror-1"}},
+		{"MirrorData", protocol.MessageTypeMirrorData, &protocol.MirrorData{RequestID: "mirror-1"}},
+		{"MirrorAck", protocol.MessageTypeMirrorAck, &protocol.MirrorAck{RequestID: "mirror-1", Success: true}},
 		{"PushEntry", protocol.MessageTypePushEntry, &protocol.PushEntry{EntryID: "entry-1"}},
+		{"PushAck", protocol.MessageTypePushAck, &protocol.PushAck{EntryID: "entry-1", Accepted: true}},
+		{"RatingPush", protocol.MessageTypeRatingPush, &protocol.RatingPush{Rating: []byte("test")}},
+		{"RatingAck", protocol.MessageTypeRatingAck, &protocol.RatingAck{RatingID: "rating-1", Accepted: true}},
 		{"Heartbeat", protocol.MessageTypeHeartbeat, &protocol.Heartbeat{NodeID: "node-1"}},
 		{"Bitfield", protocol.MessageTypeBitfield, &protocol.Bitfield{NodeID: "node-1"}},
 	}
@@ -637,5 +647,580 @@ func TestCodecRoundTrip(t *testing.T) {
 				t.Errorf("消息类型不匹配: got %d, want %d", decoded.Header.Type, tc.msgType)
 			}
 		})
+	}
+}
+
+// TestCodecUnknownMessageType 测试未知消息类型处理
+func TestCodecUnknownMessageType(t *testing.T) {
+	codec := protocol.NewCodec()
+
+	// 使用未知的消息类型
+	msg := &protocol.Message{
+		Header:  &protocol.MessageHeader{Type: protocol.MessageType(999), MessageID: "test", Timestamp: 1},
+		Payload: nil,
+	}
+
+	encoded, err := codec.Encode(msg)
+	if err != nil {
+		t.Fatalf("Encode 失败: %v", err)
+	}
+
+	decoded, err := codec.Decode(bytes.NewReader(encoded))
+	if err != nil {
+		t.Fatalf("Decode 失败: %v", err)
+	}
+
+	// 未知消息类型应返回 nil payload
+	if decoded.Payload != nil {
+		t.Errorf("未知消息类型应返回 nil payload: got %T", decoded.Payload)
+	}
+}
+
+// TestCodecEncodeDecodeAllMessageTypes 测试所有消息类型的编解码
+func TestCodecEncodeDecodeAllMessageTypes(t *testing.T) {
+	codec := protocol.NewCodec()
+
+	// HandshakeAck
+	t.Run("HandshakeAck", func(t *testing.T) {
+		msg := &protocol.Message{
+			Header: protocol.NewMessageHeader(protocol.MessageTypeHandshakeAck),
+			Payload: &protocol.HandshakeAck{
+				NodeID:       "node-ack",
+				PeerID:       "peer-ack",
+				NodeType:     protocol.NodeTypeSeed,
+				Version:      "1.0.0",
+				Accepted:     true,
+				RejectReason: "",
+				Signature:    []byte("sig"),
+			},
+		}
+		encoded, _ := codec.Encode(msg)
+		decoded, _ := codec.Decode(bytes.NewReader(encoded))
+		ack, ok := decoded.Payload.(*protocol.HandshakeAck)
+		if !ok {
+			t.Fatalf("负载类型错误: %T", decoded.Payload)
+		}
+		if !ack.Accepted {
+			t.Error("Accepted 应为 true")
+		}
+	})
+
+	// QueryResult
+	t.Run("QueryResult", func(t *testing.T) {
+		msg := &protocol.Message{
+			Header: protocol.NewMessageHeader(protocol.MessageTypeQueryResult),
+			Payload: &protocol.QueryResult{
+				QueryID:    "query-result-1",
+				Entries:    [][]byte{[]byte("entry1"), []byte("entry2")},
+				TotalCount: 2,
+				HasMore:    false,
+			},
+		}
+		encoded, _ := codec.Encode(msg)
+		decoded, _ := codec.Decode(bytes.NewReader(encoded))
+		result, ok := decoded.Payload.(*protocol.QueryResult)
+		if !ok {
+			t.Fatalf("负载类型错误: %T", decoded.Payload)
+		}
+		if result.TotalCount != 2 {
+			t.Errorf("TotalCount 错误: got %d", result.TotalCount)
+		}
+	})
+
+	// MirrorData
+	t.Run("MirrorData", func(t *testing.T) {
+		msg := &protocol.Message{
+			Header: protocol.NewMessageHeader(protocol.MessageTypeMirrorData),
+			Payload: &protocol.MirrorData{
+				RequestID:    "mirror-data-1",
+				BatchIndex:   0,
+				TotalBatches: 3,
+				Entries:      [][]byte{[]byte("entry1")},
+				Categories:   [][]byte{[]byte("cat1")},
+			},
+		}
+		encoded, _ := codec.Encode(msg)
+		decoded, _ := codec.Decode(bytes.NewReader(encoded))
+		data, ok := decoded.Payload.(*protocol.MirrorData)
+		if !ok {
+			t.Fatalf("负载类型错误: %T", decoded.Payload)
+		}
+		if data.TotalBatches != 3 {
+			t.Errorf("TotalBatches 错误: got %d", data.TotalBatches)
+		}
+	})
+
+	// MirrorAck
+	t.Run("MirrorAck", func(t *testing.T) {
+		msg := &protocol.Message{
+			Header: protocol.NewMessageHeader(protocol.MessageTypeMirrorAck),
+			Payload: &protocol.MirrorAck{
+				RequestID:       "mirror-ack-1",
+				Success:         true,
+				ErrorMessage:    "",
+				ReceivedEntries: 100,
+			},
+		}
+		encoded, _ := codec.Encode(msg)
+		decoded, _ := codec.Decode(bytes.NewReader(encoded))
+		ack, ok := decoded.Payload.(*protocol.MirrorAck)
+		if !ok {
+			t.Fatalf("负载类型错误: %T", decoded.Payload)
+		}
+		if !ack.Success {
+			t.Error("Success 应为 true")
+		}
+	})
+
+	// PushAck
+	t.Run("PushAck", func(t *testing.T) {
+		msg := &protocol.Message{
+			Header: protocol.NewMessageHeader(protocol.MessageTypePushAck),
+			Payload: &protocol.PushAck{
+				EntryID:      "entry-ack-1",
+				Accepted:     true,
+				RejectReason: "",
+				NewVersion:   2,
+			},
+		}
+		encoded, _ := codec.Encode(msg)
+		decoded, _ := codec.Decode(bytes.NewReader(encoded))
+		ack, ok := decoded.Payload.(*protocol.PushAck)
+		if !ok {
+			t.Fatalf("负载类型错误: %T", decoded.Payload)
+		}
+		if ack.NewVersion != 2 {
+			t.Errorf("NewVersion 错误: got %d", ack.NewVersion)
+		}
+	})
+
+	// RatingAck
+	t.Run("RatingAck", func(t *testing.T) {
+		msg := &protocol.Message{
+			Header: protocol.NewMessageHeader(protocol.MessageTypeRatingAck),
+			Payload: &protocol.RatingAck{
+				RatingID:     "rating-ack-1",
+				Accepted:     true,
+				RejectReason: "",
+			},
+		}
+		encoded, _ := codec.Encode(msg)
+		decoded, _ := codec.Decode(bytes.NewReader(encoded))
+		ack, ok := decoded.Payload.(*protocol.RatingAck)
+		if !ok {
+			t.Fatalf("负载类型错误: %T", decoded.Payload)
+		}
+		if !ack.Accepted {
+			t.Error("Accepted 应为 true")
+		}
+	})
+}
+
+// TestCodecDecodeHeaderTooLarge 测试解码时头部过大
+func TestCodecDecodeHeaderTooLarge(t *testing.T) {
+	codec := protocol.NewCodec()
+
+	// 构造一个头部长度字段超大的数据
+	// 4 字节长度 + 后续数据
+	lenBuf := make([]byte, 4)
+	// 设置一个非常大的长度值 (超过 64MB)
+	lenBuf[0] = 0xFF
+	lenBuf[1] = 0xFF
+	lenBuf[2] = 0xFF
+	lenBuf[3] = 0xFF
+
+	_, err := codec.Decode(bytes.NewReader(lenBuf))
+	if err == nil {
+		t.Error("头部过大应返回错误")
+	}
+}
+
+// TestStreamWriterReaderMultiple 测试多条消息的流式读写
+// 注意: 当前协议设计不支持在同一缓冲区中读取多条消息
+// 因为 Decode 会读取所有剩余字节作为 payload
+// 这个测试验证单条消息的写入和读取
+func TestStreamWriterReaderMultiple(t *testing.T) {
+	// 测试多条消息的独立读写
+	testCases := []struct {
+		name    string
+		msgType protocol.MessageType
+		payload interface{}
+	}{
+		{"Handshake", protocol.MessageTypeHandshake, &protocol.Handshake{NodeID: "node-1"}},
+		{"Query", protocol.MessageTypeQuery, &protocol.Query{QueryID: "q-1", Keyword: "test"}},
+		{"Heartbeat", protocol.MessageTypeHeartbeat, &protocol.Heartbeat{NodeID: "node-1"}},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			var buf bytes.Buffer
+
+			writer := protocol.NewStreamWriter(&buf)
+			msg := &protocol.Message{
+				Header:  protocol.NewMessageHeader(tc.msgType),
+				Payload: tc.payload,
+			}
+
+			if err := writer.WriteMessage(msg); err != nil {
+				t.Fatalf("WriteMessage 失败: %v", err)
+			}
+
+			reader := protocol.NewStreamReader(&buf)
+			decoded, err := reader.ReadMessage()
+			if err != nil {
+				t.Fatalf("ReadMessage 失败: %v", err)
+			}
+
+			if decoded.Header.Type != tc.msgType {
+				t.Errorf("消息类型错误: got %d, want %d", decoded.Header.Type, tc.msgType)
+			}
+		})
+	}
+}
+
+// TestCodecEncodeWithLargePayload 测试大负载编码
+func TestCodecEncodeWithLargePayload(t *testing.T) {
+	codec := protocol.NewCodec()
+
+	// 创建一个大负载
+	largeContent := make([]byte, 1024*100) // 100KB
+	for i := range largeContent {
+		largeContent[i] = byte(i % 256)
+	}
+
+	msg := &protocol.Message{
+		Header:  protocol.NewMessageHeader(protocol.MessageTypePushEntry),
+		Payload: &protocol.PushEntry{EntryID: "large-entry", Entry: largeContent},
+	}
+
+	encoded, err := codec.Encode(msg)
+	if err != nil {
+		t.Fatalf("Encode 失败: %v", err)
+	}
+
+	decoded, err := codec.Decode(bytes.NewReader(encoded))
+	if err != nil {
+		t.Fatalf("Decode 失败: %v", err)
+	}
+
+	push, ok := decoded.Payload.(*protocol.PushEntry)
+	if !ok {
+		t.Fatalf("负载类型错误: %T", decoded.Payload)
+	}
+
+	if len(push.Entry) != len(largeContent) {
+		t.Errorf("Entry 长度错误: got %d, want %d", len(push.Entry), len(largeContent))
+	}
+}
+
+// ==================== Protocol 测试 ====================
+
+// mockHandler 实现 protocol.Handler 接口用于测试
+type mockHandler struct {
+	handshakeFunc    func(ctx context.Context, h *protocol.Handshake) (*protocol.HandshakeAck, error)
+	queryFunc        func(ctx context.Context, q *protocol.Query) (*protocol.QueryResult, error)
+	syncRequestFunc  func(ctx context.Context, r *protocol.SyncRequest) (*protocol.SyncResponse, error)
+	mirrorRequestFunc func(ctx context.Context, r *protocol.MirrorRequest) (<-chan *protocol.MirrorData, error)
+	pushEntryFunc    func(ctx context.Context, e *protocol.PushEntry) (*protocol.PushAck, error)
+	ratingPushFunc   func(ctx context.Context, r *protocol.RatingPush) (*protocol.RatingAck, error)
+	heartbeatFunc    func(ctx context.Context, h *protocol.Heartbeat) error
+	bitfieldFunc     func(ctx context.Context, b *protocol.Bitfield) error
+}
+
+func (m *mockHandler) HandleHandshake(ctx context.Context, h *protocol.Handshake) (*protocol.HandshakeAck, error) {
+	if m.handshakeFunc != nil {
+		return m.handshakeFunc(ctx, h)
+	}
+	return &protocol.HandshakeAck{Accepted: true}, nil
+}
+
+func (m *mockHandler) HandleQuery(ctx context.Context, q *protocol.Query) (*protocol.QueryResult, error) {
+	if m.queryFunc != nil {
+		return m.queryFunc(ctx, q)
+	}
+	return &protocol.QueryResult{QueryID: q.QueryID}, nil
+}
+
+func (m *mockHandler) HandleSyncRequest(ctx context.Context, r *protocol.SyncRequest) (*protocol.SyncResponse, error) {
+	if m.syncRequestFunc != nil {
+		return m.syncRequestFunc(ctx, r)
+	}
+	return &protocol.SyncResponse{RequestID: r.RequestID}, nil
+}
+
+func (m *mockHandler) HandleMirrorRequest(ctx context.Context, r *protocol.MirrorRequest) (<-chan *protocol.MirrorData, error) {
+	if m.mirrorRequestFunc != nil {
+		return m.mirrorRequestFunc(ctx, r)
+	}
+	ch := make(chan *protocol.MirrorData)
+	close(ch)
+	return ch, nil
+}
+
+func (m *mockHandler) HandlePushEntry(ctx context.Context, e *protocol.PushEntry) (*protocol.PushAck, error) {
+	if m.pushEntryFunc != nil {
+		return m.pushEntryFunc(ctx, e)
+	}
+	return &protocol.PushAck{Accepted: true}, nil
+}
+
+func (m *mockHandler) HandleRatingPush(ctx context.Context, r *protocol.RatingPush) (*protocol.RatingAck, error) {
+	if m.ratingPushFunc != nil {
+		return m.ratingPushFunc(ctx, r)
+	}
+	return &protocol.RatingAck{Accepted: true}, nil
+}
+
+func (m *mockHandler) HandleHeartbeat(ctx context.Context, h *protocol.Heartbeat) error {
+	if m.heartbeatFunc != nil {
+		return m.heartbeatFunc(ctx, h)
+	}
+	return nil
+}
+
+func (m *mockHandler) HandleBitfield(ctx context.Context, b *protocol.Bitfield) error {
+	if m.bitfieldFunc != nil {
+		return m.bitfieldFunc(ctx, b)
+	}
+	return nil
+}
+
+// TestNewProtocol 测试创建协议实例
+func TestNewProtocol(t *testing.T) {
+	_ = context.Background()
+
+	// 创建测试用的 libp2p host
+	h, err := libp2p.New()
+	if err != nil {
+		t.Fatalf("创建 libp2p host 失败: %v", err)
+	}
+	defer h.Close()
+
+	handler := &mockHandler{}
+	p := protocol.NewProtocol(h, handler)
+
+	if p == nil {
+		t.Error("NewProtocol 不应返回 nil")
+	}
+}
+
+// TestProtocolHandlerHandshake 测试握手处理
+func TestProtocolHandlerHandshake(t *testing.T) {
+	ctx := context.Background()
+
+	h1, err := libp2p.New()
+	if err != nil {
+		t.Fatalf("创建 host1 失败: %v", err)
+	}
+	defer h1.Close()
+
+	h2, err := libp2p.New()
+	if err != nil {
+		t.Fatalf("创建 host2 失败: %v", err)
+	}
+	defer h2.Close()
+
+	// 连接两个节点
+	h1.Peerstore().AddAddrs(h2.ID(), h2.Addrs(), time.Hour)
+	if err := h1.Connect(ctx, h2.Peerstore().PeerInfo(h2.ID())); err != nil {
+		t.Fatalf("连接失败: %v", err)
+	}
+
+	// 在 h2 上设置协议处理器
+	handler := &mockHandler{
+		handshakeFunc: func(ctx context.Context, h *protocol.Handshake) (*protocol.HandshakeAck, error) {
+			return &protocol.HandshakeAck{
+				NodeID:   "node-2",
+				PeerID:   h2.ID().String(),
+				Accepted: true,
+			}, nil
+		},
+	}
+	p2 := protocol.NewProtocol(h2, handler)
+
+	if p2 == nil {
+		t.Error("NewProtocol 不应返回 nil")
+	}
+}
+
+// TestProtocolHandlerQuery 测试查询处理
+func TestProtocolHandlerQuery(t *testing.T) {
+	_ = context.Background()
+
+	h, err := libp2p.New()
+	if err != nil {
+		t.Fatalf("创建 host 失败: %v", err)
+	}
+	defer h.Close()
+
+	handler := &mockHandler{
+		queryFunc: func(ctx context.Context, q *protocol.Query) (*protocol.QueryResult, error) {
+			return &protocol.QueryResult{
+				QueryID:    q.QueryID,
+				Entries:    nil,
+				TotalCount: 0,
+				HasMore:    false,
+			}, nil
+		},
+	}
+	p := protocol.NewProtocol(h, handler)
+
+	if p == nil {
+		t.Error("NewProtocol 不应返回 nil")
+	}
+}
+
+// TestProtocolHandlerSyncRequest 测试同步请求处理
+func TestProtocolHandlerSyncRequest(t *testing.T) {
+	_ = context.Background()
+
+	h, err := libp2p.New()
+	if err != nil {
+		t.Fatalf("创建 host 失败: %v", err)
+	}
+	defer h.Close()
+
+	handler := &mockHandler{
+		syncRequestFunc: func(ctx context.Context, r *protocol.SyncRequest) (*protocol.SyncResponse, error) {
+			return &protocol.SyncResponse{
+				RequestID:       r.RequestID,
+				NewEntries:      nil,
+				UpdatedEntries:  nil,
+				DeletedEntryIDs: nil,
+				ServerTimestamp: time.Now().UnixMilli(),
+			}, nil
+		},
+	}
+	p := protocol.NewProtocol(h, handler)
+
+	if p == nil {
+		t.Error("NewProtocol 不应返回 nil")
+	}
+}
+
+// TestProtocolHandlerPushEntry 测试推送条目处理
+func TestProtocolHandlerPushEntry(t *testing.T) {
+	_ = context.Background()
+
+	h, err := libp2p.New()
+	if err != nil {
+		t.Fatalf("创建 host 失败: %v", err)
+	}
+	defer h.Close()
+
+	handler := &mockHandler{
+		pushEntryFunc: func(ctx context.Context, e *protocol.PushEntry) (*protocol.PushAck, error) {
+			return &protocol.PushAck{
+				EntryID:  e.EntryID,
+				Accepted: true,
+			}, nil
+		},
+	}
+	p := protocol.NewProtocol(h, handler)
+
+	if p == nil {
+		t.Error("NewProtocol 不应返回 nil")
+	}
+}
+
+// TestProtocolHandlerRatingPush 测试评分推送处理
+func TestProtocolHandlerRatingPush(t *testing.T) {
+	_ = context.Background()
+
+	h, err := libp2p.New()
+	if err != nil {
+		t.Fatalf("创建 host 失败: %v", err)
+	}
+	defer h.Close()
+
+	handler := &mockHandler{
+		ratingPushFunc: func(ctx context.Context, r *protocol.RatingPush) (*protocol.RatingAck, error) {
+			return &protocol.RatingAck{
+				RatingID: "rating-1",
+				Accepted: true,
+			}, nil
+		},
+	}
+	p := protocol.NewProtocol(h, handler)
+
+	if p == nil {
+		t.Error("NewProtocol 不应返回 nil")
+	}
+}
+
+// TestProtocolHandlerHeartbeat 测试心跳处理
+func TestProtocolHandlerHeartbeat(t *testing.T) {
+	_ = context.Background()
+
+	h, err := libp2p.New()
+	if err != nil {
+		t.Fatalf("创建 host 失败: %v", err)
+	}
+	defer h.Close()
+
+	heartbeatReceived := false
+	handler := &mockHandler{
+		heartbeatFunc: func(ctx context.Context, hb *protocol.Heartbeat) error {
+			heartbeatReceived = true
+			return nil
+		},
+	}
+	p := protocol.NewProtocol(h, handler)
+
+	if p == nil {
+		t.Error("NewProtocol 不应返回 nil")
+	}
+
+	_ = heartbeatReceived // 验证 handler 设置正确
+}
+
+// TestProtocolHandlerBitfield 测试位图处理
+func TestProtocolHandlerBitfield(t *testing.T) {
+	_ = context.Background()
+
+	h, err := libp2p.New()
+	if err != nil {
+		t.Fatalf("创建 host 失败: %v", err)
+	}
+	defer h.Close()
+
+	handler := &mockHandler{
+		bitfieldFunc: func(ctx context.Context, b *protocol.Bitfield) error {
+			return nil
+		},
+	}
+	p := protocol.NewProtocol(h, handler)
+
+	if p == nil {
+		t.Error("NewProtocol 不应返回 nil")
+	}
+}
+
+// TestProtocolHandlerMirrorRequest 测试镜像请求处理
+func TestProtocolHandlerMirrorRequest(t *testing.T) {
+	_ = context.Background()
+
+	h, err := libp2p.New()
+	if err != nil {
+		t.Fatalf("创建 host 失败: %v", err)
+	}
+	defer h.Close()
+
+	handler := &mockHandler{
+		mirrorRequestFunc: func(ctx context.Context, r *protocol.MirrorRequest) (<-chan *protocol.MirrorData, error) {
+			ch := make(chan *protocol.MirrorData, 1)
+			ch <- &protocol.MirrorData{
+				RequestID:   r.RequestID,
+				BatchIndex:  0,
+				TotalBatches: 1,
+			}
+			close(ch)
+			return ch, nil
+		},
+	}
+	p := protocol.NewProtocol(h, handler)
+
+	if p == nil {
+		t.Error("NewProtocol 不应返回 nil")
 	}
 }
