@@ -9,10 +9,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 
 	"github.com/daifei0527/agentwiki/internal/core/email"
+	"github.com/daifei0527/agentwiki/internal/core/user"
 	"github.com/daifei0527/agentwiki/internal/storage"
 	"github.com/daifei0527/agentwiki/internal/storage/model"
 	awerrors "github.com/daifei0527/agentwiki/pkg/errors"
@@ -21,6 +23,7 @@ import (
 // UserHandler 用户 HTTP 处理器
 // 负责用户注册、邮箱验证、用户信息查询和条目评分
 type UserHandler struct {
+	store           *storage.Store
 	userStore       storage.UserStore
 	entryStore      storage.EntryStore
 	ratingStore     storage.RatingStore
@@ -30,6 +33,7 @@ type UserHandler struct {
 
 // NewUserHandler 创建新的 UserHandler 实例
 func NewUserHandler(
+	store *storage.Store,
 	userStore storage.UserStore,
 	entryStore storage.EntryStore,
 	ratingStore storage.RatingStore,
@@ -37,6 +41,7 @@ func NewUserHandler(
 	verificationMgr *email.VerificationManager,
 ) *UserHandler {
 	return &UserHandler{
+		store:           store,
 		userStore:       userStore,
 		entryStore:      entryStore,
 		ratingStore:     ratingStore,
@@ -461,4 +466,41 @@ func generateSimpleCode(email string) string {
 func verifySimpleCode(code, email string) bool {
 	expected := generateSimpleCode(email)
 	return code == expected
+}
+
+// ListUsersHandler 用户列表处理器
+// GET /api/v1/admin/users?page=1&limit=20&level=1&search=keyword
+func (h *UserHandler) ListUsersHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		writeError(w, awerrors.New(104, awerrors.CategoryAPI, "method not allowed", 405))
+		return
+	}
+
+	// 解析查询参数
+	page, _ := strconv.Atoi(r.URL.Query().Get("page"))
+	if page < 1 {
+		page = 1
+	}
+	limit, _ := strconv.Atoi(r.URL.Query().Get("limit"))
+	if limit < 1 || limit > 100 {
+		limit = 20
+	}
+	level, _ := strconv.Atoi(r.URL.Query().Get("level"))
+	search := r.URL.Query().Get("search")
+
+	// 获取用户列表
+	ctx := r.Context()
+	adminSvc := user.NewAdminService(h.store)
+	users, total, err := adminSvc.ListUsers(ctx, (page-1)*limit, limit, int32(level), search)
+	if err != nil {
+		writeError(w, awerrors.Wrap(0, awerrors.CategorySystem, err.Error(), 500, err))
+		return
+	}
+
+	writeJSON(w, http.StatusOK, map[string]interface{}{
+		"users": users,
+		"total": total,
+		"page":  page,
+		"limit": limit,
+	})
 }
