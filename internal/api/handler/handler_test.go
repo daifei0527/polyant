@@ -30,7 +30,7 @@ func newTestStore(t *testing.T) *storage.Store {
 func newTestUserHandler(t *testing.T) (*UserHandler, *storage.Store) {
 	store := newTestStore(t)
 	verificationMgr := email.NewVerificationManager()
-	handler := NewUserHandler(store.User, store.Entry, store.Rating, nil, verificationMgr)
+	handler := NewUserHandler(store, store.User, store.Entry, store.Rating, nil, verificationMgr)
 	return handler, store
 }
 
