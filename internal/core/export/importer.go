@@ -110,6 +110,11 @@ func (i *Importer) Import(zipData []byte, opts ImportOptions) *ImportResult {
 		i.importRatings(data, opts, result)
 	}
 
+	// 如果有错误，设置 Success 为 false
+	if len(result.Errors) > 0 {
+		result.Success = false
+	}
+
 	return result
 }
 
@@ -141,7 +146,14 @@ func (i *Importer) importCategories(data []byte, opts ImportOptions, result *Imp
 			}
 		} else {
 			// 分类不存在，创建
-			i.store.Category.Create(nil, cat)
+			if _, err := i.store.Category.Create(nil, cat); err != nil {
+				result.Errors = append(result.Errors, ImportError{
+					Type:    "category",
+					ID:      cat.Path,
+					Message: fmt.Sprintf("failed to create category: %v", err),
+				})
+				continue
+			}
 		}
 		result.Summary.CategoriesImported++
 	}
@@ -179,7 +191,14 @@ func (i *Importer) importUsers(data []byte, opts ImportOptions, result *ImportRe
 				// 只更新公开字段，不修改等级
 				existing.AgentName = eu.AgentName
 				existing.Status = eu.Status
-				i.store.User.Update(nil, existing)
+				if _, err := i.store.User.Update(nil, existing); err != nil {
+					result.Errors = append(result.Errors, ImportError{
+						Type:    "user",
+						ID:      eu.PublicKey,
+						Message: fmt.Sprintf("failed to update user: %v", err),
+					})
+					continue
+				}
 			}
 		} else {
 			// 用户不存在，创建
@@ -190,7 +209,14 @@ func (i *Importer) importUsers(data []byte, opts ImportOptions, result *ImportRe
 				RegisteredAt: eu.RegisteredAt,
 				Status:       eu.Status,
 			}
-			i.store.User.Create(nil, user)
+			if _, err := i.store.User.Create(nil, user); err != nil {
+				result.Errors = append(result.Errors, ImportError{
+					Type:    "user",
+					ID:      eu.PublicKey,
+					Message: fmt.Sprintf("failed to create user: %v", err),
+				})
+				continue
+			}
 		}
 		result.Summary.UsersImported++
 	}
@@ -216,11 +242,25 @@ func (i *Importer) importEntries(data []byte, opts ImportOptions, result *Import
 				result.Summary.EntriesSkipped++
 				continue
 			case ConflictOverwrite:
-				i.store.Entry.Update(nil, entry)
+				if _, err := i.store.Entry.Update(nil, entry); err != nil {
+					result.Errors = append(result.Errors, ImportError{
+						Type:    "entry",
+						ID:      entry.ID,
+						Message: fmt.Sprintf("failed to update entry: %v", err),
+					})
+					continue
+				}
 			case ConflictMerge:
 				// 比较 version，保留更高版本
 				if entry.Version > existing.Version {
-					i.store.Entry.Update(nil, entry)
+					if _, err := i.store.Entry.Update(nil, entry); err != nil {
+						result.Errors = append(result.Errors, ImportError{
+							Type:    "entry",
+							ID:      entry.ID,
+							Message: fmt.Sprintf("failed to update entry: %v", err),
+						})
+						continue
+					}
 				} else {
 					result.Summary.EntriesSkipped++
 					continue
@@ -229,7 +269,14 @@ func (i *Importer) importEntries(data []byte, opts ImportOptions, result *Import
 			result.Summary.EntriesUpdated++
 		} else {
 			// 条目不存在，创建
-			i.store.Entry.Create(nil, entry)
+			if _, err := i.store.Entry.Create(nil, entry); err != nil {
+				result.Errors = append(result.Errors, ImportError{
+					Type:    "entry",
+					ID:      entry.ID,
+					Message: fmt.Sprintf("failed to create entry: %v", err),
+				})
+				continue
+			}
 			result.Summary.EntriesImported++
 		}
 	}
@@ -262,7 +309,14 @@ func (i *Importer) importRatings(data []byte, opts ImportOptions, result *Import
 				continue
 			}
 		} else {
-			i.store.Rating.Create(nil, rating)
+			if _, err := i.store.Rating.Create(nil, rating); err != nil {
+				result.Errors = append(result.Errors, ImportError{
+					Type:    "rating",
+					ID:      rating.ID,
+					Message: fmt.Sprintf("failed to create rating: %v", err),
+				})
+				continue
+			}
 		}
 		result.Summary.RatingsImported++
 	}
