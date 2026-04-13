@@ -11,7 +11,6 @@ import (
 const (
 	votePrefix      = "vote:"
 	votesByVoterKey = "votes:voter:"
-	votesByElection = "votes:election:"
 )
 
 // VoteStore 投票存储接口
@@ -107,6 +106,19 @@ func (s *KVVoteStore) HasVoted(ctx context.Context, voterID, electionID string) 
 }
 
 func (s *KVVoteStore) Delete(ctx context.Context, id string) error {
+	// First get the vote to find the voter index
+	vote, err := s.Get(ctx, id)
+	if err != nil {
+		return err
+	}
+
+	// Delete main key
 	key := []byte(votePrefix + id)
-	return s.kv.Delete(key)
+	if err := s.kv.Delete(key); err != nil {
+		return err
+	}
+
+	// Delete voter index
+	voterIndexKey := []byte(fmt.Sprintf("%s%s:%s", votesByVoterKey, vote.ElectionID, vote.VoterID))
+	return s.kv.Delete(voterIndexKey)
 }
