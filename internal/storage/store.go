@@ -202,3 +202,9 @@ func (s *Store) Close() error {
 	}
 	return nil
 }
+
+// KVStore 返回底层 KV 存储
+// 用于选举等需要直接访问 KV 存储的功能
+func (s *Store) KVStore() kv.Store {
+	return s.kvStore
+}
