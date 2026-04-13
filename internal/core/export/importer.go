@@ -9,6 +9,7 @@ import (
 
 	"github.com/daifei0527/agentwiki/internal/storage"
 	"github.com/daifei0527/agentwiki/internal/storage/model"
+	"github.com/daifei0527/agentwiki/pkg/logger"
 )
 
 // ConflictStrategy 冲突处理策略
@@ -131,8 +132,9 @@ func (i *Importer) importCategories(data []byte, opts ImportOptions, result *Imp
 			case ConflictSkip:
 				continue
 			case ConflictOverwrite:
-				// 更新分类
-				i.store.Category.Create(nil, cat) // 覆盖
+				// 分类结构不适合覆盖，保留现有
+				logger.Warn("category overwrite not supported, keeping existing: %s", cat.Path)
+				continue
 			case ConflictMerge:
 				// 保留现有分类
 				continue
@@ -252,7 +254,9 @@ func (i *Importer) importRatings(data []byte, opts ImportOptions, result *Import
 			case ConflictSkip:
 				continue
 			case ConflictOverwrite:
-				i.store.Rating.Create(nil, rating)
+				// 评分覆盖需要删除现有评分，但接口不支持
+				logger.Warn("rating overwrite not supported, skipping: entry=%s, rater=%s", rating.EntryId, rating.RaterPubkey)
+				continue
 			case ConflictMerge:
 				// 保留现有评分
 				continue
