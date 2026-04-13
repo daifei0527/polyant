@@ -86,7 +86,7 @@ func (h *BatchHandler) BatchCreateHandler(w http.ResponseWriter, r *http.Request
 	}
 
 	// 执行批量创建
-	response := h.executeBatchCreate(r, req.Entries, user, req.Options)
+	response := h.executeBatchCreate(r, req.Entries, user)
 
 	status := http.StatusCreated
 	if response.Summary.Failed > 0 {
@@ -153,12 +153,7 @@ func (h *BatchHandler) BatchUpdateHandler(w http.ResponseWriter, r *http.Request
 	// 执行批量更新
 	response := h.executeBatchUpdate(r, req.Entries, user)
 
-	status := http.StatusOK
-	if response.Summary.Failed > 0 {
-		status = http.StatusOK // 部分成功
-	}
-
-	writeJSON(w, status, response)
+	writeJSON(w, http.StatusOK, response)
 }
 
 // BatchDeleteHandler 批量删除知识条目
@@ -218,12 +213,7 @@ func (h *BatchHandler) BatchDeleteHandler(w http.ResponseWriter, r *http.Request
 	// 执行批量删除
 	response := h.executeBatchDelete(r, req.IDs, user)
 
-	status := http.StatusOK
-	if response.Summary.Failed > 0 {
-		status = http.StatusOK // 部分成功
-	}
-
-	writeJSON(w, status, response)
+	writeJSON(w, http.StatusOK, response)
 }
 
 // validateCreateEntries 验证批量创建条目
@@ -340,7 +330,7 @@ func (h *BatchHandler) validateDeleteEntries(ctx context.Context, ids []string, 
 }
 
 // executeBatchCreate 执行批量创建
-func (h *BatchHandler) executeBatchCreate(r *http.Request, entries []BatchEntry, user *model.User, options BatchOptions) *BatchResponse {
+func (h *BatchHandler) executeBatchCreate(r *http.Request, entries []BatchEntry, user *model.User) *BatchResponse {
 	response := &BatchResponse{
 		Success: true,
 		Summary: BatchSummary{
