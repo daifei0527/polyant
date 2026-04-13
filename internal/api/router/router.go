@@ -12,6 +12,7 @@ import (
 	"github.com/daifei0527/agentwiki/internal/core/email"
 	"github.com/daifei0527/agentwiki/internal/storage"
 	"github.com/daifei0527/agentwiki/internal/storage/index"
+	"github.com/daifei0527/agentwiki/internal/storage/kv"
 	"github.com/daifei0527/agentwiki/internal/storage/model"
 	"github.com/daifei0527/agentwiki/pkg/config"
 )
@@ -31,6 +32,7 @@ type EntryPusher interface {
 // Dependencies 路由依赖注入容器
 // 包含所有 handler 需要的存储和引擎实例
 type Dependencies struct {
+	Store           *storage.Store
 	EntryStore      storage.EntryStore
 	UserStore       storage.UserStore
 	RatingStore     storage.RatingStore
@@ -41,6 +43,7 @@ type Dependencies struct {
 	VerificationMgr *email.VerificationManager
 	RemoteQuerier   RemoteQuerier   // 远程查询服务
 	EntryPusher     EntryPusher     // 条目推送服务
+	KVStore         kv.Store        // KV 存储（选举等功能需要）
 	NodeID          string
 	NodeType        string
 	Version         string
@@ -51,12 +54,14 @@ type Dependencies struct {
 // 中间件执行顺序: RequestID -> Logging -> Recovery -> CORS -> [Auth] -> Handler
 func NewRouter(store *storage.Store, cfg *config.Config) (http.Handler, error) {
 	return NewRouterWithDeps(&Dependencies{
+		Store:         store,
 		EntryStore:    store.Entry,
 		UserStore:     store.User,
 		RatingStore:   store.Rating,
 		CategoryStore: store.Category,
 		SearchEngine:  store.Search,
 		Backlink:      store.Backlink,
+		KVStore:       store.KVStore(),
 		NodeID:        "local-node-1",
 		NodeType:      cfg.Node.Type,
 		Version:       "v0.1.0-dev",
@@ -81,6 +86,7 @@ func NewRouterWithDeps(deps *Dependencies) (http.Handler, error) {
 	}
 
 	userHandler := handler.NewUserHandler(
+		deps.Store,
 		deps.UserStore,
 		deps.EntryStore,
 		deps.RatingStore,
@@ -89,6 +95,16 @@ func NewRouterWithDeps(deps *Dependencies) (http.Handler, error) {
 	)
 	categoryHandler := handler.NewCategoryHandler(deps.CategoryStore, deps.EntryStore)
 	nodeHandler := handler.NewNodeHandler(deps.NodeID, deps.NodeType, deps.Version, deps.EntryStore)
+
+	// 创建管理员和选举 handler
+	var adminHandler *handler.AdminHandler
+	var electionHandler *handler.ElectionHandler
+	if deps.Store != nil {
+		adminHandler = handler.NewAdminHandler(deps.Store)
+	}
+	if deps.KVStore != nil {
+		electionHandler = handler.NewElectionHandler(deps.KVStore)
+	}
 
 	// 创建认证中间件
 	authMW := middleware.NewAuthMiddleware(deps.UserStore)
@@ -100,10 +116,10 @@ func NewRouterWithDeps(deps *Dependencies) (http.Handler, error) {
 	rateLimitMW := middleware.NewRateLimitMiddleware(middleware.DefaultRateLimitConfig())
 
 	// 注册公开路由（无需认证）
-	registerPublicRoutes(mux, entryHandler, userHandler, categoryHandler, nodeHandler)
+	registerPublicRoutes(mux, entryHandler, userHandler, categoryHandler, nodeHandler, electionHandler)
 
 	// 注册认证路由（需要 Ed25519 签名认证）
-	registerAuthRoutes(mux, authMW, entryHandler, userHandler, categoryHandler, nodeHandler)
+	registerAuthRoutes(mux, authMW, entryHandler, userHandler, categoryHandler, nodeHandler, adminHandler, electionHandler)
 
 	// 应用中间件链
 	var httpHandler http.Handler = mux
@@ -126,7 +142,7 @@ func (a *remoteQuerierAdapter) SearchWithRemote(ctx context.Context, query index
 }
 
 // registerPublicRoutes 注册公开路由（无需认证）
-func registerPublicRoutes(mux *http.ServeMux, eh *handler.EntryHandler, uh *handler.UserHandler, ch *handler.CategoryHandler, nh *handler.NodeHandler) {
+func registerPublicRoutes(mux *http.ServeMux, eh *handler.EntryHandler, uh *handler.UserHandler, ch *handler.CategoryHandler, nh *handler.NodeHandler, elh *handler.ElectionHandler) {
 	// 搜索知识条目
 	mux.HandleFunc("/api/v1/search", eh.SearchHandler)
 
@@ -183,10 +199,38 @@ func registerPublicRoutes(mux *http.ServeMux, eh *handler.EntryHandler, uh *hand
 
 	// 用户注册
 	mux.HandleFunc("/api/v1/user/register", uh.RegisterHandler)
+
+	// 选举公开路由（列出选举、获取选举详情）
+	if elh != nil {
+		// 列出选举 GET /api/v1/elections?status=active
+		mux.HandleFunc("/api/v1/elections", func(w http.ResponseWriter, r *http.Request) {
+			if r.Method == http.MethodGet {
+				elh.ListElectionsHandler(w, r)
+			} else {
+				http.NotFound(w, r)
+			}
+		})
+
+		// 获取选举详情 GET /api/v1/elections/{id}
+		mux.HandleFunc("/api/v1/elections/", func(w http.ResponseWriter, r *http.Request) {
+			// 检查是否是子资源请求
+			path := r.URL.Path
+			if strings.Contains(path, "/candidates") || strings.Contains(path, "/vote") || strings.Contains(path, "/close") {
+				// 这些需要认证，交给认证路由处理
+				http.NotFound(w, r)
+				return
+			}
+			if r.Method == http.MethodGet {
+				elh.GetElectionHandler(w, r)
+			} else {
+				http.NotFound(w, r)
+			}
+		})
+	}
 }
 
 // registerAuthRoutes 注册需要认证的路由
-func registerAuthRoutes(mux *http.ServeMux, authMW *middleware.AuthMiddleware, eh *handler.EntryHandler, uh *handler.UserHandler, ch *handler.CategoryHandler, nh *handler.NodeHandler) {
+func registerAuthRoutes(mux *http.ServeMux, authMW *middleware.AuthMiddleware, eh *handler.EntryHandler, uh *handler.UserHandler, ch *handler.CategoryHandler, nh *handler.NodeHandler, ah *handler.AdminHandler, elh *handler.ElectionHandler) {
 	// 创建条目（POST /api/v1/entry）
 	mux.Handle("/api/v1/entry/create", authMW.Middleware(http.HandlerFunc(eh.CreateEntryHandler)))
 
@@ -222,4 +266,44 @@ func registerAuthRoutes(mux *http.ServeMux, authMW *middleware.AuthMiddleware, e
 
 	// 触发同步（POST /api/v1/node/sync）
 	mux.Handle("/api/v1/node/sync", authMW.Middleware(http.HandlerFunc(nh.TriggerSyncHandler)))
+
+	// ==================== 管理员路由 ====================
+	if ah != nil {
+		// 用户列表 GET /api/v1/admin/users - Lv4+ (Admin)
+		mux.Handle("/api/v1/admin/users", authMW.Middleware(authMW.RequireLevel(model.UserLevelLv4, http.HandlerFunc(ah.ListUsersHandler))))
+
+		// 封禁用户 POST /api/v1/admin/users/{public_key}/ban - Lv4+ (Admin)
+		mux.Handle("/api/v1/admin/users/", authMW.Middleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			// 检查具体的操作路径
+			path := r.URL.Path
+			if strings.HasSuffix(path, "/ban") {
+				authMW.RequireLevel(model.UserLevelLv4, http.HandlerFunc(ah.BanUserHandler))(w, r)
+			} else if strings.HasSuffix(path, "/unban") {
+				authMW.RequireLevel(model.UserLevelLv4, http.HandlerFunc(ah.UnbanUserHandler))(w, r)
+			} else if strings.HasSuffix(path, "/level") {
+				// 设置用户等级 PUT /api/v1/admin/users/{public_key}/level - Lv5 (SuperAdmin)
+				authMW.RequireLevel(model.UserLevelLv5, http.HandlerFunc(ah.SetUserLevelHandler))(w, r)
+			} else {
+				http.NotFound(w, r)
+			}
+		})))
+
+		// 用户统计 GET /api/v1/admin/stats/users - Lv4+ (Admin)
+		mux.Handle("/api/v1/admin/stats/users", authMW.Middleware(authMW.RequireLevel(model.UserLevelLv4, http.HandlerFunc(ah.GetUserStatsHandler))))
+	}
+
+	// ==================== 选举路由 ====================
+	if elh != nil {
+		// 创建选举 POST /api/v1/elections - Lv5 (SuperAdmin)
+		mux.Handle("/api/v1/elections/create", authMW.Middleware(authMW.RequireLevel(model.UserLevelLv5, http.HandlerFunc(elh.CreateElectionHandler))))
+
+		// 提名候选人 POST /api/v1/elections/{id}/candidates - 已认证用户
+		mux.Handle("/api/v1/elections/candidates/", authMW.Middleware(http.HandlerFunc(elh.NominateCandidateHandler)))
+
+		// 投票 POST /api/v1/elections/{id}/vote - Lv3+
+		mux.Handle("/api/v1/elections/vote/", authMW.Middleware(authMW.RequireLevel(model.UserLevelLv3, http.HandlerFunc(elh.VoteHandler))))
+
+		// 关闭选举 POST /api/v1/elections/{id}/close - Lv5 (SuperAdmin)
+		mux.Handle("/api/v1/elections/close/", authMW.Middleware(authMW.RequireLevel(model.UserLevelLv5, http.HandlerFunc(elh.CloseElectionHandler))))
+	}
 }

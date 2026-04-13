@@ -41,6 +41,10 @@ type userContextKey string
 const (
 	// UserKey 用户信息在 context 中的键
 	UserKey userContextKey = "user"
+	// PublicKeyKey 公钥在 context 中的键
+	PublicKeyKey userContextKey = "public_key"
+	// UserLevelKey 用户等级在 context 中的键
+	UserLevelKey userContextKey = "user_level"
 )
 
 // AuthMiddleware Ed25519 签名认证中间件
@@ -134,8 +138,23 @@ func (m *AuthMiddleware) Middleware(next http.Handler) http.Handler {
 
 		// 将用户信息注入上下文
 		ctx := context.WithValue(r.Context(), UserKey, user)
+		ctx = context.WithValue(ctx, PublicKeyKey, user.PublicKey)
+		ctx = context.WithValue(ctx, UserLevelKey, user.UserLevel)
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
+}
+
+// RequireLevel 等级检查中间件
+// 要求用户达到指定等级才能访问
+func (m *AuthMiddleware) RequireLevel(minLevel int32, next http.Handler) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		userLevel, ok := r.Context().Value(UserLevelKey).(int32)
+		if !ok || userLevel < minLevel {
+			writeAuthError(w, awerrors.New(403, awerrors.CategoryAPI, fmt.Sprintf("需要 Lv%d 或更高等级", minLevel), http.StatusForbidden))
+			return
+		}
+		next.ServeHTTP(w, r)
+	}
 }
 
 // extractAuthHeaders 从请求头中提取认证信息
