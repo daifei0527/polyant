@@ -8,7 +8,6 @@ package storage
 import (
 	"context"
 	"crypto/sha256"
-	"encoding/base64"
 	"encoding/hex"
 	"fmt"
 	"sort"
@@ -213,14 +212,7 @@ func (s *MemoryUserStore) Create(ctx context.Context, user *model.User) (*model.
 	defer s.mu.Unlock()
 
 	// 计算公钥哈希作为存储key
-	pubKeyBytes, err := base64.StdEncoding.DecodeString(user.PublicKey)
-	var pubKeyHash string
-	if err == nil {
-		hash := sha256.Sum256(pubKeyBytes)
-		pubKeyHash = hex.EncodeToString(hash[:])
-	} else {
-		pubKeyHash = user.PublicKey // fallback
-	}
+	pubKeyHash := hashPublicKey(user.PublicKey)
 
 	if _, exists := s.users[pubKeyHash]; exists {
 		return nil, fmt.Errorf("user already exists")
@@ -264,14 +256,7 @@ func (s *MemoryUserStore) Update(ctx context.Context, user *model.User) (*model.
 	defer s.mu.Unlock()
 
 	// 计算公钥哈希作为存储key
-	pubKeyBytes, err := base64.StdEncoding.DecodeString(user.PublicKey)
-	var pubKeyHash string
-	if err == nil {
-		hash := sha256.Sum256(pubKeyBytes)
-		pubKeyHash = hex.EncodeToString(hash[:])
-	} else {
-		pubKeyHash = user.PublicKey
-	}
+	pubKeyHash := hashPublicKey(user.PublicKey)
 
 	if _, exists := s.users[pubKeyHash]; !exists {
 		return nil, fmt.Errorf("user not found")
@@ -283,7 +268,7 @@ func (s *MemoryUserStore) Update(ctx context.Context, user *model.User) (*model.
 }
 
 // List 列出用户
-func (s *MemoryUserStore) List(ctx context.Context, filter UserFilter) ([]*model.User, int, error) {
+func (s *MemoryUserStore) List(ctx context.Context, filter UserFilter) ([]*model.User, int64, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
@@ -295,11 +280,17 @@ func (s *MemoryUserStore) List(ctx context.Context, filter UserFilter) ([]*model
 		if filter.Level != 0 && user.UserLevel != filter.Level {
 			continue
 		}
+		if filter.Search != "" {
+			if !strings.Contains(strings.ToLower(user.AgentName), strings.ToLower(filter.Search)) &&
+				!strings.Contains(strings.ToLower(user.PublicKey), strings.ToLower(filter.Search)) {
+				continue
+			}
+		}
 		cp := *user
 		results = append(results, &cp)
 	}
 
-	total := len(results)
+	total := int64(len(results))
 	if filter.Offset > 0 && filter.Offset < len(results) {
 		results = results[filter.Offset:]
 	}

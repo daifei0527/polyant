@@ -143,20 +143,3 @@ func (v *Vote) ToJSON() ([]byte, error) {
 func (v *Vote) FromJSON(data []byte) error {
 	return json.Unmarshal(data, v)
 }
-
-// ==================== 用户统计 ====================
-
-// UserStats 用户统计信息
-type UserStats struct {
-	TotalUsers    int64 `json:"totalUsers"`
-	ActiveUsers   int64 `json:"activeUsers"` // 30天内活跃
-	Lv0Count      int64 `json:"lv0Count"`
-	Lv1Count      int64 `json:"lv1Count"`
-	Lv2Count      int64 `json:"lv2Count"`
-	Lv3Count      int64 `json:"lv3Count"`
-	Lv4Count      int64 `json:"lv4Count"`
-	Lv5Count      int64 `json:"lv5Count"`
-	TotalContribs int64 `json:"totalContribs"`
-	TotalRatings  int64 `json:"totalRatings"`
-	BannedCount   int64 `json:"bannedCount"`
-}
