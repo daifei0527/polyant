@@ -106,6 +106,9 @@ func NewRouterWithDeps(deps *Dependencies) (http.Handler, error) {
 		electionHandler = handler.NewElectionHandler(deps.KVStore)
 	}
 
+	// 创建批量操作 handler
+	batchHandler := handler.NewBatchHandler(deps.EntryStore, deps.SearchEngine, deps.Backlink, deps.UserStore)
+
 	// 创建认证中间件
 	authMW := middleware.NewAuthMiddleware(deps.UserStore)
 
@@ -119,7 +122,7 @@ func NewRouterWithDeps(deps *Dependencies) (http.Handler, error) {
 	registerPublicRoutes(mux, entryHandler, userHandler, categoryHandler, nodeHandler, electionHandler)
 
 	// 注册认证路由（需要 Ed25519 签名认证）
-	registerAuthRoutes(mux, authMW, entryHandler, userHandler, categoryHandler, nodeHandler, adminHandler, electionHandler)
+	registerAuthRoutes(mux, authMW, entryHandler, userHandler, categoryHandler, nodeHandler, adminHandler, electionHandler, batchHandler)
 
 	// 应用中间件链
 	var httpHandler http.Handler = mux
@@ -230,7 +233,7 @@ func registerPublicRoutes(mux *http.ServeMux, eh *handler.EntryHandler, uh *hand
 }
 
 // registerAuthRoutes 注册需要认证的路由
-func registerAuthRoutes(mux *http.ServeMux, authMW *middleware.AuthMiddleware, eh *handler.EntryHandler, uh *handler.UserHandler, ch *handler.CategoryHandler, nh *handler.NodeHandler, ah *handler.AdminHandler, elh *handler.ElectionHandler) {
+func registerAuthRoutes(mux *http.ServeMux, authMW *middleware.AuthMiddleware, eh *handler.EntryHandler, uh *handler.UserHandler, ch *handler.CategoryHandler, nh *handler.NodeHandler, ah *handler.AdminHandler, elh *handler.ElectionHandler, bh *handler.BatchHandler) {
 	// 创建条目（POST /api/v1/entry）
 	mux.Handle("/api/v1/entry/create", authMW.Middleware(http.HandlerFunc(eh.CreateEntryHandler)))
 
@@ -305,5 +308,22 @@ func registerAuthRoutes(mux *http.ServeMux, authMW *middleware.AuthMiddleware, e
 
 		// 关闭选举 POST /api/v1/elections/{id}/close - Lv5 (SuperAdmin)
 		mux.Handle("/api/v1/elections/close/", authMW.Middleware(authMW.RequireLevel(model.UserLevelLv5, http.HandlerFunc(elh.CloseElectionHandler))))
+	}
+
+	// ==================== 批量操作路由 ====================
+	if bh != nil {
+		// 批量操作 POST/PUT/DELETE /api/v1/entries/batch
+		mux.Handle("/api/v1/entries/batch", authMW.Middleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			switch r.Method {
+			case http.MethodPost:
+				bh.BatchCreateHandler(w, r)
+			case http.MethodPut:
+				bh.BatchUpdateHandler(w, r)
+			case http.MethodDelete:
+				bh.BatchDeleteHandler(w, r)
+			default:
+				http.NotFound(w, r)
+			}
+		})))
 	}
 }
