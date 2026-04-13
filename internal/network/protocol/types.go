@@ -1,6 +1,6 @@
 package protocol
 
-const AWSPProtocolID = "/agentwiki/sync/1.0.0"
+const AWSPProtocolID = "/agentwiki/sync/2.0.0"
 
 type MessageType int
 
