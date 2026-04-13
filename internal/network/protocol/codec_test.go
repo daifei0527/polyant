@@ -4,12 +4,18 @@ package protocol_test
 import (
 	"bytes"
 	"context"
+	"io"
 	"testing"
 	"time"
 
 	"github.com/daifei0527/agentwiki/internal/network/protocol"
-	"github.com/libp2p/go-libp2p"
+	libp2p "github.com/libp2p/go-libp2p"
+	"github.com/libp2p/go-libp2p/core/network"
+	libp2p_protocol "github.com/libp2p/go-libp2p/core/protocol"
+	mocknet "github.com/libp2p/go-libp2p/p2p/net/mock"
 )
+
+// ==================== Codec 编解码测试 ====================
 
 // ==================== Codec 编解码测试 ====================
 
@@ -1222,5 +1228,1150 @@ func TestProtocolHandlerMirrorRequest(t *testing.T) {
 
 	if p == nil {
 		t.Error("NewProtocol 不应返回 nil")
+	}
+}
+
+// ==================== ProcessMessage 测试 (使用模拟流) ====================
+
+// mockStream 实现 network.Stream 接口用于测试
+type mockStream struct {
+	r *bytes.Buffer
+	w *bytes.Buffer
+}
+
+func (m *mockStream) Read(b []byte) (n int, err error)  { return m.r.Read(b) }
+func (m *mockStream) Write(b []byte) (n int, err error) { return m.w.Write(b) }
+func (m *mockStream) Close() error                      { return nil }
+func (m *mockStream) Reset() error                      { return nil }
+func (m *mockStream) SetDeadline(t time.Time) error     { return nil }
+func (m *mockStream) SetReadDeadline(t time.Time) error { return nil }
+func (m *mockStream) SetWriteDeadline(t time.Time) error { return nil }
+func (m *mockStream) ID() string                        { return "mock-stream" }
+func (m *mockStream) Protocol() libp2p_protocol.ID      { return libp2p_protocol.ID(protocol.AWSPProtocolID) }
+func (m *mockStream) SetProtocol(p libp2p_protocol.ID)  {}
+func (m *mockStream) Conn() network.Conn                { return nil }
+func (m *mockStream) Scope() network.StreamScope        { return nil }
+func (m *mockStream) Stat() network.Stats               { return network.Stats{} }
+
+// TestProcessMessageHandshake 测试处理握手消息
+func TestProcessMessageHandshake(t *testing.T) {
+	ctx := context.Background()
+
+	handler := &mockHandler{
+		handshakeFunc: func(ctx context.Context, h *protocol.Handshake) (*protocol.HandshakeAck, error) {
+			return &protocol.HandshakeAck{
+				NodeID:   "node-2",
+				Accepted: true,
+			}, nil
+		},
+	}
+
+	// 创建消息
+	msg := &protocol.Message{
+		Header:  protocol.NewMessageHeader(protocol.MessageTypeHandshake),
+		Payload: &protocol.Handshake{NodeID: "node-1", Version: "1.0.0"},
+	}
+
+	// 编码消息
+	codec := protocol.NewCodec()
+	encoded, err := codec.Encode(msg)
+	if err != nil {
+		t.Fatalf("Encode 失败: %v", err)
+	}
+
+	// 创建模拟流
+	stream := &mockStream{
+		r: bytes.NewBuffer(encoded),
+		w: &bytes.Buffer{},
+	}
+
+	// 读取并处理消息
+	reader := protocol.NewStreamReader(stream)
+	receivedMsg, err := reader.ReadMessage()
+	if err != nil {
+		t.Fatalf("ReadMessage 失败: %v", err)
+	}
+
+	// 验证消息
+	handshake, ok := receivedMsg.Payload.(*protocol.Handshake)
+	if !ok {
+		t.Fatalf("Payload 类型错误: %T", receivedMsg.Payload)
+	}
+	if handshake.NodeID != "node-1" {
+		t.Errorf("NodeID 错误: got %q", handshake.NodeID)
+	}
+
+	// 处理消息
+	_ = handler
+	// 验证处理函数可被调用
+	ack, err := handler.HandleHandshake(ctx, handshake)
+	if err != nil {
+		t.Fatalf("HandleHandshake 失败: %v", err)
+	}
+	if !ack.Accepted {
+		t.Error("握手应被接受")
+	}
+}
+
+// TestProcessMessageQuery 测试处理查询消息
+func TestProcessMessageQuery(t *testing.T) {
+	handler := &mockHandler{
+		queryFunc: func(ctx context.Context, q *protocol.Query) (*protocol.QueryResult, error) {
+			return &protocol.QueryResult{
+				QueryID:    q.QueryID,
+				TotalCount: 5,
+			}, nil
+		},
+	}
+
+	msg := &protocol.Message{
+		Header:  protocol.NewMessageHeader(protocol.MessageTypeQuery),
+		Payload: &protocol.Query{QueryID: "q-1", Keyword: "test"},
+	}
+
+	codec := protocol.NewCodec()
+	encoded, err := codec.Encode(msg)
+	if err != nil {
+		t.Fatalf("Encode 失败: %v", err)
+	}
+
+	stream := &mockStream{
+		r: bytes.NewBuffer(encoded),
+		w: &bytes.Buffer{},
+	}
+
+	reader := protocol.NewStreamReader(stream)
+	receivedMsg, err := reader.ReadMessage()
+	if err != nil {
+		t.Fatalf("ReadMessage 失败: %v", err)
+	}
+
+	query, ok := receivedMsg.Payload.(*protocol.Query)
+	if !ok {
+		t.Fatalf("Payload 类型错误: %T", receivedMsg.Payload)
+	}
+
+	result, err := handler.HandleQuery(context.Background(), query)
+	if err != nil {
+		t.Fatalf("HandleQuery 失败: %v", err)
+	}
+	if result.TotalCount != 5 {
+		t.Errorf("TotalCount 错误: got %d", result.TotalCount)
+	}
+}
+
+// TestProcessMessageSyncRequest 测试处理同步请求消息
+func TestProcessMessageSyncRequest(t *testing.T) {
+	handler := &mockHandler{
+		syncRequestFunc: func(ctx context.Context, r *protocol.SyncRequest) (*protocol.SyncResponse, error) {
+			return &protocol.SyncResponse{
+				RequestID:       r.RequestID,
+				ServerTimestamp: time.Now().UnixMilli(),
+			}, nil
+		},
+	}
+
+	msg := &protocol.Message{
+		Header:  protocol.NewMessageHeader(protocol.MessageTypeSyncRequest),
+		Payload: &protocol.SyncRequest{RequestID: "sync-1"},
+	}
+
+	codec := protocol.NewCodec()
+	encoded, err := codec.Encode(msg)
+	if err != nil {
+		t.Fatalf("Encode 失败: %v", err)
+	}
+
+	stream := &mockStream{
+		r: bytes.NewBuffer(encoded),
+		w: &bytes.Buffer{},
+	}
+
+	reader := protocol.NewStreamReader(stream)
+	receivedMsg, err := reader.ReadMessage()
+	if err != nil {
+		t.Fatalf("ReadMessage 失败: %v", err)
+	}
+
+	syncReq, ok := receivedMsg.Payload.(*protocol.SyncRequest)
+	if !ok {
+		t.Fatalf("Payload 类型错误: %T", receivedMsg.Payload)
+	}
+
+	resp, err := handler.HandleSyncRequest(context.Background(), syncReq)
+	if err != nil {
+		t.Fatalf("HandleSyncRequest 失败: %v", err)
+	}
+	if resp.RequestID != "sync-1" {
+		t.Errorf("RequestID 错误: got %q", resp.RequestID)
+	}
+}
+
+// TestProcessMessagePushEntry 测试处理条目推送消息
+func TestProcessMessagePushEntry(t *testing.T) {
+	handler := &mockHandler{
+		pushEntryFunc: func(ctx context.Context, e *protocol.PushEntry) (*protocol.PushAck, error) {
+			return &protocol.PushAck{
+				EntryID:  e.EntryID,
+				Accepted: true,
+			}, nil
+		},
+	}
+
+	msg := &protocol.Message{
+		Header:  protocol.NewMessageHeader(protocol.MessageTypePushEntry),
+		Payload: &protocol.PushEntry{EntryID: "entry-1", Entry: []byte("test")},
+	}
+
+	codec := protocol.NewCodec()
+	encoded, err := codec.Encode(msg)
+	if err != nil {
+		t.Fatalf("Encode 失败: %v", err)
+	}
+
+	stream := &mockStream{
+		r: bytes.NewBuffer(encoded),
+		w: &bytes.Buffer{},
+	}
+
+	reader := protocol.NewStreamReader(stream)
+	receivedMsg, err := reader.ReadMessage()
+	if err != nil {
+		t.Fatalf("ReadMessage 失败: %v", err)
+	}
+
+	pushEntry, ok := receivedMsg.Payload.(*protocol.PushEntry)
+	if !ok {
+		t.Fatalf("Payload 类型错误: %T", receivedMsg.Payload)
+	}
+
+	ack, err := handler.HandlePushEntry(context.Background(), pushEntry)
+	if err != nil {
+		t.Fatalf("HandlePushEntry 失败: %v", err)
+	}
+	if !ack.Accepted {
+		t.Error("推送应被接受")
+	}
+}
+
+// TestProcessMessageRatingPush 测试处理评分推送消息
+func TestProcessMessageRatingPush(t *testing.T) {
+	handler := &mockHandler{
+		ratingPushFunc: func(ctx context.Context, r *protocol.RatingPush) (*protocol.RatingAck, error) {
+			return &protocol.RatingAck{
+				RatingID: "rating-1",
+				Accepted: true,
+			}, nil
+		},
+	}
+
+	msg := &protocol.Message{
+		Header:  protocol.NewMessageHeader(protocol.MessageTypeRatingPush),
+		Payload: &protocol.RatingPush{Rating: []byte("test")},
+	}
+
+	codec := protocol.NewCodec()
+	encoded, err := codec.Encode(msg)
+	if err != nil {
+		t.Fatalf("Encode 失败: %v", err)
+	}
+
+	stream := &mockStream{
+		r: bytes.NewBuffer(encoded),
+		w: &bytes.Buffer{},
+	}
+
+	reader := protocol.NewStreamReader(stream)
+	receivedMsg, err := reader.ReadMessage()
+	if err != nil {
+		t.Fatalf("ReadMessage 失败: %v", err)
+	}
+
+	ratingPush, ok := receivedMsg.Payload.(*protocol.RatingPush)
+	if !ok {
+		t.Fatalf("Payload 类型错误: %T", receivedMsg.Payload)
+	}
+
+	ack, err := handler.HandleRatingPush(context.Background(), ratingPush)
+	if err != nil {
+		t.Fatalf("HandleRatingPush 失败: %v", err)
+	}
+	if !ack.Accepted {
+		t.Error("评分应被接受")
+	}
+}
+
+// TestProcessMessageHeartbeat 测试处理心跳消息
+func TestProcessMessageHeartbeat(t *testing.T) {
+	heartbeatReceived := false
+	handler := &mockHandler{
+		heartbeatFunc: func(ctx context.Context, h *protocol.Heartbeat) error {
+			heartbeatReceived = true
+			return nil
+		},
+	}
+
+	msg := &protocol.Message{
+		Header:  protocol.NewMessageHeader(protocol.MessageTypeHeartbeat),
+		Payload: &protocol.Heartbeat{NodeID: "node-1"},
+	}
+
+	codec := protocol.NewCodec()
+	encoded, err := codec.Encode(msg)
+	if err != nil {
+		t.Fatalf("Encode 失败: %v", err)
+	}
+
+	stream := &mockStream{
+		r: bytes.NewBuffer(encoded),
+		w: &bytes.Buffer{},
+	}
+
+	reader := protocol.NewStreamReader(stream)
+	receivedMsg, err := reader.ReadMessage()
+	if err != nil {
+		t.Fatalf("ReadMessage 失败: %v", err)
+	}
+
+	hb, ok := receivedMsg.Payload.(*protocol.Heartbeat)
+	if !ok {
+		t.Fatalf("Payload 类型错误: %T", receivedMsg.Payload)
+	}
+
+	err = handler.HandleHeartbeat(context.Background(), hb)
+	if err != nil {
+		t.Fatalf("HandleHeartbeat 失败: %v", err)
+	}
+
+	if !heartbeatReceived {
+		t.Error("心跳应被接收")
+	}
+}
+
+// TestProcessMessageBitfield 测试处理位图消息
+func TestProcessMessageBitfield(t *testing.T) {
+	bitfieldReceived := false
+	handler := &mockHandler{
+		bitfieldFunc: func(ctx context.Context, b *protocol.Bitfield) error {
+			bitfieldReceived = true
+			return nil
+		},
+	}
+
+	msg := &protocol.Message{
+		Header:  protocol.NewMessageHeader(protocol.MessageTypeBitfield),
+		Payload: &protocol.Bitfield{NodeID: "node-1", EntryCount: 100},
+	}
+
+	codec := protocol.NewCodec()
+	encoded, err := codec.Encode(msg)
+	if err != nil {
+		t.Fatalf("Encode 失败: %v", err)
+	}
+
+	stream := &mockStream{
+		r: bytes.NewBuffer(encoded),
+		w: &bytes.Buffer{},
+	}
+
+	reader := protocol.NewStreamReader(stream)
+	receivedMsg, err := reader.ReadMessage()
+	if err != nil {
+		t.Fatalf("ReadMessage 失败: %v", err)
+	}
+
+	bf, ok := receivedMsg.Payload.(*protocol.Bitfield)
+	if !ok {
+		t.Fatalf("Payload 类型错误: %T", receivedMsg.Payload)
+	}
+
+	err = handler.HandleBitfield(context.Background(), bf)
+	if err != nil {
+		t.Fatalf("HandleBitfield 失败: %v", err)
+	}
+
+	if !bitfieldReceived {
+		t.Error("位图应被接收")
+	}
+}
+
+// TestProcessMessageMirrorRequest 测试处理镜像请求消息
+func TestProcessMessageMirrorRequest(t *testing.T) {
+	handler := &mockHandler{
+		mirrorRequestFunc: func(ctx context.Context, r *protocol.MirrorRequest) (<-chan *protocol.MirrorData, error) {
+			ch := make(chan *protocol.MirrorData, 1)
+			ch <- &protocol.MirrorData{RequestID: r.RequestID}
+			close(ch)
+			return ch, nil
+		},
+	}
+
+	msg := &protocol.Message{
+		Header:  protocol.NewMessageHeader(protocol.MessageTypeMirrorRequest),
+		Payload: &protocol.MirrorRequest{RequestID: "mirror-1"},
+	}
+
+	codec := protocol.NewCodec()
+	encoded, err := codec.Encode(msg)
+	if err != nil {
+		t.Fatalf("Encode 失败: %v", err)
+	}
+
+	stream := &mockStream{
+		r: bytes.NewBuffer(encoded),
+		w: &bytes.Buffer{},
+	}
+
+	reader := protocol.NewStreamReader(stream)
+	receivedMsg, err := reader.ReadMessage()
+	if err != nil {
+		t.Fatalf("ReadMessage 失败: %v", err)
+	}
+
+	mirrorReq, ok := receivedMsg.Payload.(*protocol.MirrorRequest)
+	if !ok {
+		t.Fatalf("Payload 类型错误: %T", receivedMsg.Payload)
+	}
+
+	ch, err := handler.HandleMirrorRequest(context.Background(), mirrorReq)
+	if err != nil {
+		t.Fatalf("HandleMirrorRequest 失败: %v", err)
+	}
+
+	data := <-ch
+	if data.RequestID != "mirror-1" {
+		t.Errorf("RequestID 错误: got %q", data.RequestID)
+	}
+}
+
+// TestRoundTripHandshake 测试完整的握手请求-响应往返
+func TestRoundTripHandshake(t *testing.T) {
+	// 创建客户端和服务端的管道
+	clientReader, serverWriter := io.Pipe()
+	serverReader, clientWriter := io.Pipe()
+
+	// 服务端处理器
+	handler := &mockHandler{
+		handshakeFunc: func(ctx context.Context, h *protocol.Handshake) (*protocol.HandshakeAck, error) {
+			return &protocol.HandshakeAck{
+				NodeID:   "server-node",
+				Accepted: true,
+			}, nil
+		},
+	}
+
+	// 服务端协程
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		defer serverWriter.Close()
+		defer serverReader.Close()
+
+		// 读取请求
+		reader := protocol.NewStreamReader(serverReader)
+		msg, err := reader.ReadMessage()
+		if err != nil {
+			return
+		}
+
+		// 处理请求
+		handshake := msg.Payload.(*protocol.Handshake)
+		ack, _ := handler.HandleHandshake(context.Background(), handshake)
+
+		// 发送响应
+		writer := protocol.NewStreamWriter(serverWriter)
+		respMsg := &protocol.Message{
+			Header:  protocol.NewMessageHeader(protocol.MessageTypeHandshakeAck),
+			Payload: ack,
+		}
+		writer.WriteMessage(respMsg)
+	}()
+
+	// 客户端发送请求
+	writer := protocol.NewStreamWriter(clientWriter)
+	reqMsg := &protocol.Message{
+		Header:  protocol.NewMessageHeader(protocol.MessageTypeHandshake),
+		Payload: &protocol.Handshake{NodeID: "client-node"},
+	}
+	if err := writer.WriteMessage(reqMsg); err != nil {
+		t.Fatalf("WriteMessage 失败: %v", err)
+	}
+	clientWriter.Close()
+
+	// 客户端读取响应
+	reader := protocol.NewStreamReader(clientReader)
+	respMsg, err := reader.ReadMessage()
+	if err != nil {
+		t.Fatalf("ReadMessage 失败: %v", err)
+	}
+	clientReader.Close()
+
+	<-done // 等待服务端完成
+
+	// 验证响应
+	ack, ok := respMsg.Payload.(*protocol.HandshakeAck)
+	if !ok {
+		t.Fatalf("Payload 类型错误: %T", respMsg.Payload)
+	}
+	if !ack.Accepted {
+		t.Error("握手应被接受")
+	}
+	if ack.NodeID != "server-node" {
+		t.Errorf("NodeID 错误: got %q", ack.NodeID)
+	}
+}
+
+// TestRoundTripQuery 测试完整的查询请求-响应往返
+func TestRoundTripQuery(t *testing.T) {
+	clientReader, serverWriter := io.Pipe()
+	serverReader, clientWriter := io.Pipe()
+
+	handler := &mockHandler{
+		queryFunc: func(ctx context.Context, q *protocol.Query) (*protocol.QueryResult, error) {
+			return &protocol.QueryResult{
+				QueryID:    q.QueryID,
+				TotalCount: 3,
+				Entries:    [][]byte{[]byte("e1"), []byte("e2"), []byte("e3")},
+			}, nil
+		},
+	}
+
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		defer serverWriter.Close()
+		defer serverReader.Close()
+
+		reader := protocol.NewStreamReader(serverReader)
+		msg, err := reader.ReadMessage()
+		if err != nil {
+			return
+		}
+
+		query := msg.Payload.(*protocol.Query)
+		result, _ := handler.HandleQuery(context.Background(), query)
+
+		writer := protocol.NewStreamWriter(serverWriter)
+		respMsg := &protocol.Message{
+			Header:  protocol.NewMessageHeader(protocol.MessageTypeQueryResult),
+			Payload: result,
+		}
+		writer.WriteMessage(respMsg)
+	}()
+
+	writer := protocol.NewStreamWriter(clientWriter)
+	reqMsg := &protocol.Message{
+		Header:  protocol.NewMessageHeader(protocol.MessageTypeQuery),
+		Payload: &protocol.Query{QueryID: "q-1", Keyword: "test"},
+	}
+	if err := writer.WriteMessage(reqMsg); err != nil {
+		t.Fatalf("WriteMessage 失败: %v", err)
+	}
+	clientWriter.Close()
+
+	reader := protocol.NewStreamReader(clientReader)
+	respMsg, err := reader.ReadMessage()
+	if err != nil {
+		t.Fatalf("ReadMessage 失败: %v", err)
+	}
+	clientReader.Close()
+
+	<-done
+
+	result, ok := respMsg.Payload.(*protocol.QueryResult)
+	if !ok {
+		t.Fatalf("Payload 类型错误: %T", respMsg.Payload)
+	}
+	if result.TotalCount != 3 {
+		t.Errorf("TotalCount 错误: got %d", result.TotalCount)
+	}
+}
+
+// TestRoundTripSyncRequest 测试完整的同步请求-响应往返
+func TestRoundTripSyncRequest(t *testing.T) {
+	clientReader, serverWriter := io.Pipe()
+	serverReader, clientWriter := io.Pipe()
+
+	handler := &mockHandler{
+		syncRequestFunc: func(ctx context.Context, r *protocol.SyncRequest) (*protocol.SyncResponse, error) {
+			return &protocol.SyncResponse{
+				RequestID:       r.RequestID,
+				NewEntries:      [][]byte{[]byte("new")},
+				DeletedEntryIDs: []string{"old"},
+			}, nil
+		},
+	}
+
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		defer serverWriter.Close()
+		defer serverReader.Close()
+
+		reader := protocol.NewStreamReader(serverReader)
+		msg, err := reader.ReadMessage()
+		if err != nil {
+			return
+		}
+
+		syncReq := msg.Payload.(*protocol.SyncRequest)
+		resp, _ := handler.HandleSyncRequest(context.Background(), syncReq)
+
+		writer := protocol.NewStreamWriter(serverWriter)
+		respMsg := &protocol.Message{
+			Header:  protocol.NewMessageHeader(protocol.MessageTypeSyncResponse),
+			Payload: resp,
+		}
+		writer.WriteMessage(respMsg)
+	}()
+
+	writer := protocol.NewStreamWriter(clientWriter)
+	reqMsg := &protocol.Message{
+		Header:  protocol.NewMessageHeader(protocol.MessageTypeSyncRequest),
+		Payload: &protocol.SyncRequest{RequestID: "sync-1"},
+	}
+	if err := writer.WriteMessage(reqMsg); err != nil {
+		t.Fatalf("WriteMessage 失败: %v", err)
+	}
+	clientWriter.Close()
+
+	reader := protocol.NewStreamReader(clientReader)
+	respMsg, err := reader.ReadMessage()
+	if err != nil {
+		t.Fatalf("ReadMessage 失败: %v", err)
+	}
+	clientReader.Close()
+
+	<-done
+
+	resp, ok := respMsg.Payload.(*protocol.SyncResponse)
+	if !ok {
+		t.Fatalf("Payload 类型错误: %T", respMsg.Payload)
+	}
+	if len(resp.NewEntries) != 1 {
+		t.Errorf("NewEntries 数量错误: got %d", len(resp.NewEntries))
+	}
+}
+
+// TestRoundTripPushEntry 测试完整的条目推送请求-响应往返
+func TestRoundTripPushEntry(t *testing.T) {
+	clientReader, serverWriter := io.Pipe()
+	serverReader, clientWriter := io.Pipe()
+
+	handler := &mockHandler{
+		pushEntryFunc: func(ctx context.Context, e *protocol.PushEntry) (*protocol.PushAck, error) {
+			return &protocol.PushAck{
+				EntryID:    e.EntryID,
+				Accepted:   true,
+				NewVersion: 2,
+			}, nil
+		},
+	}
+
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		defer serverWriter.Close()
+		defer serverReader.Close()
+
+		reader := protocol.NewStreamReader(serverReader)
+		msg, err := reader.ReadMessage()
+		if err != nil {
+			return
+		}
+
+		pushEntry := msg.Payload.(*protocol.PushEntry)
+		ack, _ := handler.HandlePushEntry(context.Background(), pushEntry)
+
+		writer := protocol.NewStreamWriter(serverWriter)
+		respMsg := &protocol.Message{
+			Header:  protocol.NewMessageHeader(protocol.MessageTypePushAck),
+			Payload: ack,
+		}
+		writer.WriteMessage(respMsg)
+	}()
+
+	writer := protocol.NewStreamWriter(clientWriter)
+	reqMsg := &protocol.Message{
+		Header:  protocol.NewMessageHeader(protocol.MessageTypePushEntry),
+		Payload: &protocol.PushEntry{EntryID: "entry-1", Entry: []byte("data")},
+	}
+	if err := writer.WriteMessage(reqMsg); err != nil {
+		t.Fatalf("WriteMessage 失败: %v", err)
+	}
+	clientWriter.Close()
+
+	reader := protocol.NewStreamReader(clientReader)
+	respMsg, err := reader.ReadMessage()
+	if err != nil {
+		t.Fatalf("ReadMessage 失败: %v", err)
+	}
+	clientReader.Close()
+
+	<-done
+
+	ack, ok := respMsg.Payload.(*protocol.PushAck)
+	if !ok {
+		t.Fatalf("Payload 类型错误: %T", respMsg.Payload)
+	}
+	if !ack.Accepted {
+		t.Error("推送应被接受")
+	}
+}
+
+// TestRoundTripRatingPush 测试完整的评分推送请求-响应往返
+func TestRoundTripRatingPush(t *testing.T) {
+	clientReader, serverWriter := io.Pipe()
+	serverReader, clientWriter := io.Pipe()
+
+	handler := &mockHandler{
+		ratingPushFunc: func(ctx context.Context, r *protocol.RatingPush) (*protocol.RatingAck, error) {
+			return &protocol.RatingAck{
+				RatingID: "rating-1",
+				Accepted: true,
+			}, nil
+		},
+	}
+
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		defer serverWriter.Close()
+		defer serverReader.Close()
+
+		reader := protocol.NewStreamReader(serverReader)
+		msg, err := reader.ReadMessage()
+		if err != nil {
+			return
+		}
+
+		ratingPush := msg.Payload.(*protocol.RatingPush)
+		ack, _ := handler.HandleRatingPush(context.Background(), ratingPush)
+
+		writer := protocol.NewStreamWriter(serverWriter)
+		respMsg := &protocol.Message{
+			Header:  protocol.NewMessageHeader(protocol.MessageTypeRatingAck),
+			Payload: ack,
+		}
+		writer.WriteMessage(respMsg)
+	}()
+
+	writer := protocol.NewStreamWriter(clientWriter)
+	reqMsg := &protocol.Message{
+		Header:  protocol.NewMessageHeader(protocol.MessageTypeRatingPush),
+		Payload: &protocol.RatingPush{Rating: []byte("rating-data")},
+	}
+	if err := writer.WriteMessage(reqMsg); err != nil {
+		t.Fatalf("WriteMessage 失败: %v", err)
+	}
+	clientWriter.Close()
+
+	reader := protocol.NewStreamReader(clientReader)
+	respMsg, err := reader.ReadMessage()
+	if err != nil {
+		t.Fatalf("ReadMessage 失败: %v", err)
+	}
+	clientReader.Close()
+
+	<-done
+
+	ack, ok := respMsg.Payload.(*protocol.RatingAck)
+	if !ok {
+		t.Fatalf("Payload 类型错误: %T", respMsg.Payload)
+	}
+	if !ack.Accepted {
+		t.Error("评分应被接受")
+	}
+}
+
+// TestSendHandshakeError 测试发送握手失败场景
+func TestSendHandshakeError(t *testing.T) {
+	ctx := context.Background()
+
+	h1, err := libp2p.New()
+	if err != nil {
+		t.Fatalf("创建 host1 失败: %v", err)
+	}
+	defer h1.Close()
+
+	// 不创建 h2, 尝试连接不存在的节点
+	p1 := protocol.NewProtocol(h1, &mockHandler{})
+
+	_, err = p1.SendHandshake(ctx, "non-existent-peer", &protocol.Handshake{
+		NodeID: "node-1",
+	})
+
+	if err == nil {
+		t.Error("连接不存在的节点应返回错误")
+	}
+}
+
+// TestSendHandshakeRejected 测试握手被拒绝场景
+func TestSendHandshakeRejected(t *testing.T) {
+	// 使用模拟流测试握手被拒绝
+	clientReader, serverWriter := io.Pipe()
+	serverReader, clientWriter := io.Pipe()
+
+	handler := &mockHandler{
+		handshakeFunc: func(ctx context.Context, h *protocol.Handshake) (*protocol.HandshakeAck, error) {
+			return &protocol.HandshakeAck{
+				NodeID:       "server-node",
+				Accepted:     false,
+				RejectReason: "version mismatch",
+			}, nil
+		},
+	}
+
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		defer serverWriter.Close()
+		defer serverReader.Close()
+
+		reader := protocol.NewStreamReader(serverReader)
+		msg, err := reader.ReadMessage()
+		if err != nil {
+			return
+		}
+
+		handshake := msg.Payload.(*protocol.Handshake)
+		ack, _ := handler.HandleHandshake(context.Background(), handshake)
+
+		writer := protocol.NewStreamWriter(serverWriter)
+		respMsg := &protocol.Message{
+			Header:  protocol.NewMessageHeader(protocol.MessageTypeHandshakeAck),
+			Payload: ack,
+		}
+		writer.WriteMessage(respMsg)
+	}()
+
+	writer := protocol.NewStreamWriter(clientWriter)
+	reqMsg := &protocol.Message{
+		Header:  protocol.NewMessageHeader(protocol.MessageTypeHandshake),
+		Payload: &protocol.Handshake{NodeID: "client-node", Version: "0.9.0"},
+	}
+	if err := writer.WriteMessage(reqMsg); err != nil {
+		t.Fatalf("WriteMessage 失败: %v", err)
+	}
+	clientWriter.Close()
+
+	reader := protocol.NewStreamReader(clientReader)
+	respMsg, err := reader.ReadMessage()
+	if err != nil {
+		t.Fatalf("ReadMessage 失败: %v", err)
+	}
+	clientReader.Close()
+
+	<-done
+
+	ack, ok := respMsg.Payload.(*protocol.HandshakeAck)
+	if !ok {
+		t.Fatalf("Payload 类型错误: %T", respMsg.Payload)
+	}
+	if ack.Accepted {
+		t.Error("握手应被拒绝")
+	}
+	if ack.RejectReason != "version mismatch" {
+		t.Errorf("RejectReason 错误: got %q", ack.RejectReason)
+	}
+}
+
+// TestSendQueryEmptyResult 测试查询返回空结果
+func TestSendQueryEmptyResult(t *testing.T) {
+	clientReader, serverWriter := io.Pipe()
+	serverReader, clientWriter := io.Pipe()
+
+	handler := &mockHandler{
+		queryFunc: func(ctx context.Context, q *protocol.Query) (*protocol.QueryResult, error) {
+			return &protocol.QueryResult{
+				QueryID:    q.QueryID,
+				TotalCount: 0,
+				Entries:    nil,
+			}, nil
+		},
+	}
+
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		defer serverWriter.Close()
+		defer serverReader.Close()
+
+		reader := protocol.NewStreamReader(serverReader)
+		msg, err := reader.ReadMessage()
+		if err != nil {
+			return
+		}
+
+		query := msg.Payload.(*protocol.Query)
+		result, _ := handler.HandleQuery(context.Background(), query)
+
+		writer := protocol.NewStreamWriter(serverWriter)
+		respMsg := &protocol.Message{
+			Header:  protocol.NewMessageHeader(protocol.MessageTypeQueryResult),
+			Payload: result,
+		}
+		writer.WriteMessage(respMsg)
+	}()
+
+	writer := protocol.NewStreamWriter(clientWriter)
+	reqMsg := &protocol.Message{
+		Header:  protocol.NewMessageHeader(protocol.MessageTypeQuery),
+		Payload: &protocol.Query{QueryID: "q-empty", Keyword: "nonexistent"},
+	}
+	if err := writer.WriteMessage(reqMsg); err != nil {
+		t.Fatalf("WriteMessage 失败: %v", err)
+	}
+	clientWriter.Close()
+
+	reader := protocol.NewStreamReader(clientReader)
+	respMsg, err := reader.ReadMessage()
+	if err != nil {
+		t.Fatalf("ReadMessage 失败: %v", err)
+	}
+	clientReader.Close()
+
+	<-done
+
+	result, ok := respMsg.Payload.(*protocol.QueryResult)
+	if !ok {
+		t.Fatalf("Payload 类型错误: %T", respMsg.Payload)
+	}
+	if result.TotalCount != 0 {
+		t.Errorf("TotalCount 应为 0, got %d", result.TotalCount)
+	}
+	if len(result.Entries) != 0 {
+		t.Errorf("Entries 应为空, got %d", len(result.Entries))
+	}
+}
+
+// ==================== 使用 Mocknet 的协议测试 ====================
+
+// TestMocknetSendHandshake 使用 mocknet 测试发送握手消息
+func TestMocknetSendHandshake(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	// 创建 mocknet
+	mn, err := mocknet.FullMeshLinked(2)
+	if err != nil {
+		t.Fatalf("创建 mocknet 失败: %v", err)
+	}
+
+	hosts := mn.Hosts()
+	h1, h2 := hosts[0], hosts[1]
+
+	// 在 h2 上设置协议处理器
+	handler := &mockHandler{
+		handshakeFunc: func(ctx context.Context, h *protocol.Handshake) (*protocol.HandshakeAck, error) {
+			return &protocol.HandshakeAck{
+				NodeID:   "node-2",
+				PeerID:   h2.ID().String(),
+				Accepted: true,
+			}, nil
+		},
+	}
+	protocol.NewProtocol(h2, handler)
+
+	// 在 h1 上创建协议并发送握手
+	p1 := protocol.NewProtocol(h1, &mockHandler{})
+
+	ack, err := p1.SendHandshake(ctx, h2.ID(), &protocol.Handshake{
+		NodeID:   "node-1",
+		PeerID:   h1.ID().String(),
+		NodeType: protocol.NodeTypeLocal,
+		Version:  "1.0.0",
+	})
+
+	if err != nil {
+		t.Fatalf("SendHandshake 失败: %v", err)
+	}
+
+	if !ack.Accepted {
+		t.Error("握手应被接受")
+	}
+
+	if ack.NodeID != "node-2" {
+		t.Errorf("NodeID 错误: got %q, want %q", ack.NodeID, "node-2")
+	}
+}
+
+// TestMocknetSendQuery 使用 mocknet 测试发送查询消息
+func TestMocknetSendQuery(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	mn, err := mocknet.FullMeshLinked(2)
+	if err != nil {
+		t.Fatalf("创建 mocknet 失败: %v", err)
+	}
+
+	hosts := mn.Hosts()
+	h1, h2 := hosts[0], hosts[1]
+
+	handler := &mockHandler{
+		queryFunc: func(ctx context.Context, q *protocol.Query) (*protocol.QueryResult, error) {
+			return &protocol.QueryResult{
+				QueryID:    q.QueryID,
+				TotalCount: 2,
+				Entries:    [][]byte{[]byte("entry1"), []byte("entry2")},
+				HasMore:    false,
+			}, nil
+		},
+	}
+	protocol.NewProtocol(h2, handler)
+
+	p1 := protocol.NewProtocol(h1, &mockHandler{})
+
+	result, err := p1.SendQuery(ctx, h2.ID(), &protocol.Query{
+		QueryID:    "query-1",
+		Keyword:    "test",
+		Categories: []string{"tech"},
+		Limit:      10,
+		QueryType:  protocol.QueryTypeGlobal,
+	})
+
+	if err != nil {
+		t.Fatalf("SendQuery 失败: %v", err)
+	}
+
+	if result.QueryID != "query-1" {
+		t.Errorf("QueryID 错误: got %q", result.QueryID)
+	}
+
+	if result.TotalCount != 2 {
+		t.Errorf("TotalCount 错误: got %d, want 2", result.TotalCount)
+	}
+}
+
+// TestMocknetSendSyncRequest 使用 mocknet 测试发送同步请求
+func TestMocknetSendSyncRequest(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	mn, err := mocknet.FullMeshLinked(2)
+	if err != nil {
+		t.Fatalf("创建 mocknet 失败: %v", err)
+	}
+
+	hosts := mn.Hosts()
+	h1, h2 := hosts[0], hosts[1]
+
+	handler := &mockHandler{
+		syncRequestFunc: func(ctx context.Context, r *protocol.SyncRequest) (*protocol.SyncResponse, error) {
+			return &protocol.SyncResponse{
+				RequestID:       r.RequestID,
+				NewEntries:      [][]byte{[]byte("new-entry")},
+				UpdatedEntries:  nil,
+				DeletedEntryIDs: []string{"old-1"},
+				ServerTimestamp: time.Now().UnixMilli(),
+			}, nil
+		},
+	}
+	protocol.NewProtocol(h2, handler)
+
+	p1 := protocol.NewProtocol(h1, &mockHandler{})
+
+	resp, err := p1.SendSyncRequest(ctx, h2.ID(), &protocol.SyncRequest{
+		RequestID:         "sync-1",
+		LastSyncTimestamp: 0,
+		VersionVector:     map[string]int64{"entry-1": 1},
+	})
+
+	if err != nil {
+		t.Fatalf("SendSyncRequest 失败: %v", err)
+	}
+
+	if resp.RequestID != "sync-1" {
+		t.Errorf("RequestID 错误: got %q", resp.RequestID)
+	}
+
+	if len(resp.NewEntries) != 1 {
+		t.Errorf("NewEntries 数量错误: got %d, want 1", len(resp.NewEntries))
+	}
+}
+
+// TestMocknetSendPushEntry 使用 mocknet 测试发送条目推送
+func TestMocknetSendPushEntry(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	mn, err := mocknet.FullMeshLinked(2)
+	if err != nil {
+		t.Fatalf("创建 mocknet 失败: %v", err)
+	}
+
+	hosts := mn.Hosts()
+	h1, h2 := hosts[0], hosts[1]
+
+	handler := &mockHandler{
+		pushEntryFunc: func(ctx context.Context, e *protocol.PushEntry) (*protocol.PushAck, error) {
+			return &protocol.PushAck{
+				EntryID:    e.EntryID,
+				Accepted:   true,
+				NewVersion: 2,
+			}, nil
+		},
+	}
+	protocol.NewProtocol(h2, handler)
+
+	p1 := protocol.NewProtocol(h1, &mockHandler{})
+
+	ack, err := p1.SendPushEntry(ctx, h2.ID(), &protocol.PushEntry{
+		EntryID:          "entry-1",
+		Entry:            []byte(`{"title":"test"}`),
+		CreatorSignature: []byte("sig"),
+	})
+
+	if err != nil {
+		t.Fatalf("SendPushEntry 失败: %v", err)
+	}
+
+	if !ack.Accepted {
+		t.Error("推送应被接受")
+	}
+
+	if ack.NewVersion != 2 {
+		t.Errorf("NewVersion 错误: got %d, want 2", ack.NewVersion)
+	}
+}
+
+// TestMocknetSendRatingPush 使用 mocknet 测试发送评分推送
+func TestMocknetSendRatingPush(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	mn, err := mocknet.FullMeshLinked(2)
+	if err != nil {
+		t.Fatalf("创建 mocknet 失败: %v", err)
+	}
+
+	hosts := mn.Hosts()
+	h1, h2 := hosts[0], hosts[1]
+
+	handler := &mockHandler{
+		ratingPushFunc: func(ctx context.Context, r *protocol.RatingPush) (*protocol.RatingAck, error) {
+			return &protocol.RatingAck{
+				RatingID:     "rating-1",
+				Accepted:     true,
+				RejectReason: "",
+			}, nil
+		},
+	}
+	protocol.NewProtocol(h2, handler)
+
+	p1 := protocol.NewProtocol(h1, &mockHandler{})
+
+	ack, err := p1.SendRatingPush(ctx, h2.ID(), &protocol.RatingPush{
+		Rating:         []byte(`{"entry_id":"entry-1","score":5}`),
+		RaterSignature: []byte("rater-sig"),
+	})
+
+	if err != nil {
+		t.Fatalf("SendRatingPush 失败: %v", err)
+	}
+
+	if !ack.Accepted {
+		t.Error("评分应被接受")
 	}
 }
