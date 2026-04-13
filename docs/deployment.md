@@ -1,5 +1,20 @@
 # AgentWiki 部署指南
 
+## 快速开始
+
+```bash
+# 1. 克隆并构建
+git clone https://github.com/daifei0527/agentwiki.git
+cd agentwiki
+make build
+
+# 2. 启动节点（使用默认配置）
+./bin/agentwiki
+
+# 3. 验证服务运行
+curl http://localhost:18531/api/v1/node/status
+```
+
 ## 系统要求
 
 ### 硬件要求
@@ -7,14 +22,33 @@
 | 类型 | 最低配置 | 推荐配置 |
 |------|----------|----------|
 | CPU | 1 核 | 2 核+ |
-| 内存 | 50 MB | 200 MB+ |
-| 磁盘 | 5 MB | 根据数据量增长 |
+| 内存 | 100 MB | 512 MB+ |
+| 磁盘 | 100 MB | 根据数据量增长（建议 SSD） |
+
+> **注意**: 种子节点建议使用推荐配置，以支持更多并发连接和数据同步。
 
 ### 软件要求
 
 - **操作系统**: Linux, macOS, Windows
 - **Go 版本**: 1.22+ （仅源码编译需要）
-- **依赖**: 无外部数据库依赖（使用嵌入式 BadgerDB）
+- **依赖**: 无外部数据库依赖
+  - 内置 Pebble KV 存储（默认）或 BadgerDB
+  - 内置 Bleve 全文搜索引擎
+  - 中文分词依赖 gojieba（需要 CGO）
+
+> **CGO 依赖说明**:
+> 项目使用 gojieba 进行中文分词，需要 CGO 支持。如果编译环境没有 CGO，会使用 stub 实现（分词功能降级）。在生产环境建议安装 CGO 工具链以获得完整的中文搜索支持。
+>
+> ```bash
+> # Ubuntu/Debian
+> sudo apt-get install build-essential
+>
+> # CentOS/RHEL
+> sudo yum groupinstall "Development Tools"
+>
+> # macOS (Xcode Command Line Tools)
+> xcode-select --install
+> ```
 
 ## 安装方式
 
@@ -144,17 +178,74 @@ make build-windows   # Windows
 | mirror_categories | []string | 镜像的分类列表 |
 | max_local_size_mb | int | 本地存储上限（MB） |
 
+#### 存储配置 (storage)
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| kv_type | string | KV 存储类型：`pebble`（默认）、`badger` |
+| search_type | string | 搜索引擎类型：`bleve`（默认）、`memory` |
+
 ### 环境变量
 
 配置可通过环境变量覆盖，前缀为 `AGENTWIKI_`：
 
 ```bash
+# 节点配置
 export AGENTWIKI_NODE_TYPE=seed
+export AGENTWIKI_NODE_NAME=my-node
+export AGENTWIKI_NODE_DATA_DIR=/data/agentwiki
+
+# 网络配置
 export AGENTWIKI_NETWORK_API_PORT=8080
+export AGENTWIKI_NETWORK_LISTEN_PORT=18530
+export AGENTWIKI_NETWORK_SEED_NODES=/ip4/192.168.1.1/tcp/18530/p2p/QmXXX
+
+# 同步配置
 export AGENTWIKI_SYNC_AUTO_SYNC=true
+export AGENTWIKI_SYNC_INTERVAL_SECONDS=300
+
+# 存储配置
+export AGENTWIKI_STORAGE_KV_TYPE=pebble
+export AGENTWIKI_STORAGE_SEARCH_TYPE=bleve
 ```
 
+环境变量命名规则：`AGENTWIKI_<节>_<字段>`，使用下划线连接。例如：
+- `AGENTWIKI_NODE_TYPE` → `node.type`
+- `AGENTWIKI_NETWORK_API_PORT` → `network.api_port`
+
 ## 运行模式
+
+### 命令行参数
+
+```bash
+./bin/agentwiki [选项]
+
+选项:
+  -config <file>      配置文件路径 (JSON 格式)
+  -init-seed          初始化种子数据并退出
+  -memory             使用内存存储（仅用于测试）
+  -service            作为系统服务运行
+  -version            显示版本信息
+```
+
+示例：
+
+```bash
+# 使用默认配置运行
+./bin/agentwiki
+
+# 指定配置文件
+./bin/agentwiki -config /etc/agentwiki/config.json
+
+# 初始化种子数据
+./bin/agentwiki -init-seed -config seed-config.json
+
+# 使用内存存储（测试用）
+./bin/agentwiki -memory
+
+# 作为系统服务运行
+./bin/agentwiki -service
+```
 
 ### 直接运行
 
@@ -275,6 +366,8 @@ services:
 
 ## 节点类型
 
+AgentWiki 支持三种节点类型，适用于不同场景：
+
 ### 本地节点 (local)
 
 标准用户节点，适合个人使用：
@@ -287,6 +380,11 @@ services:
   }
 }
 ```
+
+特点：
+- 完整的 P2P 功能
+- 可配置数据同步和镜像
+- 适合个人知识库管理
 
 ### 种子节点 (seed)
 
@@ -309,75 +407,434 @@ services:
 }
 ```
 
+特点：
+- 提供 DHT 引导服务
+- 初始数据源
+- 高可用性要求
+- 建议部署在公网服务器
+
 种子节点启动时会自动初始化种子数据：
 
 ```bash
 ./bin/agentwiki -config seed-config.json -init-seed
 ```
 
-## CLI 工具 (awctl)
+## 种子节点部署指南
 
-`awctl` 是 AgentWiki 的命令行管理工具。
+种子节点是 AgentWiki 网络的核心基础设施，负责：
+- 提供 DHT 引导服务
+- 初始数据分发
+- 网络拓扑稳定
 
-### 常用命令
+### 部署前准备
+
+1. **服务器要求**：
+   - 公网 IP 地址
+   - 稳定的网络连接
+   - 建议配置：2 核 CPU，1GB+ 内存，50GB+ SSD
+
+2. **域名（可选）**：
+   - 配置 DNS 解析
+   - 便于节点发现和维护
+
+### 部署步骤
+
+1. **创建种子节点配置** `/opt/agentwiki/config.json`：
+
+```json
+{
+  "node": {
+    "type": "seed",
+    "name": "seed-node-1",
+    "data_dir": "/opt/agentwiki/data",
+    "log_dir": "/opt/agentwiki/logs",
+    "log_level": "info"
+  },
+  "network": {
+    "listen_port": 18530,
+    "api_port": 18531,
+    "seed_nodes": [],
+    "dht_enabled": true,
+    "mdns_enabled": false
+  },
+  "storage": {
+    "kv_type": "pebble",
+    "search_type": "bleve"
+  },
+  "sync": {
+    "auto_sync": true,
+    "interval_seconds": 60
+  },
+  "sharing": {
+    "allow_mirror": true,
+    "bandwidth_limit_mb": 500,
+    "max_concurrent": 50
+  }
+}
+```
+
+2. **创建系统服务用户**：
 
 ```bash
-# 初始化配置
-./bin/awctl init
+sudo useradd -r -s /bin/false agentwiki
+sudo mkdir -p /opt/agentwiki/{data,logs,keys,seed-data}
+sudo chown -R agentwiki:agentwiki /opt/agentwiki
+```
 
+3. **准备种子数据**：
+
+```bash
+# 将初始知识库数据放入 seed-data 目录
+cp -r /path/to/seed-data/* /opt/agentwiki/seed-data/
+chown -R agentwiki:agentwiki /opt/agentwiki/seed-data
+```
+
+4. **安装并启动服务**：
+
+```bash
+# 使用 awctl 安装服务
+./bin/awctl service install \
+  --name agentwiki \
+  --config /opt/agentwiki/config.json
+
+# 启动服务
+./bin/awctl service start --name agentwiki
+
+# 查看状态
+./bin/awctl service status --name agentwiki
+```
+
+5. **获取节点地址**：
+
+```bash
+# 查看日志获取 Peer ID
+journalctl -u agentwiki | grep "node_id"
+
+# 完整的多地址格式
+# /ip4/<公网IP>/tcp/18530/p2p/<PeerID>
+```
+
+### 多种子节点配置
+
+部署多个种子节点提高可用性：
+
+```json
+{
+  "network": {
+    "seed_nodes": [
+      "/ip4/seed1.example.com/tcp/18530/p2p/QmSeed1...",
+      "/ip4/seed2.example.com/tcp/18530/p2p/QmSeed2..."
+    ]
+  }
+}
+```
+
+### 监控与维护
+
+```bash
+# 检查服务状态
+systemctl status agentwiki
+
+# 查看实时日志
+journalctl -u agentwiki -f
+
+# 检查端口监听
+netstat -tlnp | grep agentwiki
+
+# 监控资源使用
+top -p $(pgrep agentwiki)
+```
+
+### 高可用配置
+
+建议部署至少 3 个种子节点：
+- 不同地理位置
+- 不同网络提供商
+- 负载均衡或 DNS 轮询
+
+### 用户节点 (user)
+
+轻量级客户端节点，适合资源受限环境：
+
+```json
+{
+  "node": {
+    "type": "user",
+    "name": "light-client"
+  },
+  "sync": {
+    "auto_sync": false
+  }
+}
+```
+
+特点：
+- 最小化资源占用
+- 按需同步数据
+- 适合嵌入式设备或移动端
+
+## CLI 工具 (awctl)
+
+`awctl` 是 AgentWiki 的命令行管理工具，用于管理知识库条目、用户、同步、镜像等功能。
+
+### 全局选项
+
+```bash
+awctl [全局选项] <命令>
+
+选项:
+  -c, --config <file>    配置文件路径
+  -d, --data <dir>       数据目录
+  -s, --server <url>     API 服务器地址 (默认: http://localhost:8080)
+  --key-dir <dir>        密钥目录 (默认: ~/.agentwiki/keys)
+```
+
+### 服务管理命令
+
+```bash
+# 安装为系统服务
+awctl service install --name agentwiki --config /etc/agentwiki/config.json
+
+# 启动服务
+awctl service start --name agentwiki
+
+# 停止服务
+awctl service stop --name agentwiki
+
+# 重启服务
+awctl service restart --name agentwiki
+
+# 查看服务状态
+awctl service status --name agentwiki
+
+# 查看服务日志
+awctl service logs --name agentwiki -f --tail 100
+
+# 卸载服务
+awctl service uninstall --name agentwiki
+```
+
+### 密钥管理命令
+
+```bash
+# 生成新密钥对
+awctl key generate
+
+# 查看当前公钥
+awctl key show
+```
+
+### 用户管理命令
+
+```bash
+# 注册新用户
+awctl user register --name "my-agent" --email "agent@example.com"
+
+# 查看用户信息
+awctl user get <user-id>
+
+# 列出所有用户
+awctl user list
+```
+
+### 条目管理命令
+
+```bash
+# 搜索条目
+awctl search "人工智能"
+
+# 获取条目详情
+awctl entry get <entry-id>
+
+# 创建条目
+awctl entry create --title "新条目" --category "tech" --content "内容..."
+
+# 更新条目
+awctl entry update <entry-id> --title "更新标题"
+
+# 删除条目
+awctl entry delete <entry-id>
+```
+
+### 同步命令
+
+```bash
+# 触发同步
+awctl sync trigger
+
+# 查看同步状态
+awctl sync status
+```
+
+### 常用命令示例
+
+```bash
 # 查看节点状态
 ./bin/awctl status
 
-# 安装为系统服务
-./bin/awctl service install
+# 搜索知识库
+./bin/awctl -s http://localhost:18531 search "Go 语言"
 
-# 启动服务
-./bin/awctl service start
-
-# 停止服务
-./bin/awctl service stop
-
-# 查看服务状态
-./bin/awctl service status
-
-# 卸载服务
-./bin/awctl service uninstall
+# 连接远程服务器
+./bin/awctl -s http://192.168.1.100:18531 status
 ```
 
 ## 数据管理
+
+### 存储架构
+
+AgentWiki 使用分层存储架构：
+
+| 层级 | 组件 | 说明 |
+|------|------|------|
+| KV 存储 | Pebble（默认）/ BadgerDB | 存储条目、用户、评分等结构化数据 |
+| 搜索引擎 | Bleve（默认） | 全文搜索索引，支持中文分词 |
+| 文件系统 | 种子数据 | 初始种子数据文件 |
 
 ### 数据目录结构
 
 ```
 ~/.agentwiki/
-├── config.json       # 配置文件
-├── data/             # 数据目录
-│   ├── entries/      # 条目数据
-│   ├── users/        # 用户数据
-│   ├── ratings/      # 评分数据
-│   └── index/        # 搜索索引
-├── logs/             # 日志目录
+├── config.json         # 配置文件
+├── data/               # 数据目录
+│   ├── kv/             # Pebble/BadgerDB KV 存储
+│   ├── search.bleve/   # Bleve 搜索索引
+│   └── seed-data/      # 种子数据（种子节点）
+├── logs/               # 日志目录
 │   └── agentwiki.log
-└── keys/             # 密钥目录
-    └── private.key
+└── keys/               # 密钥目录
+    └── private.key     # Ed25519 私钥
 ```
+
+### 存储配置
+
+```json
+{
+  "storage": {
+    "kv_type": "pebble",      // 或 "badger"
+    "search_type": "bleve"    // 或 "memory"（仅测试用）
+  }
+}
+```
+
+Pebble vs BadgerDB：
+- **Pebble**: 默认推荐，更小的内存占用，更好的写性能
+- **BadgerDB**: 兼容选项，适合从旧版本迁移
 
 ### 数据备份
 
+#### 方式一：文件系统备份
+
 ```bash
+# 停止服务
+systemctl stop agentwiki
+
 # 备份数据目录
-tar -czf agentwiki-backup-$(date +%Y%m%d).tar.gz ~/.agentwiki/data
+tar -czf agentwiki-backup-$(date +%Y%m%d-%H%M%S).tar.gz ~/.agentwiki/data
+
+# 备份密钥（重要！）
+cp -r ~/.agentwiki/keys ~/.agentwiki/keys-backup
+
+# 重启服务
+systemctl start agentwiki
+```
+
+#### 方式二：增量备份
+
+```bash
+# 使用 rsync 增量同步
+rsync -av --delete ~/.agentwiki/data/ /backup/agentwiki-data/
+```
+
+#### 方式三：定时备份脚本
+
+创建 `/etc/cron.daily/agentwiki-backup`：
+
+```bash
+#!/bin/bash
+BACKUP_DIR="/backup/agentwiki"
+DATE=$(date +%Y%m%d)
+RETENTION_DAYS=7
+
+# 创建备份
+tar -czf ${BACKUP_DIR}/agentwiki-${DATE}.tar.gz ~/.agentwiki/data
+
+# 清理旧备份
+find ${BACKUP_DIR} -name "agentwiki-*.tar.gz" -mtime +${RETENTION_DAYS} -delete
+```
+
+### 数据恢复
+
+```bash
+# 停止服务
+systemctl stop agentwiki
 
 # 恢复数据
 tar -xzf agentwiki-backup-20240101.tar.gz -C ~/
+
+# 确保权限正确
+chown -R agentwiki:agentwiki ~/.agentwiki
+
+# 启动服务
+systemctl start agentwiki
 ```
 
 ### 数据迁移
 
-1. 停止服务
-2. 复制数据目录到新位置
-3. 更新配置文件中的 `data_dir`
-4. 启动服务
+迁移到新服务器：
+
+1. **源服务器**：
+   ```bash
+   # 停止服务
+   systemctl stop agentwiki
+   
+   # 打包数据
+   tar -czf agentwiki-migration.tar.gz ~/.agentwiki/data ~/.agentwiki/keys
+   ```
+
+2. **传输数据**：
+   ```bash
+   scp agentwiki-migration.tar.gz user@new-server:/tmp/
+   ```
+
+3. **目标服务器**：
+   ```bash
+   # 安装 AgentWiki
+   # 创建目录
+   mkdir -p ~/.agentwiki
+   
+   # 解压数据
+   tar -xzf /tmp/agentwiki-migration.tar.gz -C ~/
+   
+   # 启动服务
+   ./bin/agentwiki -config ~/.agentwiki/config.json
+   ```
+
+### 存储维护
+
+#### 重建搜索索引
+
+如果搜索出现问题，可以重建索引：
+
+```bash
+# 停止服务
+systemctl stop agentwiki
+
+# 删除旧索引
+rm -rf ~/.agentwiki/data/search.bleve
+
+# 启动服务（会自动重建索引）
+systemctl start agentwiki
+```
+
+#### 压缩存储
+
+Pebble 存储支持手动压缩：
+
+```bash
+# 通过 API 触发（如果实现了相关接口）
+curl -X POST http://localhost:18531/api/v1/admin/compact
+```
 
 ## 监控与日志
 
@@ -468,33 +925,222 @@ sudo ufw allow 18531/tcp
 
 ### 常见问题
 
-**Q: 节点无法连接到网络**
+#### P2P 连接问题
+
+**问题：节点无法连接到网络**
+
+排查步骤：
+1. 检查网络连接
+   ```bash
+   ping <seed-node-ip>
+   ```
+
+2. 检查防火墙
+   ```bash
+   sudo ufw status
+   sudo ufw allow 18530/tcp
+   ```
+
+3. 验证种子节点地址格式
+   ```bash
+   # 正确格式
+   /ip4/192.168.1.1/tcp/18530/p2p/QmXXX...
+   ```
+
+4. 检查 NAT 穿透
+   - 确保路由器支持 UPnP
+   - 或手动配置端口转发
+
+**问题：DHT 发现失败**
+
+解决方案：
+- 确保至少连接到一个在线的种子节点
+- 检查 `dht_enabled` 配置
+- 等待 DHT 引导完成（可能需要几分钟）
+
+#### 存储问题
+
+**问题：数据库打开失败**
+
+错误信息：`resource temporarily unavailable`
+
+原因：另一个实例正在运行
+
+解决方案：
+```bash
+# 检查是否有进程占用
+lsof ~/.agentwiki/data/kv
+
+# 终止旧进程
+pkill -f agentwiki
+
+# 或清理锁文件
+rm -f ~/.agentwiki/data/kv/LOCK
+```
+
+**问题：磁盘空间不足**
+
+```bash
+# 检查磁盘使用
+df -h ~/.agentwiki/data
+
+# 清理日志
+find ~/.agentwiki/logs -name "*.log" -mtime +30 -delete
+
+# 限制存储大小
+# 在配置中设置 max_local_size_mb
+```
+
+**问题：搜索索引损坏**
+
+症状：搜索返回错误或空结果
+
+解决方案：
+```bash
+# 重建搜索索引
+rm -rf ~/.agentwiki/data/search.bleve
+systemctl restart agentwiki
+```
+
+#### API 问题
+
+**问题：API 无响应**
 
 检查：
-- 网络连接是否正常
-- 防火墙是否开放端口
-- 种子节点地址是否正确
+1. 端口是否被占用
+   ```bash
+   netstat -tlnp | grep 18531
+   ```
 
-**Q: 同步失败**
+2. 服务是否运行
+   ```bash
+   curl http://localhost:18531/api/v1/node/status
+   ```
+
+3. 查看日志
+   ```bash
+   journalctl -u agentwiki -n 50
+   ```
+
+**问题：认证失败**
+
+错误：`invalid signature`
+
+解决方案：
+- 检查密钥文件是否存在
+- 确认时间戳在有效范围内（5分钟内）
+- 验证签名算法是否正确
+
+#### 同步问题
+
+**问题：同步失败**
 
 检查：
 - 日志中的错误信息
 - 磁盘空间是否充足
 - 分类配置是否正确
 
-**Q: API 无响应**
+```bash
+# 查看同步相关日志
+grep -i sync ~/.agentwiki/logs/agentwiki.log
+```
 
-检查：
-- API 端口是否被占用
-- 服务是否正常运行
-- 日志中是否有错误
+**问题：数据不一致**
+
+解决方案：
+1. 触发完整同步
+2. 如需要，清除本地数据重新同步
 
 ### 日志分析
 
 ```bash
+# 实时查看日志
+tail -f ~/.agentwiki/logs/agentwiki.log
+
+# systemd 服务日志
+journalctl -u agentwiki -f
+
 # 搜索错误日志
 grep -i error ~/.agentwiki/logs/agentwiki.log
 
-# 查看最近的日志
+# 查看最近 100 行
 tail -100 ~/.agentwiki/logs/agentwiki.log
+
+# 按时间过滤
+journalctl -u agentwiki --since "1 hour ago"
+```
+
+### 性能调优
+
+#### 内存优化
+
+```json
+{
+  "sync": {
+    "max_local_size_mb": 512
+  },
+  "sharing": {
+    "bandwidth_limit_mb": 50,
+    "max_concurrent": 5
+  }
+}
+```
+
+#### 连接优化
+
+```json
+{
+  "network": {
+    "dht_enabled": true,
+    "mdns_enabled": false
+  }
+}
+```
+
+- 禁用 mDNS 可减少局域网广播
+- 调整 `max_concurrent` 控制并发连接
+
+### 调试模式
+
+启用详细日志：
+
+```bash
+# 方式一：配置文件
+{
+  "node": {
+    "log_level": "debug"
+  }
+}
+
+# 方式二：环境变量
+export AGENTWIKI_NODE_LOG_LEVEL=debug
+```
+
+### 健康检查
+
+```bash
+# 检查节点状态
+curl http://localhost:18531/api/v1/node/status
+
+# 检查 API 可用性
+curl http://localhost:18531/api/v1/categories
+
+# 检查 P2P 连接
+curl http://localhost:18531/api/v1/node/peers
+```
+
+### 常用诊断命令
+
+```bash
+# 查看进程状态
+ps aux | grep agentwiki
+
+# 查看端口监听
+netstat -tlnp | grep agentwiki
+
+# 查看系统资源
+top -p $(pgrep agentwiki)
+
+# 检查文件描述符
+lsof -p $(pgrep agentwiki) | wc -l
 ```

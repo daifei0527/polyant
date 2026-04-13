@@ -182,13 +182,19 @@ awctl config set data.dir /data/agentwiki
 | 编程语言 | Go 1.22 |
 | P2P网络 | go-libp2p |
 | DHT发现 | go-libp2p-kad-dht |
-| KV存储 | BadgerDB |
-| 全文搜索 | 自研索引 + gojieba |
+| KV存储 | Pebble (CockroachDB) |
+| 全文搜索 | Bleve + gojieba |
 | 认证加密 | Ed25519 |
 | 系统服务 | kardianos/service |
 | Web框架 | gorilla/mux |
 | CLI框架 | spf13/cobra |
 | 邮件服务 | SMTP |
+
+## 文档
+
+- [API 文档](docs/api.md) - 完整的 REST API 参考
+- [部署文档](docs/deployment.md) - 安装、配置、运维指南
+- [测试覆盖率报告](docs/coverage.html) - 代码覆盖率详情
 
 ## 项目结构
 
