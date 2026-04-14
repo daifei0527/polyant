@@ -107,7 +107,8 @@ type Store struct {
 	Category CategoryStore
 	Search   index.SearchEngine
 	Backlink BacklinkIndex
-	kvStore  kv.Store // underlying KV store for cleanup
+	Audit    kv.AuditStore // 审计日志存储
+	kvStore  kv.Store      // underlying KV store for cleanup
 }
 
 // NewMemoryStore 创建内存存储实例
@@ -119,6 +120,9 @@ func NewMemoryStore() (*Store, error) {
 	searchEngine := NewMemorySearchEngine()
 	backlinkIndex := NewMemoryBacklinkIndex()
 
+	// 创建内存 KV 存储用于审计日志
+	memKV := kv.NewMemoryStore()
+
 	return &Store{
 		Entry:    entryStore,
 		User:     userStore,
@@ -126,6 +130,7 @@ func NewMemoryStore() (*Store, error) {
 		Category: categoryStore,
 		Search:   searchEngine,
 		Backlink: backlinkIndex,
+		Audit:    kv.NewAuditStore(memKV),
 	}, nil
 }
 
@@ -180,7 +185,8 @@ func NewPersistentStore(cfg *StoreConfig) (*Store, error) {
 		Category: NewBadgerCategoryStore(kvStore),
 		Search:   searchEngine,
 		Backlink: NewMemoryBacklinkIndex(), // 反向链接仍使用内存实现
-		kvStore:  kvStore,                  // Store reference for cleanup
+		Audit:    kv.NewAuditStore(kvStore), // 共享 KV 存储
+		kvStore:  kvStore,                   // Store reference for cleanup
 	}, nil
 }
 
