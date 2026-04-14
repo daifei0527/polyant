@@ -5,7 +5,6 @@ import (
 	"os"
 	"os/exec"
 	"runtime"
-	"syscall"
 
 	"github.com/daifei0527/polyant/internal/service/daemon"
 	"github.com/daifei0527/polyant/pkg/config"
@@ -207,12 +206,9 @@ var serviceStatusCmd = &cobra.Command{
 		if data, err := os.ReadFile(pidFile); err == nil {
 			var pid int
 			fmt.Sscanf(string(data), "%d", &pid)
-			if pid > 0 {
-				// 检查进程是否存在
-				if err := syscall.Kill(pid, 0); err == nil {
-					fmt.Printf("服务状态: 运行中 (PID: %d)\n", pid)
-					return nil
-				}
+			if pid > 0 && processExists(pid) {
+				fmt.Printf("服务状态: 运行中 (PID: %d)\n", pid)
+				return nil
 			}
 		}
 
@@ -320,7 +316,7 @@ func stopViaSystemd(name string) error {
 		var pid int
 		fmt.Sscanf(string(data), "%d", &pid)
 		if pid > 0 {
-			if err := syscall.Kill(pid, syscall.SIGTERM); err != nil {
+			if err := terminateProcess(pid); err != nil {
 				return fmt.Errorf("停止进程失败: %w", err)
 			}
 			fmt.Printf("✓ 服务 %s 已停止 (PID: %d)\n", name, pid)

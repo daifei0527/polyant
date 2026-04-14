@@ -94,10 +94,10 @@ cross-compile:
 		out=$(BUILD_DIR)/polyant-$${GOOS}-$${GOARCH}; \
 		[ "$${GOOS}" = "windows" ] && out=$${out}.exe; \
 		echo "  编译 $$out..."; \
-		GOOS=$${GOOS} GOARCH=$${GOARCH} $(GOBUILD) $(LDFLAGS) -o $$out $(CMD_DIR)/polyant/; \
+		CGO_ENABLED=0 GOOS=$${GOOS} GOARCH=$${GOARCH} $(GOBUILD) $(LDFLAGS) -o $$out $(CMD_DIR)/polyant/; \
 		out=$(BUILD_DIR)/awctl-$${GOOS}-$${GOARCH}; \
 		[ "$${GOOS}" = "windows" ] && out=$${out}.exe; \
-		GOOS=$${GOOS} GOARCH=$${GOARCH} $(GOBUILD) $(LDFLAGS) -o $$out $(CMD_DIR)/awctl/; \
+		CGO_ENABLED=0 GOOS=$${GOOS} GOARCH=$${GOARCH} $(GOBUILD) $(LDFLAGS) -o $$out $(CMD_DIR)/awctl/; \
 	done
 	@echo ">>> 交叉编译完成"
 

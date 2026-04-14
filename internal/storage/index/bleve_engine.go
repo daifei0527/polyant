@@ -13,7 +13,6 @@ import (
 	"github.com/blevesearch/bleve/v2/index/upsidedown"
 	"github.com/blevesearch/bleve/v2/index/upsidedown/store/boltdb"
 	"github.com/daifei0527/polyant/internal/storage/model"
-	"github.com/yanyiwu/gojieba"
 )
 
 const (
@@ -25,7 +24,7 @@ const (
 // 支持持久化索引和中文分词
 type BleveEngine struct {
 	index bleve.Index
-	jieba *gojieba.Jieba
+	jieba *JiebaWrapper
 }
 
 // entryDocument 是用于索引的文档结构
@@ -45,7 +44,7 @@ type entryDocument struct {
 // indexPath: 索引文件存储路径
 func NewBleveEngine(indexPath string) (*BleveEngine, error) {
 	// 创建中文分词器
-	jieba := gojieba.NewJieba()
+	jieba := NewJiebaWrapper()
 
 	// 创建索引映射
 	mapping := bleve.NewIndexMapping()
