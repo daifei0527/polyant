@@ -383,6 +383,7 @@ func (app *AgentWiki) Start() error {
 
 	// 创建 API 路由
 	apiHandler, err := router.NewRouterWithDeps(&router.Dependencies{
+		Store:         app.store,
 		EntryStore:    app.store.Entry,
 		UserStore:     app.store.User,
 		RatingStore:   app.store.Rating,
@@ -391,6 +392,7 @@ func (app *AgentWiki) Start() error {
 		Backlink:      app.store.Backlink,
 		RemoteQuerier: remoteQueryService,
 		EntryPusher:   app.pushService,
+		KVStore:       app.store.KVStore(),
 		NodeID:        app.p2pHost.NodeID(),
 		NodeType:      app.config.Node.Type,
 		Version:       Version,
