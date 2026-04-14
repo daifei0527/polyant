@@ -1024,89 +1024,113 @@
         // Language switching
         function setLang(lang) {
             document.documentElement.lang = lang;
-            localStorage.setItem('agentwiki-lang', lang);
+            try {
+                localStorage.setItem('agentwiki-lang', lang);
+            } catch(e) {}
 
             // Update button states
-            document.querySelectorAll('.lang-btn').forEach(btn => {
-                btn.classList.remove('active');
-            });
-            document.querySelector(`.lang-btn[onclick="setLang('${lang}')"]`).classList.add('active');
+            var btns = document.querySelectorAll('.lang-btn');
+            for (var i = 0; i < btns.length; i++) {
+                btns[i].classList.remove('active');
+            }
+
+            var activeBtn = document.querySelector('.lang-btn[onclick="setLang(\'' + lang + '\')"]');
+            if (activeBtn) {
+                activeBtn.classList.add('active');
+            }
         }
 
         // Initialize language from localStorage
-        const savedLang = localStorage.getItem('agentwiki-lang') || 'zh';
+        var savedLang = 'zh';
+        try {
+            savedLang = localStorage.getItem('agentwiki-lang') || 'zh';
+        } catch(e) {}
         setLang(savedLang);
 
-        // Copy path function
+        // Copy path function - simple and reliable
         function copyPath() {
-            const path = 'https://openclaw.dlibrary.cn/SKILL.md';
-
-            // Try modern clipboard API first
-            if (navigator.clipboard && navigator.clipboard.writeText) {
-                navigator.clipboard.writeText(path).then(() => {
-                    showCopySuccess();
-                }).catch(() => {
-                    fallbackCopy(path);
-                });
-            } else {
-                fallbackCopy(path);
-            }
-        }
-
-        // Fallback copy method
-        function fallbackCopy(text) {
-            const textarea = document.createElement('textarea');
-            textarea.value = text;
+            var path = 'https://openclaw.dlibrary.cn/SKILL.md';
+            var textarea = document.createElement('textarea');
+            textarea.value = path;
             textarea.style.position = 'fixed';
-            textarea.style.left = '-9999px';
+            textarea.style.top = '0';
+            textarea.style.left = '0';
+            textarea.style.width = '2em';
+            textarea.style.height = '2em';
+            textarea.style.padding = '0';
+            textarea.style.border = 'none';
+            textarea.style.outline = 'none';
+            textarea.style.boxShadow = 'none';
+            textarea.style.background = 'transparent';
             document.body.appendChild(textarea);
+            textarea.focus();
             textarea.select();
+
+            var success = false;
             try {
-                document.execCommand('copy');
-                showCopySuccess();
+                success = document.execCommand('copy');
             } catch (err) {
-                alert('复制失败，请手动复制: ' + text);
+                console.error('Copy failed:', err);
             }
+
             document.body.removeChild(textarea);
+
+            if (success) {
+                showCopySuccess();
+            } else {
+                // Final fallback - prompt user
+                window.prompt('复制以下路径:', path);
+            }
         }
 
         // Show copy success feedback
         function showCopySuccess() {
-            const toast = document.getElementById('toast');
-            const btn = document.getElementById('copyBtn');
+            var toast = document.getElementById('toast');
+            var btn = document.getElementById('copyBtn');
 
             toast.classList.add('show');
             btn.classList.add('copied');
 
-            setTimeout(() => {
+            setTimeout(function() {
                 toast.classList.remove('show');
                 btn.classList.remove('copied');
             }, 2000);
         }
 
         // Scroll Animation
-        const observerOptions = {
-            threshold: 0.1,
-            rootMargin: '0px 0px -50px 0px'
-        };
+        if ('IntersectionObserver' in window) {
+            var observerOptions = {
+                threshold: 0.1,
+                rootMargin: '0px 0px -50px 0px'
+            };
 
-        const observer = new IntersectionObserver((entries) => {
-            entries.forEach(entry => {
-                if (entry.isIntersecting) {
-                    entry.target.classList.add('visible');
+            var observer = new IntersectionObserver(function(entries) {
+                for (var i = 0; i < entries.length; i++) {
+                    if (entries[i].isIntersecting) {
+                        entries[i].target.classList.add('visible');
+                    }
                 }
-            });
-        }, observerOptions);
+            }, observerOptions);
 
-        document.querySelectorAll('.animate-on-scroll').forEach(el => {
-            observer.observe(el);
-        });
+            var animatedElements = document.querySelectorAll('.animate-on-scroll');
+            for (var i = 0; i < animatedElements.length; i++) {
+                observer.observe(animatedElements[i]);
+            }
+        } else {
+            // Fallback: show all elements
+            var animatedElements = document.querySelectorAll('.animate-on-scroll');
+            for (var i = 0; i < animatedElements.length; i++) {
+                animatedElements[i].classList.add('visible');
+            }
+        }
 
         // Smooth scroll for navigation
-        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
-            anchor.addEventListener('click', function(e) {
+        var anchors = document.querySelectorAll('a[href^="#"]');
+        for (var i = 0; i < anchors.length; i++) {
+            anchors[i].addEventListener('click', function(e) {
                 e.preventDefault();
-                const target = document.querySelector(this.getAttribute('href'));
+                var targetId = this.getAttribute('href');
+                var target = document.querySelector(targetId);
                 if (target) {
                     target.scrollIntoView({
                         behavior: 'smooth',
@@ -1114,7 +1138,7 @@
                     });
                 }
             });
-        });
+        }
     </script>
 </body>
 </html>
