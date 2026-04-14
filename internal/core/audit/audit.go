@@ -21,6 +21,25 @@ var sensitiveFields = []string{
 // 脱敏正则
 var sensitivePatterns []*regexp.Regexp
 
+// 敏感操作路径映射
+var sensitiveOps = map[string]map[string]string{
+	"POST": {
+		"/api/v1/user/register":     "user.register",
+		"/api/v1/user/verify-email": "user.verify_email",
+		"/api/v1/user/update":       "user.update",
+		"/api/v1/entry/create":      "entry.create",
+		"/api/v1/categories/create": "category.create",
+		"/api/v1/elections":         "election.create",
+		"/api/v1/batch/create":      "batch.create",
+		"/api/v1/batch/update":      "batch.update",
+		"/api/v1/batch/delete":      "batch.delete",
+		"/api/v1/admin/import":      "admin.import",
+	},
+	"GET": {
+		"/api/v1/admin/export": "admin.export",
+	},
+}
+
 func init() {
 	for _, field := range sensitiveFields {
 		// 匹配 "field": "value" 或 "field":"value"
@@ -95,25 +114,6 @@ func TruncateString(s string, maxLen int) string {
 
 // GetActionType 获取操作类型
 func GetActionType(method, path string) string {
-	// 敏感操作路径映射
-	sensitiveOps := map[string]map[string]string{
-		"POST": {
-			"/api/v1/user/register":     "user.register",
-			"/api/v1/user/verify-email": "user.verify_email",
-			"/api/v1/user/update":       "user.update",
-			"/api/v1/entry/create":      "entry.create",
-			"/api/v1/categories/create": "category.create",
-			"/api/v1/elections":         "election.create",
-			"/api/v1/batch/create":      "batch.create",
-			"/api/v1/batch/update":      "batch.update",
-			"/api/v1/batch/delete":      "batch.delete",
-			"/api/v1/admin/import":      "admin.import",
-		},
-		"GET": {
-			"/api/v1/admin/export": "admin.export",
-		},
-	}
-
 	// 精确匹配
 	if methodOps, ok := sensitiveOps[method]; ok {
 		for pattern, action := range methodOps {
@@ -171,11 +171,11 @@ func ExtractTargetID(path string) string {
 		case strings.HasPrefix(path, "/api/v1/entry/"):
 			return parts[4] // entry-id
 		case strings.HasPrefix(path, "/api/v1/admin/users/"):
-			return parts[5] // user-pk
-		case strings.HasPrefix(path, "/api/v1/elections/"):
-			if len(parts) >= 5 {
-				return parts[4] // election-id
+			if len(parts) >= 6 {
+				return parts[5] // user-pk
 			}
+		case strings.HasPrefix(path, "/api/v1/elections/"):
+			return parts[4] // election-id
 		}
 	}
 	return ""
