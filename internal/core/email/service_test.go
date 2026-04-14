@@ -235,7 +235,7 @@ func TestService_Send_WithFromName(t *testing.T) {
 		Host:     "smtp.example.com",
 		Port:     587,
 		From:     "noreply@example.com",
-		FromName: "AgentWiki Team",
+		FromName: "Polyant Team",
 		Username: "user",
 		Password: "pass",
 	})
@@ -243,8 +243,8 @@ func TestService_Send_WithFromName(t *testing.T) {
 	email := &Email{
 		To:       []string{"user@example.com"},
 		Subject:  "Welcome",
-		TextBody: "Welcome to AgentWiki",
-		HTMLBody: "<html><body>Welcome to AgentWiki</body></html>",
+		TextBody: "Welcome to Polyant",
+		HTMLBody: "<html><body>Welcome to Polyant</body></html>",
 	}
 
 	err := service.Send(email)
@@ -285,7 +285,7 @@ func TestService_SendVerificationEmail(t *testing.T) {
 		Host:     "smtp.example.com",
 		Port:     587,
 		From:     "noreply@example.com",
-		FromName: "AgentWiki",
+		FromName: "Polyant",
 		Username: "user",
 		Password: "pass",
 	})
@@ -312,7 +312,7 @@ func TestService_SendWelcomeEmail(t *testing.T) {
 		Host:     "smtp.example.com",
 		Port:     587,
 		From:     "noreply@example.com",
-		FromName: "AgentWiki",
+		FromName: "Polyant",
 		Username: "user",
 		Password: "pass",
 	})
@@ -335,7 +335,7 @@ func TestService_SendNotificationEmail(t *testing.T) {
 		Host:     "smtp.example.com",
 		Port:     587,
 		From:     "noreply@example.com",
-		FromName: "AgentWiki",
+		FromName: "Polyant",
 		Username: "user",
 		Password: "pass",
 	})

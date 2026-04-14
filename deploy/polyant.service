@@ -1,0 +1,27 @@
+[Unit]
+Description=Polyant - Decentralized Knowledge Base
+Documentation=https://github.com/daifei0527/polyant
+After=network.target
+
+[Service]
+Type=simple
+User=polyant
+Group=polyant
+WorkingDirectory=/opt/polyant
+ExecStart=/usr/local/bin/polyant serve --config /etc/polyant/config.yaml
+Restart=on-failure
+RestartSec=5
+LimitNOFILE=65536
+
+# 环境变量
+Environment=POLYANT_DATA_DIR=/var/lib/polyant
+Environment=POLYANT_LOG_LEVEL=info
+
+# 安全设置
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/polyant /var/log/polyant
+
+[Install]
+WantedBy=multi-user.target

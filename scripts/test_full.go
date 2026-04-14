@@ -66,9 +66,9 @@ func doRequestWithKey(tc *TestContext, method, path, body, pubKey, privKey strin
 	}
 
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("X-AgentWiki-PublicKey", pubKey)
-	req.Header.Set("X-AgentWiki-Timestamp", timestamp)
-	req.Header.Set("X-AgentWiki-Signature", signature)
+	req.Header.Set("X-Polyant-PublicKey", pubKey)
+	req.Header.Set("X-Polyant-Timestamp", timestamp)
+	req.Header.Set("X-Polyant-Signature", signature)
 
 	resp, err := tc.Client.Do(req)
 	if err != nil {
@@ -139,7 +139,7 @@ func main() {
 	}
 
 	fmt.Println("========================================")
-	fmt.Println("AgentWiki 完整功能测试 - Part 2")
+	fmt.Println("Polyant 完整功能测试 - Part 2")
 	fmt.Println("========================================\n")
 
 	// ==================== 创建普通测试用户 ====================
@@ -180,9 +180,9 @@ func main() {
 
 	req, _ := http.NewRequest("POST", reqPath, bytes.NewReader(banBodyBytes))
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("X-AgentWiki-PublicKey", tc.AdminPubKey)
-	req.Header.Set("X-AgentWiki-Timestamp", timestamp)
-	req.Header.Set("X-AgentWiki-Signature", signature)
+	req.Header.Set("X-Polyant-PublicKey", tc.AdminPubKey)
+	req.Header.Set("X-Polyant-Timestamp", timestamp)
+	req.Header.Set("X-Polyant-Signature", signature)
 
 	httpResp, err := tc.Client.Do(req)
 	if err == nil && httpResp.StatusCode == 200 {
@@ -215,9 +215,9 @@ func main() {
 
 	req2, _ := http.NewRequest("POST", reqPath2, nil)
 	req2.Header.Set("Content-Type", "application/json")
-	req2.Header.Set("X-AgentWiki-PublicKey", tc.AdminPubKey)
-	req2.Header.Set("X-AgentWiki-Timestamp", timestamp2)
-	req2.Header.Set("X-AgentWiki-Signature", signature2)
+	req2.Header.Set("X-Polyant-PublicKey", tc.AdminPubKey)
+	req2.Header.Set("X-Polyant-Timestamp", timestamp2)
+	req2.Header.Set("X-Polyant-Signature", signature2)
 
 	httpResp2, err := tc.Client.Do(req2)
 	if err == nil && httpResp2.StatusCode == 200 {
@@ -252,9 +252,9 @@ func main() {
 
 	req3, _ := http.NewRequest("PUT", reqPath3, bytes.NewReader(levelBodyBytes))
 	req3.Header.Set("Content-Type", "application/json")
-	req3.Header.Set("X-AgentWiki-PublicKey", tc.AdminPubKey)
-	req3.Header.Set("X-AgentWiki-Timestamp", timestamp3)
-	req3.Header.Set("X-AgentWiki-Signature", signature3)
+	req3.Header.Set("X-Polyant-PublicKey", tc.AdminPubKey)
+	req3.Header.Set("X-Polyant-Timestamp", timestamp3)
+	req3.Header.Set("X-Polyant-Signature", signature3)
 
 	httpResp3, err := tc.Client.Do(req3)
 	if err == nil && httpResp3.StatusCode == 200 {
@@ -291,9 +291,9 @@ func main() {
 	batchSignature := signRequest("POST", "/api/v1/entries/batch", batchTimestamp, string(batchCreateBodyBytes), tc.AdminPrivKey)
 	batchReq, _ := http.NewRequest("POST", tc.BaseURL+"/api/v1/entries/batch", bytes.NewReader(batchCreateBodyBytes))
 	batchReq.Header.Set("Content-Type", "application/json")
-	batchReq.Header.Set("X-AgentWiki-PublicKey", tc.AdminPubKey)
-	batchReq.Header.Set("X-AgentWiki-Timestamp", batchTimestamp)
-	batchReq.Header.Set("X-AgentWiki-Signature", batchSignature)
+	batchReq.Header.Set("X-Polyant-PublicKey", tc.AdminPubKey)
+	batchReq.Header.Set("X-Polyant-Timestamp", batchTimestamp)
+	batchReq.Header.Set("X-Polyant-Signature", batchSignature)
 	batchResp, err := tc.Client.Do(batchReq)
 
 	var entryIDs []string
@@ -337,9 +337,9 @@ func main() {
 		updateSignature := signRequest("PUT", "/api/v1/entries/batch", updateTimestamp, string(batchUpdateBodyBytes), tc.AdminPrivKey)
 		updateReq, _ := http.NewRequest("PUT", tc.BaseURL+"/api/v1/entries/batch", bytes.NewReader(batchUpdateBodyBytes))
 		updateReq.Header.Set("Content-Type", "application/json")
-		updateReq.Header.Set("X-AgentWiki-PublicKey", tc.AdminPubKey)
-		updateReq.Header.Set("X-AgentWiki-Timestamp", updateTimestamp)
-		updateReq.Header.Set("X-AgentWiki-Signature", updateSignature)
+		updateReq.Header.Set("X-Polyant-PublicKey", tc.AdminPubKey)
+		updateReq.Header.Set("X-Polyant-Timestamp", updateTimestamp)
+		updateReq.Header.Set("X-Polyant-Signature", updateSignature)
 		updateResp, err := tc.Client.Do(updateReq)
 		
 		if err == nil && updateResp.StatusCode >= 200 && updateResp.StatusCode < 300 {
@@ -367,9 +367,9 @@ func main() {
 		deleteSignature := signRequest("DELETE", "/api/v1/entries/batch", deleteTimestamp, string(batchDeleteBodyBytes), tc.AdminPrivKey)
 		deleteReq, _ := http.NewRequest("DELETE", tc.BaseURL+"/api/v1/entries/batch", bytes.NewReader(batchDeleteBodyBytes))
 		deleteReq.Header.Set("Content-Type", "application/json")
-		deleteReq.Header.Set("X-AgentWiki-PublicKey", tc.AdminPubKey)
-		deleteReq.Header.Set("X-AgentWiki-Timestamp", deleteTimestamp)
-		deleteReq.Header.Set("X-AgentWiki-Signature", deleteSignature)
+		deleteReq.Header.Set("X-Polyant-PublicKey", tc.AdminPubKey)
+		deleteReq.Header.Set("X-Polyant-Timestamp", deleteTimestamp)
+		deleteReq.Header.Set("X-Polyant-Signature", deleteSignature)
 		deleteResp, err := tc.Client.Do(deleteReq)
 		
 		if err == nil && deleteResp.StatusCode >= 200 && deleteResp.StatusCode < 300 {
@@ -465,9 +465,9 @@ func main() {
 	exportTimestamp := strconv.FormatInt(time.Now().UnixMilli(), 10)
 	exportSignature := signRequest("GET", "/api/v1/admin/export", exportTimestamp, "", tc.AdminPrivKey)
 	exportReq, _ := http.NewRequest("GET", tc.BaseURL+"/api/v1/admin/export?include=entries,categories,users", nil)
-	exportReq.Header.Set("X-AgentWiki-PublicKey", tc.AdminPubKey)
-	exportReq.Header.Set("X-AgentWiki-Timestamp", exportTimestamp)
-	exportReq.Header.Set("X-AgentWiki-Signature", exportSignature)
+	exportReq.Header.Set("X-Polyant-PublicKey", tc.AdminPubKey)
+	exportReq.Header.Set("X-Polyant-Timestamp", exportTimestamp)
+	exportReq.Header.Set("X-Polyant-Signature", exportSignature)
 	exportResp, err := tc.Client.Do(exportReq)
 
 	var exportData []byte
@@ -509,9 +509,9 @@ func main() {
 		// 发送导入请求
 		importReq, _ := http.NewRequest("POST", tc.BaseURL+"/api/v1/admin/import", &multipartBuffer)
 		importReq.Header.Set("Content-Type", contentType)
-		importReq.Header.Set("X-AgentWiki-PublicKey", tc.AdminPubKey)
-		importReq.Header.Set("X-AgentWiki-Timestamp", importTimestamp)
-		importReq.Header.Set("X-AgentWiki-Signature", importSignature)
+		importReq.Header.Set("X-Polyant-PublicKey", tc.AdminPubKey)
+		importReq.Header.Set("X-Polyant-Timestamp", importTimestamp)
+		importReq.Header.Set("X-Polyant-Signature", importSignature)
 
 		importResp, err := tc.Client.Do(importReq)
 		if err != nil {

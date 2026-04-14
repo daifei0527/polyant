@@ -1,7 +1,7 @@
 {
   "node": {
     "type": "seed",
-    "name": "agentwiki-seed-node",
+    "name": "polyant-seed-node",
     "data_dir": "./data/seed",
     "log_dir": "./logs",
     "log_level": "debug"

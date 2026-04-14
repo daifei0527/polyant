@@ -15,8 +15,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/daifei0527/agentwiki/internal/storage"
-	"github.com/daifei0527/agentwiki/internal/storage/model"
+	"github.com/daifei0527/polyant/internal/storage"
+	"github.com/daifei0527/polyant/internal/storage/model"
 )
 
 func newTestUserStore(t *testing.T) (storage.UserStore, *model.User, ed25519.PrivateKey) {
@@ -83,9 +83,9 @@ func TestAuthMiddleware_ValidSignature(t *testing.T) {
 	signature := ed25519.Sign(privKey, []byte(signContent))
 
 	// Set headers
-	req.Header.Set("X-AgentWiki-PublicKey", pubKeyB64)
-	req.Header.Set("X-AgentWiki-Timestamp", string(rune(timestamp)))
-	req.Header.Set("X-AgentWiki-Signature", base64.StdEncoding.EncodeToString(signature))
+	req.Header.Set("X-Polyant-PublicKey", pubKeyB64)
+	req.Header.Set("X-Polyant-Timestamp", string(rune(timestamp)))
+	req.Header.Set("X-Polyant-Signature", base64.StdEncoding.EncodeToString(signature))
 
 	rec := httptest.NewRecorder()
 
@@ -125,9 +125,9 @@ func TestAuthMiddleware_InvalidPublicKey(t *testing.T) {
 	})
 
 	req := httptest.NewRequest(http.MethodGet, "/api/v1/test", nil)
-	req.Header.Set("X-AgentWiki-PublicKey", "invalid-base64-key")
-	req.Header.Set("X-AgentWiki-Timestamp", "1234567890")
-	req.Header.Set("X-AgentWiki-Signature", "c2lnbmF0dXJl") // valid base64
+	req.Header.Set("X-Polyant-PublicKey", "invalid-base64-key")
+	req.Header.Set("X-Polyant-Timestamp", "1234567890")
+	req.Header.Set("X-Polyant-Signature", "c2lnbmF0dXJl") // valid base64
 
 	rec := httptest.NewRecorder()
 
@@ -158,9 +158,9 @@ func TestAuthMiddleware_ExpiredTimestamp(t *testing.T) {
 	signContent := "POST\n/api/v1/test\n" + string(rune(oldTimestamp)) + "\n" + hex.EncodeToString(bodyHash[:])
 	signature := ed25519.Sign(privKey, []byte(signContent))
 
-	req.Header.Set("X-AgentWiki-PublicKey", pubKeyB64)
-	req.Header.Set("X-AgentWiki-Timestamp", string(rune(oldTimestamp)))
-	req.Header.Set("X-AgentWiki-Signature", base64.StdEncoding.EncodeToString(signature))
+	req.Header.Set("X-Polyant-PublicKey", pubKeyB64)
+	req.Header.Set("X-Polyant-Timestamp", string(rune(oldTimestamp)))
+	req.Header.Set("X-Polyant-Signature", base64.StdEncoding.EncodeToString(signature))
 
 	rec := httptest.NewRecorder()
 
@@ -193,9 +193,9 @@ func TestAuthMiddleware_UserNotFound(t *testing.T) {
 	signContent := "POST\n/api/v1/test\n" + string(rune(timestamp)) + "\n" + hex.EncodeToString(bodyHash[:])
 	signature := ed25519.Sign(privKey, []byte(signContent))
 
-	req.Header.Set("X-AgentWiki-PublicKey", pubKeyB64)
-	req.Header.Set("X-AgentWiki-Timestamp", string(rune(timestamp)))
-	req.Header.Set("X-AgentWiki-Signature", base64.StdEncoding.EncodeToString(signature))
+	req.Header.Set("X-Polyant-PublicKey", pubKeyB64)
+	req.Header.Set("X-Polyant-Timestamp", string(rune(timestamp)))
+	req.Header.Set("X-Polyant-Signature", base64.StdEncoding.EncodeToString(signature))
 
 	rec := httptest.NewRecorder()
 
@@ -267,9 +267,9 @@ func TestAuthMiddleware_SuspendedUser(t *testing.T) {
 	signature := ed25519.Sign(privKey, []byte(signContent))
 
 	// Correct timestamp format
-	req.Header.Set("X-AgentWiki-PublicKey", pubKeyB64)
-	req.Header.Set("X-AgentWiki-Timestamp", fmt.Sprintf("%d", timestamp))
-	req.Header.Set("X-AgentWiki-Signature", base64.StdEncoding.EncodeToString(signature))
+	req.Header.Set("X-Polyant-PublicKey", pubKeyB64)
+	req.Header.Set("X-Polyant-Timestamp", fmt.Sprintf("%d", timestamp))
+	req.Header.Set("X-Polyant-Signature", base64.StdEncoding.EncodeToString(signature))
 
 	rec := httptest.NewRecorder()
 

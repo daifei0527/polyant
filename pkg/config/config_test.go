@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/daifei0527/agentwiki/pkg/config"
+	"github.com/daifei0527/polyant/pkg/config"
 )
 
 // ==================== DefaultConfig 测试 ====================
@@ -350,8 +350,8 @@ func TestSaveToNestedPath(t *testing.T) {
 
 // TestLoadWithEnvNodeType 测试环境变量覆盖节点类型
 func TestLoadWithEnvNodeType(t *testing.T) {
-	os.Setenv("AGENTWIKI_NODE_TYPE", "seed")
-	defer os.Unsetenv("AGENTWIKI_NODE_TYPE")
+	os.Setenv("POLYANT_NODE_TYPE", "seed")
+	defer os.Unsetenv("POLYANT_NODE_TYPE")
 
 	cfg := config.DefaultConfig()
 	cfg = config.LoadWithEnv(cfg)
@@ -363,10 +363,10 @@ func TestLoadWithEnvNodeType(t *testing.T) {
 
 // TestLoadWithEnvPorts 测试环境变量覆盖端口
 func TestLoadWithEnvPorts(t *testing.T) {
-	os.Setenv("AGENTWIKI_NETWORK_LISTEN_PORT", "9999")
-	os.Setenv("AGENTWIKI_NETWORK_API_PORT", "8888")
-	defer os.Unsetenv("AGENTWIKI_NETWORK_LISTEN_PORT")
-	defer os.Unsetenv("AGENTWIKI_NETWORK_API_PORT")
+	os.Setenv("POLYANT_NETWORK_LISTEN_PORT", "9999")
+	os.Setenv("POLYANT_NETWORK_API_PORT", "8888")
+	defer os.Unsetenv("POLYANT_NETWORK_LISTEN_PORT")
+	defer os.Unsetenv("POLYANT_NETWORK_API_PORT")
 
 	cfg := config.DefaultConfig()
 	cfg = config.LoadWithEnv(cfg)
@@ -381,8 +381,8 @@ func TestLoadWithEnvPorts(t *testing.T) {
 
 // TestLoadWithEnvSeedNodes 测试环境变量覆盖种子节点
 func TestLoadWithEnvSeedNodes(t *testing.T) {
-	os.Setenv("AGENTWIKI_NETWORK_SEED_NODES", "node1:9000,node2:9000")
-	defer os.Unsetenv("AGENTWIKI_NETWORK_SEED_NODES")
+	os.Setenv("POLYANT_NETWORK_SEED_NODES", "node1:9000,node2:9000")
+	defer os.Unsetenv("POLYANT_NETWORK_SEED_NODES")
 
 	cfg := config.DefaultConfig()
 	cfg = config.LoadWithEnv(cfg)
@@ -410,8 +410,8 @@ func TestLoadWithEnvBool(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.value, func(t *testing.T) {
-			os.Setenv("AGENTWIKI_SYNC_AUTO_SYNC", tc.value)
-			defer os.Unsetenv("AGENTWIKI_SYNC_AUTO_SYNC")
+			os.Setenv("POLYANT_SYNC_AUTO_SYNC", tc.value)
+			defer os.Unsetenv("POLYANT_SYNC_AUTO_SYNC")
 
 			cfg := config.DefaultConfig()
 			cfg.Sync.AutoSync = !tc.expected // 设置相反值
@@ -426,8 +426,8 @@ func TestLoadWithEnvBool(t *testing.T) {
 
 // TestLoadWithEnvNil 测试空配置的环境变量加载
 func TestLoadWithEnvNil(t *testing.T) {
-	os.Setenv("AGENTWIKI_NODE_TYPE", "user")
-	defer os.Unsetenv("AGENTWIKI_NODE_TYPE")
+	os.Setenv("POLYANT_NODE_TYPE", "user")
+	defer os.Unsetenv("POLYANT_NODE_TYPE")
 
 	cfg := config.LoadWithEnv(nil)
 
@@ -510,8 +510,8 @@ func TestParseBool(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.input, func(t *testing.T) {
 			// parseBool 是内部函数，通过 LoadWithEnv 测试
-			os.Setenv("AGENTWIKI_SYNC_AUTO_SYNC", tc.input)
-			defer os.Unsetenv("AGENTWIKI_SYNC_AUTO_SYNC")
+			os.Setenv("POLYANT_SYNC_AUTO_SYNC", tc.input)
+			defer os.Unsetenv("POLYANT_SYNC_AUTO_SYNC")
 
 			cfg := &config.Config{}
 			cfg.Sync.AutoSync = false

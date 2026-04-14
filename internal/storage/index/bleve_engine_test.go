@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/daifei0527/agentwiki/internal/storage/model"
+	"github.com/daifei0527/polyant/internal/storage/model"
 )
 
 func TestBleveEngine_IndexAndSearch(t *testing.T) {

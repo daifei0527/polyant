@@ -6,7 +6,7 @@ import (
 	"sync"
 	"time"
 
-	awsp "github.com/daifei0527/agentwiki/internal/network/protocol/proto"
+	awsp "github.com/daifei0527/polyant/internal/network/protocol/proto"
 	"github.com/libp2p/go-libp2p/core/host"
 	"github.com/libp2p/go-libp2p/core/network"
 	"github.com/libp2p/go-libp2p/core/peer"

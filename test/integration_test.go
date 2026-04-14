@@ -17,8 +17,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/daifei0527/agentwiki/internal/api/router"
-	"github.com/daifei0527/agentwiki/internal/storage"
+	"github.com/daifei0527/polyant/internal/api/router"
+	"github.com/daifei0527/polyant/internal/storage"
 )
 
 // TestServer 测试服务器
@@ -192,9 +192,9 @@ func (s *TestServer) DoRequest(method, path string, body interface{}, needAuth b
 		signContent := fmt.Sprintf("%s\n%s\n%d\n%s", method, path, timestamp, hex.EncodeToString(bodyHash[:]))
 		signature := ed25519.Sign(s.privKey, []byte(signContent))
 
-		req.Header.Set("X-AgentWiki-PublicKey", s.pubKeyB64)
-		req.Header.Set("X-AgentWiki-Timestamp", fmt.Sprintf("%d", timestamp))
-		req.Header.Set("X-AgentWiki-Signature", base64.StdEncoding.EncodeToString(signature))
+		req.Header.Set("X-Polyant-PublicKey", s.pubKeyB64)
+		req.Header.Set("X-Polyant-Timestamp", fmt.Sprintf("%d", timestamp))
+		req.Header.Set("X-Polyant-Signature", base64.StdEncoding.EncodeToString(signature))
 	}
 
 	resp, err := s.client.Do(req)

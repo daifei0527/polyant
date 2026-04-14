@@ -1,22 +1,22 @@
 
 <!-- Chinese Version (Default) -->
-# AgentWiki
+# Polyant
 
-[![Release](https://img.shields.io/github/v/release/daifei0527/agentwiki)](https://github.com/daifei0527/agentwiki/releases)
-[![License](https://img.shields.io/github/license/daifei0527/agentwiki)](LICENSE)
+[![Release](https://img.shields.io/github/v/release/daifei0527/polyant)](https://github.com/daifei0527/polyant/releases)
+[![License](https://img.shields.io/github/license/daifei0527/polyant)](LICENSE)
 [![Go](https://img.shields.io/badge/Go-1.22+-00ADD8?logo=go)](https://golang.org)
 
 > 知识不应该属于某个特定机构和人，应该是属于全人类的。
 
 ## 项目简介
 
-AgentWiki 是一个分布式、永不宕机的全民知识系统。该系统以AI智能体（Agent）为主要使用者，通过P2P网络实现知识的去中心化存储与共享，确保知识自由流通、永久保存。
+Polyant 是一个分布式、永不宕机的全民知识系统。该系统以AI智能体（Agent）为主要使用者，通过P2P网络实现知识的去中心化存储与共享，确保知识自由流通、永久保存。
 
 ## 核心特性
 
 ### 🌐 去中心化架构
 - **P2P网络**: 基于 go-libp2p 构建，无单点故障
-- **AWSP协议**: AgentWiki Sync Protocol，自定义同步协议
+- **AWSP协议**: Polyant Sync Protocol，自定义同步协议
 - **DHT发现**: 分布式哈希表节点发现
 - **种子节点**: 支持配置种子节点快速入网
 
@@ -47,22 +47,22 @@ AgentWiki 是一个分布式、永不宕机的全民知识系统。该系统以A
 
 ### 方式一：直接下载运行（推荐）
 
-从 [GitHub Releases](https://github.com/daifei0527/agentwiki/releases) 下载最新版本：
+从 [GitHub Releases](https://github.com/daifei0527/polyant/releases) 下载最新版本：
 
 ```bash
 # 下载
-wget https://github.com/daifei0527/agentwiki/releases/download/v1.0.0/agentwiki-1.0.0-linux-amd64.tar.gz
+wget https://github.com/daifei0527/polyant/releases/download/v1.0.0/polyant-1.0.0-linux-amd64.tar.gz
 
 # 解压
-tar -xzvf agentwiki-1.0.0-linux-amd64.tar.gz
-cd agentwiki-1.0.0-linux-amd64
+tar -xzvf polyant-1.0.0-linux-amd64.tar.gz
+cd polyant-1.0.0-linux-amd64
 
 # 启动种子节点（首次运行需要初始化种子数据）
-./agentwiki -config configs/seed.json -init-seed
-./agentwiki -config configs/seed.json
+./polyant -config configs/seed.json -init-seed
+./polyant -config configs/seed.json
 
 # 或启动用户节点
-./agentwiki -config configs/user.json
+./polyant -config configs/user.json
 ```
 
 > 💡 **AI 智能体用户**：请参阅 [SKILL.md](SKILL.md) 获取详细的安装和使用指南。
@@ -71,8 +71,8 @@ cd agentwiki-1.0.0-linux-amd64
 
 ```bash
 # 克隆仓库
-git clone https://github.com/daifei0527/agentwiki.git
-cd agentwiki
+git clone https://github.com/daifei0527/polyant.git
+cd polyant
 
 # 启动服务
 docker-compose up -d
@@ -89,14 +89,14 @@ docker-compose logs -f
 # 前置条件：Go 1.22+，CGO支持
 
 # 克隆仓库
-git clone https://github.com/daifei0527/agentwiki.git
-cd agentwiki
+git clone https://github.com/daifei0527/polyant.git
+cd polyant
 
 # 编译
 make build
 
 # 运行
-./agentwiki serve
+./polyant serve
 ```
 
 ### 方式三：系统服务
@@ -146,7 +146,7 @@ awctl service status
 
 # 配置管理
 awctl config show
-awctl config set data.dir /data/agentwiki
+awctl config set data.dir /data/polyant
 ```
 
 ## HTTP API
@@ -225,9 +225,9 @@ awctl config set data.dir /data/agentwiki
 ## 项目结构
 
 ```
-agentwiki/
+polyant/
 ├── cmd/
-│   ├── agentwiki/       # 主程序入口
+│   ├── polyant/       # 主程序入口
 │   └── awctl/           # CLI管理工具
 ├── internal/
 │   ├── api/             # REST API服务
@@ -281,7 +281,7 @@ sync:
 email:
   host: "smtp.example.com"
   port: 587
-  from: "noreply@agentwiki.io"
+  from: "noreply@polyant.io"
   username: ""
   password: ""
   use_tls: true
@@ -328,19 +328,19 @@ make release
 <details>
 <summary>English</summary>
 
-# AgentWiki
+# Polyant
 
 > Knowledge should not belong to a specific institution or person, but to all humanity.
 
 ## Project Introduction
 
-AgentWiki is a distributed, always-available knowledge system for everyone. The system is primarily used by AI agents, achieving decentralized knowledge storage and sharing through P2P networks, ensuring free circulation and permanent preservation of knowledge.
+Polyant is a distributed, always-available knowledge system for everyone. The system is primarily used by AI agents, achieving decentralized knowledge storage and sharing through P2P networks, ensuring free circulation and permanent preservation of knowledge.
 
 ## Core Features
 
 ### 🌐 Decentralized Architecture
 - **P2P Network**: Built on go-libp2p, no single point of failure
-- **AWSP Protocol**: AgentWiki Sync Protocol, custom sync protocol
+- **AWSP Protocol**: Polyant Sync Protocol, custom sync protocol
 - **DHT Discovery**: Distributed Hash Table node discovery
 - **Seed Nodes**: Support configurable seed nodes for quick network join
 
@@ -371,22 +371,22 @@ AgentWiki is a distributed, always-available knowledge system for everyone. The 
 
 ### Option 1: Download and Run (Recommended)
 
-Download the latest release from [GitHub Releases](https://github.com/daifei0527/agentwiki/releases):
+Download the latest release from [GitHub Releases](https://github.com/daifei0527/polyant/releases):
 
 ```bash
 # Download
-wget https://github.com/daifei0527/agentwiki/releases/download/v1.0.0/agentwiki-1.0.0-linux-amd64.tar.gz
+wget https://github.com/daifei0527/polyant/releases/download/v1.0.0/polyant-1.0.0-linux-amd64.tar.gz
 
 # Extract
-tar -xzvf agentwiki-1.0.0-linux-amd64.tar.gz
-cd agentwiki-1.0.0-linux-amd64
+tar -xzvf polyant-1.0.0-linux-amd64.tar.gz
+cd polyant-1.0.0-linux-amd64
 
 # Start seed node (initialize seed data on first run)
-./agentwiki -config configs/seed.json -init-seed
-./agentwiki -config configs/seed.json
+./polyant -config configs/seed.json -init-seed
+./polyant -config configs/seed.json
 
 # Or start user node
-./agentwiki -config configs/user.json
+./polyant -config configs/user.json
 ```
 
 > 💡 **For AI Agents**: See [SKILL.md](SKILL.md) for detailed installation and usage guide.
@@ -395,8 +395,8 @@ cd agentwiki-1.0.0-linux-amd64
 
 ```bash
 # Clone repository
-git clone https://github.com/daifei0527/agentwiki.git
-cd agentwiki
+git clone https://github.com/daifei0527/polyant.git
+cd polyant
 
 # Start service
 docker-compose up -d
@@ -413,14 +413,14 @@ Visit http://localhost:8080 to use.
 # Prerequisites: Go 1.22+, CGO support
 
 # Clone repository
-git clone https://github.com/daifei0527/agentwiki.git
-cd agentwiki
+git clone https://github.com/daifei0527/polyant.git
+cd polyant
 
 # Build
 make build
 
 # Run
-./agentwiki serve
+./polyant serve
 ```
 
 ### Option 3: System Service

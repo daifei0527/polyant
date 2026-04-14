@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/daifei0527/agentwiki/internal/storage/model"
+	"github.com/daifei0527/polyant/internal/storage/model"
 )
 
 const (

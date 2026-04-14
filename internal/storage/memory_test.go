@@ -4,8 +4,8 @@ import (
 	"context"
 	"testing"
 
-	"github.com/daifei0527/agentwiki/internal/storage/index"
-	"github.com/daifei0527/agentwiki/internal/storage/model"
+	"github.com/daifei0527/polyant/internal/storage/index"
+	"github.com/daifei0527/polyant/internal/storage/model"
 )
 
 func TestMemoryEntryStore_Create(t *testing.T) {

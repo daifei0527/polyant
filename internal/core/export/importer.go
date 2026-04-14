@@ -7,9 +7,9 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/daifei0527/agentwiki/internal/storage"
-	"github.com/daifei0527/agentwiki/internal/storage/model"
-	"github.com/daifei0527/agentwiki/pkg/logger"
+	"github.com/daifei0527/polyant/internal/storage"
+	"github.com/daifei0527/polyant/internal/storage/model"
+	"github.com/daifei0527/polyant/pkg/logger"
 )
 
 // ConflictStrategy 冲突处理策略

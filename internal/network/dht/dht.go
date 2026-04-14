@@ -6,7 +6,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/daifei0527/agentwiki/pkg/config"
+	"github.com/daifei0527/polyant/pkg/config"
 	"github.com/libp2p/go-libp2p/core/host"
 	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/libp2p/go-libp2p/core/routing"

@@ -13,7 +13,7 @@ import (
 	"path/filepath"
 	"time"
 
-	authed25519 "github.com/daifei0527/agentwiki/internal/auth/ed25519"
+	authed25519 "github.com/daifei0527/polyant/internal/auth/ed25519"
 )
 
 // Client API 客户端
@@ -115,9 +115,9 @@ func (c *Client) SetAuthHeaders(req *http.Request, body []byte) error {
 		return err
 	}
 
-	req.Header.Set("X-AgentWiki-PublicKey", pubKey)
-	req.Header.Set("X-AgentWiki-Timestamp", timestamp)
-	req.Header.Set("X-AgentWiki-Signature", signature)
+	req.Header.Set("X-Polyant-PublicKey", pubKey)
+	req.Header.Set("X-Polyant-Timestamp", timestamp)
+	req.Header.Set("X-Polyant-Signature", signature)
 
 	return nil
 }
@@ -133,7 +133,7 @@ func GetDefaultKeyDir() string {
 	if err != nil {
 		homeDir = "."
 	}
-	return filepath.Join(homeDir, ".agentwiki", "keys")
+	return filepath.Join(homeDir, ".polyant", "keys")
 }
 
 // EnsureKeyDirExists 确保密钥目录存在

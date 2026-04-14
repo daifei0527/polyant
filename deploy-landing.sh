@@ -1,11 +1,11 @@
 #!/bin/bash
-# AgentWiki Landing Page Deployment Script
+# Polyant Landing Page Deployment Script
 
 # 创建网站目录
 mkdir -p /var/www/openclaw.dlibrary.cn
 
 # 复制页面文件
-cp /home/daifei/agentwiki/web/landing/index.html /var/www/openclaw.dlibrary.cn/
+cp /home/daifei/polyant/web/landing/index.html /var/www/openclaw.dlibrary.cn/
 
 # 设置权限
 chown -R www-data:www-data /var/www/openclaw.dlibrary.cn
@@ -51,4 +51,4 @@ NGINX_CONF
 # 测试并重载 nginx
 nginx -t && systemctl reload nginx
 
-echo "✅ AgentWiki Landing Page deployed to https://openclaw.dlibrary.cn"
+echo "✅ Polyant Landing Page deployed to https://openclaw.dlibrary.cn"

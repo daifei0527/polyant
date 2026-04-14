@@ -8,11 +8,11 @@ import (
 	"sync"
 	"time"
 
-	"github.com/daifei0527/agentwiki/internal/network/host"
-	"github.com/daifei0527/agentwiki/internal/network/protocol"
-	"github.com/daifei0527/agentwiki/internal/storage"
-	"github.com/daifei0527/agentwiki/internal/storage/index"
-	"github.com/daifei0527/agentwiki/internal/storage/model"
+	"github.com/daifei0527/polyant/internal/network/host"
+	"github.com/daifei0527/polyant/internal/network/protocol"
+	"github.com/daifei0527/polyant/internal/storage"
+	"github.com/daifei0527/polyant/internal/storage/index"
+	"github.com/daifei0527/polyant/internal/storage/model"
 	"github.com/libp2p/go-libp2p/core/peer"
 )
 

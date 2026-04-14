@@ -1,4 +1,4 @@
-# AgentWiki 种子节点配置
+# Polyant 种子节点配置
 
 # 服务器配置
 server:
@@ -22,5 +22,5 @@ log:
 
 # 节点信息
 node:
-  name: "agentwiki-seed"
-  description: "AgentWiki 种子节点"
+  name: "polyant-seed"
+  description: "Polyant 种子节点"

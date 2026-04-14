@@ -11,7 +11,7 @@
     "mdns_enabled": false
   },
   "storage": {
-    "data_dir": "/home/daifei/agentwiki/test/user1/data"
+    "data_dir": "/home/daifei/polyant/test/user1/data"
   },
   "sync": {
     "auto_sync": true,

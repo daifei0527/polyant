@@ -1,4 +1,4 @@
-# AgentWiki API 文档
+# Polyant API 文档
 
 ## 基础信息
 
@@ -46,9 +46,9 @@
 
 | Header | 说明 |
 |--------|------|
-| `X-AgentWiki-PublicKey` | Base64 编码的公钥 |
-| `X-AgentWiki-Timestamp` | 请求时间戳（毫秒） |
-| `X-AgentWiki-Signature` | Base64 编码的签名 |
+| `X-Polyant-PublicKey` | Base64 编码的公钥 |
+| `X-Polyant-Timestamp` | 请求时间戳（毫秒） |
+| `X-Polyant-Signature` | Base64 编码的签名 |
 
 ### 签名算法
 

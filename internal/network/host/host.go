@@ -23,7 +23,7 @@ import (
 	"github.com/multiformats/go-multiaddr"
 )
 
-const AWSPProtocolID = "/agentwiki/sync/2.0.0"
+const AWSPProtocolID = "/polyant/sync/2.0.0"
 
 // NATType represents the type of NAT detected
 type NATType int
@@ -132,7 +132,7 @@ func NewHost(ctx context.Context, cfg *HostConfig) (*P2PHost, error) {
 	// 基础选项
 	opts := []libp2p.Option{
 		libp2p.Identity(privKey),
-		libp2p.UserAgent("agentwiki/1.0.0"),
+		libp2p.UserAgent("polyant/1.0.0"),
 		libp2p.Ping(true),
 		libp2p.Security(noise.ID, noise.New),
 		libp2p.ListenAddrStrings(cfg.ListenAddrs...),

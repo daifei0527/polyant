@@ -281,7 +281,7 @@ var configShowCmd = &cobra.Command{
 		status, err := client.GetStatus(ctx)
 		if err != nil {
 			fmt.Println("当前配置 (本地):")
-			fmt.Println("  数据目录: ~/.agentwiki")
+			fmt.Println("  数据目录: ~/.polyant")
 			fmt.Println("  API端口: 8080")
 			fmt.Println("  P2P端口: 9000")
 			return nil

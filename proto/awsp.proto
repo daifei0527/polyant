@@ -2,7 +2,7 @@ syntax = "proto3";
 
 package awsp;
 
-option go_package = "github.com/daifei0527/agentwiki/internal/network/protocol/proto";
+option go_package = "github.com/daifei0527/polyant/internal/network/protocol/proto";
 
 // 消息类型枚举
 enum MessageType {

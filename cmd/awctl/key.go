@@ -21,7 +21,7 @@ var keyGenerateCmd = &cobra.Command{
 	Short: "生成新的密钥对",
 	Long: `生成新的 Ed25519 密钥对。
 
-密钥将保存在 ~/.agentwiki/keys/ 目录下。
+密钥将保存在 ~/.polyant/keys/ 目录下。
 如果密钥已存在，将显示警告并提示覆盖选项。`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		keyDir := GetDefaultKeyDir()

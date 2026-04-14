@@ -69,9 +69,9 @@ func doRequest(tc *TestConfig, method, path string, body interface{}) (*APIRespo
 	}
 
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("X-AgentWiki-PublicKey", tc.UserKey.PublicKey)
-	req.Header.Set("X-AgentWiki-Timestamp", timestamp)
-	req.Header.Set("X-AgentWiki-Signature", signature)
+	req.Header.Set("X-Polyant-PublicKey", tc.UserKey.PublicKey)
+	req.Header.Set("X-Polyant-Timestamp", timestamp)
+	req.Header.Set("X-Polyant-Signature", signature)
 
 	resp, err := tc.Client.Do(req)
 	if err != nil {
@@ -172,7 +172,7 @@ func main() {
 	}
 
 	fmt.Println("========================================")
-	fmt.Println("AgentWiki 全面功能测试")
+	fmt.Println("Polyant 全面功能测试")
 	fmt.Println("========================================")
 	fmt.Printf("测试目标: %s\n", tc.BaseURL)
 	fmt.Printf("测试用户: %s...\n\n", tc.UserKey.PublicKey[:20])

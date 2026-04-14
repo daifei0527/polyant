@@ -1,6 +1,6 @@
-# AgentWiki 分布式百科知识库系统 -- 技术设计文档
+# Polyant 分布式百科知识库系统 -- 技术设计文档
 
-> **项目代号**: AgentWiki
+> **项目代号**: Polyant
 > **文档版本**: v1.0
 > **日期**: 2026-04-08
 > **技术栈**: Go (Golang) 1.22+
@@ -35,7 +35,7 @@
                             | Skill 协议调用 (HTTP REST)
                             v
 +================================================================+
-|               AgentWiki 本地节点服务 (单进程多goroutine)           |
+|               Polyant 本地节点服务 (单进程多goroutine)           |
 |                                                                |
 |  +------------------+  +------------------+  +---------------+ |
 |  |   Skill API 层    |  |   查询引擎       |  |  同步引擎      | |
@@ -63,7 +63,7 @@
 |  |                  P2P 网络层 (go-libp2p)                    | |
 |  |  +------+ +------+ +------+ +------------------------+   | |
 |  |  | DHT  | | mDNS | | NAT  | | AWSP 自定义同步协议     |   | |
-|  |  | 发现  | | 局域网| | 穿透  | | /agentwiki/sync/1.0.0|   | |
+|  |  | 发现  | | 局域网| | 穿透  | | /polyant/sync/1.0.0|   | |
 |  |  +------+ +------+ +------+ +------------------------+   | |
 |  +----------------------------------------------------------+ |
 |                                                                |
@@ -233,7 +233,7 @@ type SyncEngine interface {
 ### 1.5 进程与 Goroutine 架构
 
 ```
-AgentWiki Node (单进程, 多goroutine)
+Polyant Node (单进程, 多goroutine)
 |
 +-- Main Goroutine
 |   |-- 系统服务管理 (kardianos/service)
@@ -539,8 +539,8 @@ func (a *ZhEnMixAnalyzer) Analyze(input []byte) analysis.TokenStream {
 // pkg/proto/model.proto
 
 syntax = "proto3";
-package agentwiki.model;
-option go_package = "github.com/agentwiki/pkg/proto/model";
+package polyant.model;
+option go_package = "github.com/polyant/pkg/proto/model";
 
 import "google/protobuf/struct.proto";
 
@@ -630,8 +630,8 @@ message Category {
 // pkg/proto/protocol.proto
 
 syntax = "proto3";
-package agentwiki.protocol;
-option go_package = "github.com/agentwiki/pkg/proto/protocol";
+package polyant.protocol;
+option go_package = "github.com/polyant/pkg/proto/protocol";
 
 import "model.proto";
 
@@ -788,7 +788,7 @@ message Bitfield {
 ### 2.5 存储目录结构
 
 ```
-~/.agentwiki/                          # 默认数据根目录
+~/.polyant/                          # 默认数据根目录
 |
 +-- data/                              # 数据目录
 |   +-- kv/                            # Pebble KV 数据库
@@ -815,15 +815,15 @@ message Bitfield {
 |   +-- node.key                       # libp2p 节点密钥
 |
 +-- logs/                              # 日志目录
-|   +-- agentwiki.log
-|   +-- agentwiki-2026-04-08.log.gz    # 归档日志
+|   +-- polyant.log
+|   +-- polyant-2026-04-08.log.gz    # 归档日志
 |
 +-- cache/                             # 缓存目录
 |   +-- query_cache/
 |   +-- mirror_temp/
 |
-+-- agentwiki.yaml                     # 配置文件
-+-- agentwiki.yaml.bak                 # 配置备份
++-- polyant.yaml                     # 配置文件
++-- polyant.yaml.bak                 # 配置备份
 ```
 
 ### 2.6 存储层接口定义
@@ -931,7 +931,7 @@ type BatchTx interface {
 |  |                           |                               | |
 |  |  +-----------------------------------------------------+ | |
 |  |  |              Protocol Layer                           | | |
-|  |  |  AWSP: /agentwiki/sync/1.0.0                          | | |
+|  |  |  AWSP: /polyant/sync/1.0.0                          | | |
 |  |  +-----------------------------------------------------+ | |
 |  +----------------------------------------------------------+ |
 +================================================================+
@@ -942,7 +942,7 @@ type BatchTx interface {
 ```go
 // internal/network/host/host.go
 
-const AWSPProtocolID = "/agentwiki/sync/1.0.0"
+const AWSPProtocolID = "/polyant/sync/1.0.0"
 
 type HostConfig struct {
     ListenAddrs []string
@@ -958,7 +958,7 @@ func NewHost(ctx context.Context, cfg *HostConfig) (host.Host, error) {
     opts := []libp2p.Option{
         libp2p.ListenAddrStrings(cfg.ListenAddrs...),
         libp2p.Identity(cfg.PrivateKey),
-        libp2p.UserAgent("agentwiki/1.0.0"),
+        libp2p.UserAgent("polyant/1.0.0"),
         libp2p.Ping(true),
         libp2p.ConnectionManager(&swarm.ConnManager{
             LowWater:    50,
@@ -993,7 +993,7 @@ func NewHost(ctx context.Context, cfg *HostConfig) (host.Host, error) {
     |  2. Noise Handshake (加密协商)        |
     |  <===============================>  |
     |  3. yamux Stream Open               |
-    |     (/agentwiki/sync/1.0.0)         |
+    |     (/polyant/sync/1.0.0)         |
     |  ================================>  |
     |  4. HANDSHAKE                       |
     |     {node_id, type=LOCAL,           |
@@ -1234,9 +1234,9 @@ func (c *Codec) Decode(r io.Reader) (*Message, error) {
 请求签名 Header:
 
 ```
-X-AgentWiki-PublicKey: {base64_ed25519_public_key}
-X-AgentWiki-Timestamp: {unix_milliseconds}
-X-AgentWiki-Signature: {base64_ed25519_signature}
+X-Polyant-PublicKey: {base64_ed25519_public_key}
+X-Polyant-Timestamp: {unix_milliseconds}
+X-Polyant-Signature: {base64_ed25519_signature}
 ```
 
 签名内容: `METHOD + "\n" + PATH + "\n" + TIMESTAMP + "\n" + SHA256(BODY)`
@@ -1316,9 +1316,9 @@ GET /api/v1/search?q=go并发编程&cat=computer-science/programming-languages/g
 
 ```
 POST /api/v1/entry
-X-AgentWiki-PublicKey: {key}
-X-AgentWiki-Timestamp: {ts}
-X-AgentWiki-Signature: {sig}
+X-Polyant-PublicKey: {key}
+X-Polyant-Timestamp: {ts}
+X-Polyant-Signature: {sig}
 ```
 
 ```json
@@ -1680,14 +1680,14 @@ IDLE -> PREPARE -> EXCHANGE -> MERGE -> RESOLVE -> VERIFY -> COMPLETE -> IDLE
 ### 6.1 配置文件格式 (YAML)
 
 ```yaml
-# agentwiki.yaml
+# polyant.yaml
 # 优先级: 命令行参数 > 环境变量 > 配置文件 > 默认值
 
 node:
   type: local                    # local | seed
   name: "my-agent-node"
-  data_dir: "~/.agentwiki/data"
-  log_dir: "~/.agentwiki/logs"
+  data_dir: "~/.polyant/data"
+  log_dir: "~/.polyant/logs"
   log_level: "info"              # debug | info | warn | error
 
 network:
@@ -1695,7 +1695,7 @@ network:
   api_port: 18531
   api_listen: "127.0.0.1"
   seed_nodes:
-    - "/dns4/seed1.agentwiki.org/tcp/18530/p2p/QmSeedNode1..."
+    - "/dns4/seed1.polyant.org/tcp/18530/p2p/QmSeedNode1..."
   dht_enabled: true
   mdns_enabled: true
   nat_enabled: true
@@ -1719,7 +1719,7 @@ sharing:
   allowed_categories: ["*"]
 
 user:
-  private_key_path: "~/.agentwiki/keys/ed25519_private.key"
+  private_key_path: "~/.polyant/keys/ed25519_private.key"
   email: ""
   auto_register: true
   agent_name: ""
@@ -1731,7 +1731,7 @@ seed:
     port: 587
     username: ""
     password: ""
-    from_address: "noreply@agentwiki.org"
+    from_address: "noreply@polyant.org"
     tls: true
   init_data_dir: "./configs/seed-data"
   seed_sync_interval: 300
@@ -1756,8 +1756,8 @@ rate_limit:
 | 环境变量 | 配置项 | 默认值 |
 |----------|--------|--------|
 | `AW_NODE_TYPE` | `node.type` | `local` |
-| `AW_NODE_NAME` | `node.name` | `agentwiki-node` |
-| `AW_NODE_DATA_DIR` | `node.data_dir` | `~/.agentwiki/data` |
+| `AW_NODE_NAME` | `node.name` | `polyant-node` |
+| `AW_NODE_DATA_DIR` | `node.data_dir` | `~/.polyant/data` |
 | `AW_NODE_LOG_LEVEL` | `node.log_level` | `info` |
 | `AW_NETWORK_LISTEN_PORT` | `network.listen_port` | `18530` |
 | `AW_NETWORK_API_PORT` | `network.api_port` | `18531` |
@@ -2001,17 +2001,17 @@ all: build
 
 build:
 	@mkdir -p $(BUILD_DIR)
-	go build $(LDFLAGS) -o $(BUILD_DIR)/agentwiki ./cmd/agentwiki/
+	go build $(LDFLAGS) -o $(BUILD_DIR)/polyant ./cmd/polyant/
 	go build $(LDFLAGS) -o $(BUILD_DIR)/awctl ./cmd/awctl/
 
 cross-compile:
 	@mkdir -p $(BUILD_DIR)
 	@for p in $(PLATFORMS); do \
 		GOOS=$${p%/*}; GOARCH=$${p#*/}; \
-		out=$(BUILD_DIR)/agentwiki-$${GOOS}-$${GOARCH}; \
+		out=$(BUILD_DIR)/polyant-$${GOOS}-$${GOARCH}; \
 		[ "$${GOOS}" = "windows" ] && out=$${out}.exe; \
 		echo "Building $$out..."; \
-		GOOS=$${GOOS} GOARCH=$${GOARCH} go build $(LDFLAGS) -o $$out ./cmd/agentwiki/; \
+		GOOS=$${GOOS} GOARCH=$${GOARCH} go build $(LDFLAGS) -o $$out ./cmd/polyant/; \
 	done
 
 test:
@@ -2029,29 +2029,29 @@ proto:
 clean: rm -rf $(BUILD_DIR)
 
 docker-build:
-	docker build -t agentwiki:$(VERSION) -f Dockerfile.seed .
+	docker build -t polyant:$(VERSION) -f Dockerfile.seed .
 ```
 
 ### 9.2 systemd 配置 (Linux)
 
 ```ini
-# configs/systemd/agentwiki.service
+# configs/systemd/polyant.service
 [Unit]
-Description=AgentWiki Distributed Knowledge Base
+Description=Polyant Distributed Knowledge Base
 After=network-online.target
 Wants=network-online.target
 
 [Service]
 Type=simple
-User=agentwiki
-Group=agentwiki
-WorkingDirectory=/var/lib/agentwiki
-ExecStart=/usr/local/bin/agentwiki --config /etc/agentwiki/agentwiki.yaml
+User=polyant
+Group=polyant
+WorkingDirectory=/var/lib/polyant
+ExecStart=/usr/local/bin/polyant --config /etc/polyant/polyant.yaml
 Restart=on-failure
 RestartSec=5
 NoNewPrivileges=true
 ProtectSystem=strict
-ReadWritePaths=/var/lib/agentwiki /var/log/agentwiki
+ReadWritePaths=/var/lib/polyant /var/log/polyant
 LimitNOFILE=65536
 MemoryMax=512M
 
@@ -2062,9 +2062,9 @@ WantedBy=multi-user.target
 种子节点 systemd (更多资源):
 
 ```ini
-# configs/systemd/agentwiki-seed.service
+# configs/systemd/polyant-seed.service
 [Service]
-ExecStart=/usr/local/bin/agentwiki --config /etc/agentwiki/agentwiki-seed.yaml
+ExecStart=/usr/local/bin/polyant --config /etc/polyant/polyant-seed.yaml
 Restart=always
 RestartSec=3
 LimitNOFILE=131072
@@ -2075,32 +2075,32 @@ CPUQuota=400%
 ### 9.3 launchd 配置 (macOS)
 
 ```xml
-<!-- configs/launchd/com.agentwiki.agentwiki.plist -->
+<!-- configs/launchd/com.polyant.polyant.plist -->
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
   "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
     <key>Label</key>
-    <string>com.agentwiki.agentwiki</string>
+    <string>com.polyant.polyant</string>
     <key>ProgramArguments</key>
     <array>
-        <string>/usr/local/bin/agentwiki</string>
+        <string>/usr/local/bin/polyant</string>
         <string>--config</string>
-        <string>/etc/agentwiki/agentwiki.yaml</string>
+        <string>/etc/polyant/polyant.yaml</string>
     </array>
     <key>WorkingDirectory</key>
-    <string>/var/lib/agentwiki</string>
+    <string>/var/lib/polyant</string>
     <key>UserName</key>
-    <string>_agentwiki</string>
+    <string>_polyant</string>
     <key>RunAtLoad</key>
     <true/>
     <key>KeepAlive</key>
     <true/>
     <key>StandardOutPath</key>
-    <string>/var/log/agentwiki/stdout.log</string>
+    <string>/var/log/polyant/stdout.log</string>
     <key>StandardErrorPath</key>
-    <string>/var/log/agentwiki/stderr.log</string>
+    <string>/var/log/polyant/stderr.log</string>
     <key>SoftResourceLimits</key>
     <dict>
         <key>NumberOfFiles</key>
@@ -2118,8 +2118,8 @@ CPUQuota=400%
 
 func newSystemService(cfg *config.Config) (service.Service, error) {
     svcConfig := &service.Config{
-        Name:        "AgentWiki",
-        DisplayName: "AgentWiki Distributed Knowledge Base",
+        Name:        "Polyant",
+        DisplayName: "Polyant Distributed Knowledge Base",
         Description: "P2P distributed knowledge base for AI agents",
         Arguments:   []string{"--config", cfg.ConfigPath},
     }
@@ -2153,13 +2153,13 @@ func (p *program) Stop(s service.Service) error {
 
 ```powershell
 # 安装服务
-agentwiki.exe install --config C:\AgentWiki\agentwiki.yaml
+polyant.exe install --config C:\Polyant\polyant.yaml
 # 启动服务
-agentwiki.exe start
+polyant.exe start
 # 停止服务
-agentwiki.exe stop
+polyant.exe stop
 # 卸载服务
-agentwiki.exe uninstall
+polyant.exe uninstall
 ```
 
 ### 9.5 Docker 支持 (种子节点)
@@ -2177,31 +2177,31 @@ RUN go mod download
 COPY . .
 RUN make proto
 RUN CGO_ENABLED=0 GOOS=linux go build \
-    -ldflags "-s -w" -o /agentwiki ./cmd/agentwiki/
+    -ldflags "-s -w" -o /polyant ./cmd/polyant/
 
 # --- 运行镜像 ---
 FROM alpine:3.19
 
 RUN apk add --no-cache ca-certificates tzdata
-RUN addgroup -g 1000 agentwiki && \
-    adduser -u 1000 -G agentwiki -s /bin/sh -D agentwiki
+RUN addgroup -g 1000 polyant && \
+    adduser -u 1000 -G polyant -s /bin/sh -D polyant
 
-WORKDIR /var/lib/agentwiki
-COPY --from=builder /agentwiki /usr/local/bin/agentwiki
-COPY configs/seed-data/ /var/lib/agentwiki/seed-data/
+WORKDIR /var/lib/polyant
+COPY --from=builder /polyant /usr/local/bin/polyant
+COPY configs/seed-data/ /var/lib/polyant/seed-data/
 
-RUN mkdir -p /var/lib/agentwiki/data \
-             /var/lib/agentwiki/keys \
-             /var/lib/agentwiki/logs \
-             /etc/agentwiki
+RUN mkdir -p /var/lib/polyant/data \
+             /var/lib/polyant/keys \
+             /var/lib/polyant/logs \
+             /etc/polyant
 
-COPY configs/agentwiki-seed.yaml /etc/agentwiki/agentwiki.yaml
+COPY configs/polyant-seed.yaml /etc/polyant/polyant.yaml
 
 EXPOSE 18530 18531
 
-USER agentwiki
-ENTRYPOINT ["agentwiki"]
-CMD ["--config", "/etc/agentwiki/agentwiki.yaml"]
+USER polyant
+ENTRYPOINT ["polyant"]
+CMD ["--config", "/etc/polyant/polyant.yaml"]
 ```
 
 ```yaml
@@ -2213,13 +2213,13 @@ services:
     build:
       context: .
       docker_file: Dockerfile.seed
-    container_name: agentwiki-seed-1
+    container_name: polyant-seed-1
     ports:
       - "18530:18530"
       - "18531:18531"
     volumes:
-      - seed1-data:/var/lib/agentwiki/data
-      - seed1-keys:/var/lib/agentwiki/keys
+      - seed1-data:/var/lib/polyant/data
+      - seed1-keys:/var/lib/polyant/keys
     environment:
       - AW_NODE_TYPE=seed
       - AW_SEED_ENABLED=true
@@ -2235,13 +2235,13 @@ services:
     build:
       context: .
       docker_file: Dockerfile.seed
-    container_name: agentwiki-seed-2
+    container_name: polyant-seed-2
     ports:
       - "18532:18530"
       - "18533:18531"
     volumes:
-      - seed2-data:/var/lib/agentwiki/data
-      - seed2-keys:/var/lib/agentwiki/keys
+      - seed2-data:/var/lib/polyant/data
+      - seed2-keys:/var/lib/polyant/keys
     environment:
       - AW_NODE_TYPE=seed
       - AW_SEED_ENABLED=true
@@ -2264,7 +2264,7 @@ volumes:
 
 | 检查项 | 本地节点 | 种子节点 |
 |--------|---------|---------|
-| 创建用户 `agentwiki` | 推荐 | 必须 |
+| 创建用户 `polyant` | 推荐 | 必须 |
 | 创建数据目录 | 自动 | 手动 |
 | 配置文件部署 | 自动生成 | 手动配置 |
 | Ed25519 密钥生成 | 自动 | 手动/首次启动 |
@@ -2280,4 +2280,4 @@ volumes:
 
 > **文档结束**
 >
-> 本文档为 AgentWiki 分布式百科知识库系统的完整技术设计文档，涵盖系统架构、存储层、网络层、API层、核心算法、配置管理、错误处理、安全性和部署设计。Go 开发人员可依据本文档直接开始编码实现。
+> 本文档为 Polyant 分布式百科知识库系统的完整技术设计文档，涵盖系统架构、存储层、网络层、API层、核心算法、配置管理、错误处理、安全性和部署设计。Go 开发人员可依据本文档直接开始编码实现。

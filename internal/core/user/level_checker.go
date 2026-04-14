@@ -6,8 +6,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/daifei0527/agentwiki/internal/storage"
-	"github.com/daifei0527/agentwiki/internal/storage/model"
+	"github.com/daifei0527/polyant/internal/storage"
+	"github.com/daifei0527/polyant/internal/storage/model"
 )
 
 // LevelUpgradeChecker 用户层级升级检查器

@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** 为 AgentWiki 添加数据导出/导入功能，支持管理员备份、迁移和恢复系统数据
+**Goal:** 为 Polyant 添加数据导出/导入功能，支持管理员备份、迁移和恢复系统数据
 
 **Architecture:** 新增 ExportService 和 ImportService 处理 ZIP 文件生成和解析，ExportHandler 提供 REST API 端点，支持三种冲突处理策略
 
@@ -43,8 +43,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/daifei0527/agentwiki/internal/storage"
-	"github.com/daifei0527/agentwiki/internal/storage/model"
+	"github.com/daifei0527/polyant/internal/storage"
+	"github.com/daifei0527/polyant/internal/storage/model"
 )
 
 // Manifest 导出文件元数据
@@ -233,8 +233,8 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/daifei0527/agentwiki/internal/storage"
-	"github.com/daifei0527/agentwiki/internal/storage/model"
+	"github.com/daifei0527/polyant/internal/storage"
+	"github.com/daifei0527/polyant/internal/storage/model"
 )
 
 // ConflictStrategy 冲突处理策略
@@ -530,10 +530,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/daifei0527/agentwiki/internal/core/export"
-	"github.com/daifei0527/agentwiki/internal/storage"
-	"github.com/daifei0527/agentwiki/internal/storage/model"
-	awerrors "github.com/daifei0527/agentwiki/pkg/errors"
+	"github.com/daifei0527/polyant/internal/core/export"
+	"github.com/daifei0527/polyant/internal/storage"
+	"github.com/daifei0527/polyant/internal/storage/model"
+	awerrors "github.com/daifei0527/polyant/pkg/errors"
 )
 
 // ExportHandler 导出/导入处理器
@@ -579,7 +579,7 @@ func (h *ExportHandler) ExportHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// 设置响应头
-	filename := fmt.Sprintf("agentwiki-export-%s.zip", time.Now().Format("20060102"))
+	filename := fmt.Sprintf("polyant-export-%s.zip", time.Now().Format("20060102"))
 	w.Header().Set("Content-Type", "application/zip")
 	w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=\"%s\"", filename))
 	w.Header().Set("Content-Length", fmt.Sprintf("%d", len(zipData)))
@@ -762,8 +762,8 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/daifei0527/agentwiki/internal/storage"
-	"github.com/daifei0527/agentwiki/internal/storage/model"
+	"github.com/daifei0527/polyant/internal/storage"
+	"github.com/daifei0527/polyant/internal/storage/model"
 )
 
 func newTestStore(t *testing.T) *storage.Store {
@@ -892,8 +892,8 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/daifei0527/agentwiki/internal/storage"
-	"github.com/daifei0527/agentwiki/internal/storage/model"
+	"github.com/daifei0527/polyant/internal/storage"
+	"github.com/daifei0527/polyant/internal/storage/model"
 )
 
 func TestImporter_Import(t *testing.T) {

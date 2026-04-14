@@ -1,4 +1,4 @@
-# AgentWiki 项目审计报告与开发计划
+# Polyant 项目审计报告与开发计划
 
 **审计日期**: 2026-04-11
 **项目版本**: 0.1.0-dev
@@ -41,7 +41,7 @@
 | **API 认证中间件** | `internal/api/middleware/auth.go` | 签名验证逻辑需完善 | P0 |
 | **条目签名验证** | `internal/api/handler/entry_handler.go` | 创建条目时的签名验证 | P1 |
 | **搜索排序算法** | `internal/storage/index/search.go` | 需集成评分权重、时效性因子 | P2 |
-| **种子节点初始化** | `cmd/agentwiki/main.go` | 默认数据集导入、种子模式启动 | P1 |
+| **种子节点初始化** | `cmd/polyant/main.go` | 默认数据集导入、种子模式启动 | P1 |
 | **远程查询** | `internal/network/sync/` | 本地未命中时查询种子节点 | P2 |
 | **条目推送** | `internal/network/sync/` | 推送新条目到种子节点 | P2 |
 | **系统服务** | `internal/service/daemon/` | kardianos/service 集成不完整 | P2 |

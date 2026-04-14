@@ -1,4 +1,4 @@
-// Package config 提供 AgentWiki 项目的配置管理功能
+// Package config 提供 Polyant 项目的配置管理功能
 // 支持从 JSON 文件加载配置、环境变量覆盖和配置验证
 package config
 
@@ -96,7 +96,7 @@ func DefaultConfig() *Config {
 	return &Config{
 		Node: NodeConfig{
 			Type:     "local",
-			Name:     "agentwiki-node-1",
+			Name:     "polyant-node-1",
 			DataDir:  "./data",
 			LogDir:   "./logs",
 			LogLevel: "info",
@@ -169,125 +169,125 @@ func Load(path string) (*Config, error) {
 }
 
 // LoadWithEnv 使用环境变量覆盖配置值
-// 支持的环境变量前缀为 AGENTWIKI_，使用下划线分隔层级
-// 例如: AGENTWIKI_NODE_TYPE, AGENTWIKI_NETWORK_LISTEN_PORT
+// 支持的环境变量前缀为 POLYANT_，使用下划线分隔层级
+// 例如: POLYANT_NODE_TYPE, POLYANT_NETWORK_LISTEN_PORT
 func LoadWithEnv(config *Config) *Config {
 	if config == nil {
 		config = DefaultConfig()
 	}
 
 	// 节点配置环境变量
-	if v := os.Getenv("AGENTWIKI_NODE_TYPE"); v != "" {
+	if v := os.Getenv("POLYANT_NODE_TYPE"); v != "" {
 		config.Node.Type = v
 	}
-	if v := os.Getenv("AGENTWIKI_NODE_NAME"); v != "" {
+	if v := os.Getenv("POLYANT_NODE_NAME"); v != "" {
 		config.Node.Name = v
 	}
-	if v := os.Getenv("AGENTWIKI_NODE_DATA_DIR"); v != "" {
+	if v := os.Getenv("POLYANT_NODE_DATA_DIR"); v != "" {
 		config.Node.DataDir = v
 	}
-	if v := os.Getenv("AGENTWIKI_NODE_LOG_DIR"); v != "" {
+	if v := os.Getenv("POLYANT_NODE_LOG_DIR"); v != "" {
 		config.Node.LogDir = v
 	}
-	if v := os.Getenv("AGENTWIKI_NODE_LOG_LEVEL"); v != "" {
+	if v := os.Getenv("POLYANT_NODE_LOG_LEVEL"); v != "" {
 		config.Node.LogLevel = v
 	}
 
 	// 网络配置环境变量
-	if v := os.Getenv("AGENTWIKI_NETWORK_LISTEN_PORT"); v != "" {
+	if v := os.Getenv("POLYANT_NETWORK_LISTEN_PORT"); v != "" {
 		if port, err := strconv.Atoi(v); err == nil {
 			config.Network.ListenPort = port
 		}
 	}
-	if v := os.Getenv("AGENTWIKI_NETWORK_API_PORT"); v != "" {
+	if v := os.Getenv("POLYANT_NETWORK_API_PORT"); v != "" {
 		if port, err := strconv.Atoi(v); err == nil {
 			config.Network.APIPort = port
 		}
 	}
-	if v := os.Getenv("AGENTWIKI_NETWORK_SEED_NODES"); v != "" {
+	if v := os.Getenv("POLYANT_NETWORK_SEED_NODES"); v != "" {
 		config.Network.SeedNodes = strings.Split(v, ",")
 	}
-	if v := os.Getenv("AGENTWIKI_NETWORK_DHT_ENABLED"); v != "" {
+	if v := os.Getenv("POLYANT_NETWORK_DHT_ENABLED"); v != "" {
 		config.Network.DHTEnabled = parseBool(v)
 	}
-	if v := os.Getenv("AGENTWIKI_NETWORK_MDNS_ENABLED"); v != "" {
+	if v := os.Getenv("POLYANT_NETWORK_MDNS_ENABLED"); v != "" {
 		config.Network.MDNSEnabled = parseBool(v)
 	}
 
 	// 同步配置环境变量
-	if v := os.Getenv("AGENTWIKI_SYNC_AUTO_SYNC"); v != "" {
+	if v := os.Getenv("POLYANT_SYNC_AUTO_SYNC"); v != "" {
 		config.Sync.AutoSync = parseBool(v)
 	}
-	if v := os.Getenv("AGENTWIKI_SYNC_INTERVAL_SECONDS"); v != "" {
+	if v := os.Getenv("POLYANT_SYNC_INTERVAL_SECONDS"); v != "" {
 		if sec, err := strconv.Atoi(v); err == nil {
 			config.Sync.IntervalSeconds = sec
 		}
 	}
-	if v := os.Getenv("AGENTWIKI_SYNC_MIRROR_CATEGORIES"); v != "" {
+	if v := os.Getenv("POLYANT_SYNC_MIRROR_CATEGORIES"); v != "" {
 		config.Sync.MirrorCategories = strings.Split(v, ",")
 	}
-	if v := os.Getenv("AGENTWIKI_SYNC_MAX_LOCAL_SIZE_MB"); v != "" {
+	if v := os.Getenv("POLYANT_SYNC_MAX_LOCAL_SIZE_MB"); v != "" {
 		if size, err := strconv.Atoi(v); err == nil {
 			config.Sync.MaxLocalSizeMB = size
 		}
 	}
-	if v := os.Getenv("AGENTWIKI_SYNC_COMPRESSION"); v != "" {
+	if v := os.Getenv("POLYANT_SYNC_COMPRESSION"); v != "" {
 		config.Sync.Compression = v
 	}
 
 	// 共享配置环境变量
-	if v := os.Getenv("AGENTWIKI_SHARING_ALLOW_MIRROR"); v != "" {
+	if v := os.Getenv("POLYANT_SHARING_ALLOW_MIRROR"); v != "" {
 		config.Sharing.AllowMirror = parseBool(v)
 	}
-	if v := os.Getenv("AGENTWIKI_SHARING_BANDWIDTH_LIMIT_MB"); v != "" {
+	if v := os.Getenv("POLYANT_SHARING_BANDWIDTH_LIMIT_MB"); v != "" {
 		if limit, err := strconv.Atoi(v); err == nil {
 			config.Sharing.BandwidthLimitMB = limit
 		}
 	}
-	if v := os.Getenv("AGENTWIKI_SHARING_MAX_CONCURRENT"); v != "" {
+	if v := os.Getenv("POLYANT_SHARING_MAX_CONCURRENT"); v != "" {
 		if max, err := strconv.Atoi(v); err == nil {
 			config.Sharing.MaxConcurrent = max
 		}
 	}
 
 	// 用户配置环境变量
-	if v := os.Getenv("AGENTWIKI_USER_PRIVATE_KEY_PATH"); v != "" {
+	if v := os.Getenv("POLYANT_USER_PRIVATE_KEY_PATH"); v != "" {
 		config.User.PrivateKeyPath = v
 	}
-	if v := os.Getenv("AGENTWIKI_USER_EMAIL"); v != "" {
+	if v := os.Getenv("POLYANT_USER_EMAIL"); v != "" {
 		config.User.Email = v
 	}
-	if v := os.Getenv("AGENTWIKI_USER_AUTO_REGISTER"); v != "" {
+	if v := os.Getenv("POLYANT_USER_AUTO_REGISTER"); v != "" {
 		config.User.AutoRegister = parseBool(v)
 	}
 
 	// SMTP 配置环境变量
-	if v := os.Getenv("AGENTWIKI_SMTP_ENABLED"); v != "" {
+	if v := os.Getenv("POLYANT_SMTP_ENABLED"); v != "" {
 		config.SMTP.Enabled = parseBool(v)
 	}
-	if v := os.Getenv("AGENTWIKI_SMTP_HOST"); v != "" {
+	if v := os.Getenv("POLYANT_SMTP_HOST"); v != "" {
 		config.SMTP.Host = v
 	}
-	if v := os.Getenv("AGENTWIKI_SMTP_PORT"); v != "" {
+	if v := os.Getenv("POLYANT_SMTP_PORT"); v != "" {
 		if port, err := strconv.Atoi(v); err == nil {
 			config.SMTP.Port = port
 		}
 	}
-	if v := os.Getenv("AGENTWIKI_SMTP_USERNAME"); v != "" {
+	if v := os.Getenv("POLYANT_SMTP_USERNAME"); v != "" {
 		config.SMTP.Username = v
 	}
-	if v := os.Getenv("AGENTWIKI_SMTP_PASSWORD"); v != "" {
+	if v := os.Getenv("POLYANT_SMTP_PASSWORD"); v != "" {
 		config.SMTP.Password = v
 	}
-	if v := os.Getenv("AGENTWIKI_SMTP_FROM"); v != "" {
+	if v := os.Getenv("POLYANT_SMTP_FROM"); v != "" {
 		config.SMTP.From = v
 	}
 
 	// API 配置环境变量
-	if v := os.Getenv("AGENTWIKI_API_ENABLED"); v != "" {
+	if v := os.Getenv("POLYANT_API_ENABLED"); v != "" {
 		config.API.Enabled = parseBool(v)
 	}
-	if v := os.Getenv("AGENTWIKI_API_CORS"); v != "" {
+	if v := os.Getenv("POLYANT_API_CORS"); v != "" {
 		config.API.CORS = parseBool(v)
 	}
 

@@ -216,14 +216,14 @@ func TestClient_SetAuthHeaders(t *testing.T) {
 	}
 
 	// Check headers are set
-	if req.Header.Get("X-AgentWiki-PublicKey") == "" {
-		t.Error("X-AgentWiki-PublicKey header should be set")
+	if req.Header.Get("X-Polyant-PublicKey") == "" {
+		t.Error("X-Polyant-PublicKey header should be set")
 	}
-	if req.Header.Get("X-AgentWiki-Timestamp") == "" {
-		t.Error("X-AgentWiki-Timestamp header should be set")
+	if req.Header.Get("X-Polyant-Timestamp") == "" {
+		t.Error("X-Polyant-Timestamp header should be set")
 	}
-	if req.Header.Get("X-AgentWiki-Signature") == "" {
-		t.Error("X-AgentWiki-Signature header should be set")
+	if req.Header.Get("X-Polyant-Signature") == "" {
+		t.Error("X-Polyant-Signature header should be set")
 	}
 }
 
@@ -287,7 +287,7 @@ func TestClient_doRequestWithAuth_RequireAuth(t *testing.T) {
 	// Create test server
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// Check auth headers
-		pubKey := r.Header.Get("X-AgentWiki-PublicKey")
+		pubKey := r.Header.Get("X-Polyant-PublicKey")
 		if pubKey == "" {
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusUnauthorized)
@@ -416,7 +416,7 @@ func TestGetDefaultKeyDir(t *testing.T) {
 	if keyDir == "" {
 		t.Error("GetDefaultKeyDir should not return empty string")
 	}
-	// Should contain .agentwiki
+	// Should contain .polyant
 	if !filepath.IsAbs(keyDir) {
 		t.Errorf("GetDefaultKeyDir should return absolute path, got %s", keyDir)
 	}
@@ -431,7 +431,7 @@ func TestEnsureKeyDirExists(t *testing.T) {
 	defer os.RemoveAll(tmpHome)
 
 	// This test is environment-dependent, so we just verify it doesn't error
-	// In production, it would create ~/.agentwiki
+	// In production, it would create ~/.polyant
 	_ = tmpHome
 }
 

@@ -1,4 +1,4 @@
-// Package handler 定义了 AgentWiki API 的 HTTP 请求处理器。
+// Package handler 定义了 Polyant API 的 HTTP 请求处理器。
 // 包含知识条目、用户、分类、节点等各模块的 handler 实现。
 package handler
 

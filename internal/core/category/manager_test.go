@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	"github.com/daifei0527/agentwiki/internal/storage"
+	"github.com/daifei0527/polyant/internal/storage"
 )
 
 func newTestManager(t *testing.T) *Manager {

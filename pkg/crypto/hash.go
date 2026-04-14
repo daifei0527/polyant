@@ -1,4 +1,4 @@
-// Package crypto 提供 AgentWiki 项目的加密工具函数
+// Package crypto 提供 Polyant 项目的加密工具函数
 // 包含哈希计算、验证和 UUID 生成等功能
 package crypto
 

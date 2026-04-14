@@ -6,9 +6,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/daifei0527/agentwiki/internal/network/dht"
-	"github.com/daifei0527/agentwiki/internal/network/host"
-	"github.com/daifei0527/agentwiki/pkg/config"
+	"github.com/daifei0527/polyant/internal/network/dht"
+	"github.com/daifei0527/polyant/internal/network/host"
+	"github.com/daifei0527/polyant/pkg/config"
 )
 
 // testHostConfig 创建测试用主机配置

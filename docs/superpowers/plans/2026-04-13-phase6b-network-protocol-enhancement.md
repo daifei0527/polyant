@@ -68,7 +68,7 @@ syntax = "proto3";
 
 package awsp;
 
-option go_package = "github.com/daifei0527/agentwiki/internal/network/protocol/proto";
+option go_package = "github.com/daifei0527/polyant/internal/network/protocol/proto";
 
 // 消息类型枚举
 enum MessageType {
@@ -286,7 +286,7 @@ Expected: 安装成功
 
 - [ ] **Step 3: 生成 Go 代码**
 
-Run: `protoc --go_out=. --go_opt=module=github.com/daifei0527/agentwiki proto/awsp.proto`
+Run: `protoc --go_out=. --go_opt=module=github.com/daifei0527/polyant proto/awsp.proto`
 Expected: 生成 internal/network/protocol/proto/awsp.pb.go
 
 - [ ] **Step 4: 验证生成的代码**
@@ -321,7 +321,7 @@ import (
 	"bytes"
 	"testing"
 
-	"github.com/daifei0527/agentwiki/internal/network/protocol/proto"
+	"github.com/daifei0527/polyant/internal/network/protocol/proto"
 )
 
 func TestProtobufCodec_EncodeDecodeHandshake(t *testing.T) {
@@ -572,7 +572,7 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/daifei0527/agentwiki/internal/network/protocol/proto"
+	"github.com/daifei0527/polyant/internal/network/protocol/proto"
 	"google.golang.org/protobuf/encoding/protowire"
 	"google.golang.org/protobuf/proto"
 )
@@ -783,7 +783,7 @@ func (p *Protocol) processMessage(ctx context.Context, msg *proto.Message) (*pro
 package protocol
 
 import (
-	"github.com/daifei0527/agentwiki/internal/network/protocol/proto"
+	"github.com/daifei0527/polyant/internal/network/protocol/proto"
 )
 
 // Handshake 转换
@@ -846,7 +846,7 @@ Co-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>"
 ```go
 const (
 	// AWSPProtocolID 协议 ID (v2.0.0 使用 Protobuf)
-	AWSPProtocolID = "/agentwiki/sync/2.0.0"
+	AWSPProtocolID = "/polyant/sync/2.0.0"
 )
 ```
 
@@ -855,7 +855,7 @@ const (
 修改 `internal/network/host/host.go`:
 
 ```go
-const AWSPProtocolID = "/agentwiki/sync/2.0.0"
+const AWSPProtocolID = "/polyant/sync/2.0.0"
 ```
 
 - [ ] **Step 3: 提交版本更新**
@@ -990,7 +990,7 @@ import (
 	"bytes"
 	"testing"
 
-	"github.com/daifei0527/agentwiki/internal/network/protocol/proto"
+	"github.com/daifei0527/polyant/internal/network/protocol/proto"
 )
 
 func BenchmarkProtobufCodec_Encode(b *testing.B) {

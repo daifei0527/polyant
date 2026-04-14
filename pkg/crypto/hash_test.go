@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/daifei0527/agentwiki/pkg/crypto"
+	"github.com/daifei0527/polyant/pkg/crypto"
 )
 
 // ==================== SHA256 测试 ====================
@@ -20,7 +20,7 @@ func TestComputeSHA256(t *testing.T) {
 	}{
 		{"", "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"},
 		{"hello", "2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824"},
-		{"Hello, AgentWiki!", "a1b2c3d4e5f6..."}, // 只检查长度和格式
+		{"Hello, Polyant!", "a1b2c3d4e5f6..."}, // 只检查长度和格式
 	}
 
 	for _, tc := range tests {

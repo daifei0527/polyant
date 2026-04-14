@@ -1,4 +1,4 @@
-// AgentWiki 前端应用
+// Polyant 前端应用
 
 // API 基础地址
 const API_BASE = '/api/v1';

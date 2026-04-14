@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	authed25519 "github.com/daifei0527/agentwiki/internal/auth/ed25519"
+	authed25519 "github.com/daifei0527/polyant/internal/auth/ed25519"
 )
 
 // TestGenerateKeyPair 测试密钥对生成
@@ -47,7 +47,7 @@ func TestSignAndVerify(t *testing.T) {
 		t.Fatalf("生成密钥对失败: %v", err)
 	}
 
-	message := []byte("Hello, AgentWiki!")
+	message := []byte("Hello, Polyant!")
 
 	// 签名
 	signature, err := authed25519.Sign(priv, message)
@@ -221,7 +221,7 @@ func TestStringToPrivateKeyInvalid(t *testing.T) {
 // TestSaveAndLoadKeyPair 测试密钥对保存和加载
 func TestSaveAndLoadKeyPair(t *testing.T) {
 	// 创建临时目录
-	tmpDir, err := os.MkdirTemp("", "agentwiki-keys-test-")
+	tmpDir, err := os.MkdirTemp("", "polyant-keys-test-")
 	if err != nil {
 		t.Fatalf("创建临时目录失败: %v", err)
 	}
@@ -265,7 +265,7 @@ func TestSaveAndLoadKeyPair(t *testing.T) {
 // TestLoadKeyPairFromSeparateFiles 测试从单独文件加载密钥对
 func TestLoadKeyPairFromSeparateFiles(t *testing.T) {
 	// 创建临时目录
-	tmpDir, err := os.MkdirTemp("", "agentwiki-keys-test-")
+	tmpDir, err := os.MkdirTemp("", "polyant-keys-test-")
 	if err != nil {
 		t.Fatalf("创建临时目录失败: %v", err)
 	}
@@ -308,7 +308,7 @@ func TestLoadKeyPairFromSeparateFiles(t *testing.T) {
 
 // TestLoadKeyPairNotFound 测试加载不存在的密钥对
 func TestLoadKeyPairNotFound(t *testing.T) {
-	tmpDir, err := os.MkdirTemp("", "agentwiki-keys-test-")
+	tmpDir, err := os.MkdirTemp("", "polyant-keys-test-")
 	if err != nil {
 		t.Fatalf("创建临时目录失败: %v", err)
 	}

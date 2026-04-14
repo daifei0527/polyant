@@ -3,7 +3,7 @@ package protocol
 import (
 	"testing"
 
-	awsp "github.com/daifei0527/agentwiki/internal/network/protocol/proto"
+	awsp "github.com/daifei0527/polyant/internal/network/protocol/proto"
 )
 
 func TestMessageTypeConversion(t *testing.T) {

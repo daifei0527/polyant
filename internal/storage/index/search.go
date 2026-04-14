@@ -8,7 +8,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/daifei0527/agentwiki/internal/storage/model"
+	"github.com/daifei0527/polyant/internal/storage/model"
 )
 
 // SimpleSearcher 定义了简单搜索引擎的接口

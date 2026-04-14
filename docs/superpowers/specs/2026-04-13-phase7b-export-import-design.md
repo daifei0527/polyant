@@ -6,7 +6,7 @@
 
 ## 概述
 
-为 AgentWiki 添加数据导出/导入功能，支持管理员备份、迁移和恢复系统数据。
+为 Polyant 添加数据导出/导入功能，支持管理员备份、迁移和恢复系统数据。
 
 ## 目标
 
@@ -40,7 +40,7 @@ GET /api/v1/admin/export?include=entries,categories,users,ratings
 
 响应:
 Content-Type: application/zip
-Content-Disposition: attachment; filename="agentwiki-export-20260413.zip"
+Content-Disposition: attachment; filename="polyant-export-20260413.zip"
 
 ZIP 文件结构:
 ├── manifest.json        # 元数据

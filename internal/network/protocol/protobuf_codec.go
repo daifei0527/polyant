@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"io"
 
-	awsp "github.com/daifei0527/agentwiki/internal/network/protocol/proto"
+	awsp "github.com/daifei0527/polyant/internal/network/protocol/proto"
 	"google.golang.org/protobuf/proto"
 )
 

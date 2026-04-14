@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"testing"
 
-	"github.com/daifei0527/agentwiki/internal/network/protocol/proto"
+	"github.com/daifei0527/polyant/internal/network/protocol/proto"
 )
 
 func BenchmarkProtobufCodec_Encode(b *testing.B) {

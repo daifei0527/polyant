@@ -5,9 +5,9 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/daifei0527/agentwiki/internal/core/election"
-	"github.com/daifei0527/agentwiki/internal/storage/kv"
-	"github.com/daifei0527/agentwiki/internal/storage/model"
+	"github.com/daifei0527/polyant/internal/core/election"
+	"github.com/daifei0527/polyant/internal/storage/kv"
+	"github.com/daifei0527/polyant/internal/storage/model"
 )
 
 // ElectionHandler 选举 API 处理器

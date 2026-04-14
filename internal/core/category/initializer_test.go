@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/daifei0527/agentwiki/internal/storage/model"
+	"github.com/daifei0527/polyant/internal/storage/model"
 )
 
 // mockCategoryStore 实现 storage.CategoryStore 接口用于测试
