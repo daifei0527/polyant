@@ -8,8 +8,17 @@ import (
 	"text/tabwriter"
 	"time"
 
+	"github.com/daifei0527/polyant/pkg/i18n"
 	"github.com/spf13/cobra"
 )
+
+// getLang 获取当前语言设置
+func getLang() i18n.Lang {
+	if langFlag == "" {
+		return i18n.LangZhCN
+	}
+	return i18n.Lang(langFlag)
+}
 
 // entryCmd 条目管理命令
 var entryCmd = &cobra.Command{
@@ -49,11 +58,11 @@ var entryListCmd = &cobra.Command{
 		}
 
 		if len(entries) == 0 {
-			fmt.Println("暂无条目")
+			fmt.Println(i18n.Tc(getLang(), "cli.entry.no_result"))
 			return nil
 		}
 
-		fmt.Printf("条目列表 (共 %d 条):\n\n", total)
+		fmt.Printf("%s\n\n", i18n.Tc(getLang(), "cli.entry.list_title", map[string]interface{}{"count": total}))
 
 		w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
 		fmt.Fprintln(w, "ID\t标题\t分类\t评分\t创建时间")
@@ -263,7 +272,7 @@ var entrySearchCmd = &cobra.Command{
 		}
 
 		if len(entries) == 0 {
-			fmt.Println("未找到匹配的条目")
+			fmt.Println(i18n.Tc(getLang(), "cli.entry.no_result"))
 			return nil
 		}
 
