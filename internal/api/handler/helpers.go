@@ -12,6 +12,7 @@ import (
 	"github.com/daifei0527/polyant/internal/api/middleware"
 	"github.com/daifei0527/polyant/internal/storage/model"
 	awerrors "github.com/daifei0527/polyant/pkg/errors"
+	"github.com/daifei0527/polyant/pkg/i18n"
 )
 
 // writeJSON 写入 JSON 响应
@@ -33,6 +34,49 @@ func writeError(w http.ResponseWriter, err *awerrors.AWError) {
 	writeJSON(w, status, &APIResponse{
 		Code:    err.Code,
 		Message: err.Message,
+		Data:    nil,
+	})
+}
+
+// writeSuccess 写入成功响应（带多语言支持）
+func writeSuccess(w http.ResponseWriter, r *http.Request, data interface{}) {
+	lang := i18n.GetLangFromRequest(r)
+	writeJSON(w, http.StatusOK, &APIResponse{
+		Code:    0,
+		Message: i18n.Tc(lang, "common.success"),
+		Data:    data,
+	})
+}
+
+// writeSuccessWithCode 写入成功响应（指定消息码）
+func writeSuccessWithCode(w http.ResponseWriter, r *http.Request, code string, data interface{}) {
+	lang := i18n.GetLangFromRequest(r)
+	writeJSON(w, http.StatusOK, &APIResponse{
+		Code:    0,
+		Message: i18n.Tc(lang, code),
+		Data:    data,
+	})
+}
+
+// writeErrorI18n 写入错误响应（带多语言支持）
+func writeErrorI18n(w http.ResponseWriter, r *http.Request, err *awerrors.AWError) {
+	lang := i18n.GetLangFromRequest(r)
+
+	message := err.Message
+	if err.I18nCode != "" {
+		if translated := i18n.Tc(lang, err.I18nCode); translated != err.I18nCode {
+			message = translated
+		}
+	}
+
+	status := err.HTTPStatus
+	if status == 0 {
+		status = http.StatusInternalServerError
+	}
+
+	writeJSON(w, status, &APIResponse{
+		Code:    err.Code,
+		Message: message,
 		Data:    nil,
 	})
 }

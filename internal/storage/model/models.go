@@ -60,6 +60,10 @@ type KnowledgeEntry struct {
 	Status      string                 `json:"status"`      // 条目状态
 	License     string                 `json:"license"`     // 许可证
 	SourceRef   string                 `json:"sourceRef"`   // 来源引用
+	// 多语言支持
+	Lang        string            `json:"lang,omitempty"`        // 条目主语言
+	TitleI18n   map[string]string `json:"titleI18n,omitempty"`   // 多语言标题 {"zh-CN": "标题", "en-US": "Title"}
+	ContentI18n map[string]string `json:"contentI18n,omitempty"` // 多语言内容
 }
 
 // NewKnowledgeEntry 创建一个新的知识条目实例，自动生成ID和时间戳
@@ -99,6 +103,26 @@ func (e *KnowledgeEntry) ToJSON() ([]byte, error) {
 // FromJSON 从JSON字节数组反序列化为知识条目
 func (e *KnowledgeEntry) FromJSON(data []byte) error {
 	return json.Unmarshal(data, e)
+}
+
+// GetTitleByLang 根据语言获取标题
+func (e *KnowledgeEntry) GetTitleByLang(lang string) string {
+	if e.TitleI18n != nil {
+		if title, ok := e.TitleI18n[lang]; ok {
+			return title
+		}
+	}
+	return e.Title
+}
+
+// GetContentByLang 根据语言获取内容
+func (e *KnowledgeEntry) GetContentByLang(lang string) string {
+	if e.ContentI18n != nil {
+		if content, ok := e.ContentI18n[lang]; ok {
+			return content
+		}
+	}
+	return e.Content
 }
 
 // ==================== 用户 ====================
@@ -190,6 +214,9 @@ type Category struct {
 	IsBuiltin   bool   `json:"isBuiltin"`   // 是否为内置分类
 	MaintainedBy string `json:"maintainedBy"` // 维护者公钥
 	CreatedAt   int64  `json:"createdAt"`   // 创建时间
+	// 多语言支持
+	NameI18n map[string]string `json:"nameI18n,omitempty"` // 多语言名称
+	DescI18n map[string]string `json:"descI18n,omitempty"` // 多语言描述
 }
 
 // ToJSON 将分类序列化为JSON字节数组
@@ -200,6 +227,16 @@ func (c *Category) ToJSON() ([]byte, error) {
 // FromJSON 从JSON字节数组反序列化为分类
 func (c *Category) FromJSON(data []byte) error {
 	return json.Unmarshal(data, c)
+}
+
+// GetNameByLang 根据语言获取分类名称
+func (c *Category) GetNameByLang(lang string) string {
+	if c.NameI18n != nil {
+		if name, ok := c.NameI18n[lang]; ok {
+			return name
+		}
+	}
+	return c.Name
 }
 
 // ==================== 节点信息 ====================
