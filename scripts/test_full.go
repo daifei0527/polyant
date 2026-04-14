@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"mime/multipart"
 	"net/http"
 	"net/url"
 	"os"
@@ -485,8 +486,61 @@ func main() {
 	// ==================== 测试 12: 数据导入 ====================
 	if len(exportData) > 0 {
 		fmt.Println("【测试 12】数据导入 (Lv4+)")
-		fmt.Printf("⚠️ 数据导入需要 multipart/form-data，跳过实际导入测试\n\n")
-		results = append(results, "⚠️ 数据导入 API (需要 multipart)")
+
+		// 创建 multipart 表单
+		var multipartBuffer bytes.Buffer
+		writer := multipart.NewWriter(&multipartBuffer)
+
+		// 添加文件字段
+		fileWriter, _ := writer.CreateFormFile("file", "import.zip")
+		fileWriter.Write(exportData)
+
+		// 添加 conflict 字段
+		_ = writer.WriteField("conflict", "skip")
+		writer.Close()
+
+		multipartData := multipartBuffer.Bytes()
+		contentType := writer.FormDataContentType()
+
+		// 计算签名
+		importTimestamp := strconv.FormatInt(time.Now().UnixMilli(), 10)
+		importSignature := signRequest("POST", "/api/v1/admin/import", importTimestamp, string(multipartData), tc.AdminPrivKey)
+
+		// 发送导入请求
+		importReq, _ := http.NewRequest("POST", tc.BaseURL+"/api/v1/admin/import", &multipartBuffer)
+		importReq.Header.Set("Content-Type", contentType)
+		importReq.Header.Set("X-AgentWiki-PublicKey", tc.AdminPubKey)
+		importReq.Header.Set("X-AgentWiki-Timestamp", importTimestamp)
+		importReq.Header.Set("X-AgentWiki-Signature", importSignature)
+
+		importResp, err := tc.Client.Do(importReq)
+		if err != nil {
+			fmt.Printf("❌ 导入请求失败: %v\n\n", err)
+			failCount++
+			results = append(results, "❌ 数据导入 API")
+		} else {
+			importRespBody, _ := io.ReadAll(importResp.Body)
+			importResp.Body.Close()
+
+			var apiResp struct {
+				Code    int    `json:"code"`
+				Message string `json:"message"`
+				Data    struct {
+					Success bool `json:"success"`
+				} `json:"data"`
+			}
+			json.Unmarshal(importRespBody, &apiResp)
+
+			if importResp.StatusCode == 200 && apiResp.Code == 0 {
+				fmt.Printf("✅ 数据导入成功\n\n")
+				passCount++
+				results = append(results, "✅ 数据导入 API")
+			} else {
+				fmt.Printf("❌ 数据导入失败: HTTP %d, code=%d\n\n", importResp.StatusCode, apiResp.Code)
+				failCount++
+				results = append(results, "❌ 数据导入 API")
+			}
+		}
 	}
 
 	// ==================== 测试总结 ====================

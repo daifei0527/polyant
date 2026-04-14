@@ -111,15 +111,32 @@ func (s *BadgerUserStore) Create(ctx context.Context, user *model.User) (*model.
 }
 
 func (s *BadgerUserStore) Get(ctx context.Context, pubkeyHash string) (*model.User, error) {
-	// kv.UserStore.GetUser uses publicKey, but our interface uses pubkeyHash
-	// We store users by publicKey, so we need to search through all users
+	// 检查是否为 base64 编码的公钥（原始格式）
+	// 原始公钥通常以 base64 编码，包含 + / = 等字符
+	// 公钥哈希是 hex 编码，只包含 0-9 a-f
+	isRawPublicKey := false
+	for _, c := range pubkeyHash {
+		if (c < '0' || c > '9') && (c < 'a' || c > 'f') && c != '-' {
+			isRawPublicKey = true
+			break
+		}
+	}
+
 	users, err := s.store.ListUsers(0, 100000)
 	if err != nil {
 		return nil, err
 	}
 	for _, u := range users {
-		if hashPublicKey(u.PublicKey) == pubkeyHash {
-			return u, nil
+		if isRawPublicKey {
+			// 直接比较公钥
+			if u.PublicKey == pubkeyHash {
+				return u, nil
+			}
+		} else {
+			// 比较公钥哈希
+			if hashPublicKey(u.PublicKey) == pubkeyHash {
+				return u, nil
+			}
 		}
 	}
 	return nil, fmt.Errorf("user not found")

@@ -37,11 +37,20 @@ type ImportSummary struct {
 	RatingsImported    int `json:"ratings_imported"`
 }
 
+// ImportErrorType 导入错误类型
+type ImportErrorType string
+
+const (
+	ImportErrorTypeFatal   ImportErrorType = "fatal"   // 致命错误，导入失败
+	ImportErrorTypeWarning ImportErrorType = "warning" // 警告，跳过处理
+)
+
 // ImportError 导入错误
 type ImportError struct {
-	Type    string `json:"type"`
-	ID      string `json:"id"`
-	Message string `json:"message"`
+	Type    string          `json:"type"`              // 资源类型：entry, user, category, rating
+	ID      string          `json:"id"`                // 资源标识
+	Message string          `json:"message"`           // 错误信息
+	Level   ImportErrorType `json:"level,omitempty"`   // 错误级别：fatal 或 warning
 }
 
 // ImportResult 导入结果
@@ -110,9 +119,12 @@ func (i *Importer) Import(zipData []byte, opts ImportOptions) *ImportResult {
 		i.importRatings(data, opts, result)
 	}
 
-	// 如果有错误，设置 Success 为 false
-	if len(result.Errors) > 0 {
-		result.Success = false
+	// 检查是否有致命错误
+	for _, e := range result.Errors {
+		if e.Level == ImportErrorTypeFatal || e.Level == "" {
+			result.Success = false
+			break
+		}
 	}
 
 	return result
@@ -125,6 +137,7 @@ func (i *Importer) importCategories(data []byte, opts ImportOptions, result *Imp
 		result.Errors = append(result.Errors, ImportError{
 			Type:    "category",
 			Message: fmt.Sprintf("failed to parse categories: %v", err),
+			Level:   ImportErrorTypeFatal,
 		})
 		return
 	}
@@ -135,6 +148,12 @@ func (i *Importer) importCategories(data []byte, opts ImportOptions, result *Imp
 			// 分类已存在
 			switch opts.ConflictStrategy {
 			case ConflictSkip:
+				result.Errors = append(result.Errors, ImportError{
+					Type:    "category",
+					ID:      cat.Path,
+					Message: "category already exists, skipped",
+					Level:   ImportErrorTypeWarning,
+				})
 				continue
 			case ConflictOverwrite:
 				// 分类结构不适合覆盖，保留现有
@@ -151,6 +170,7 @@ func (i *Importer) importCategories(data []byte, opts ImportOptions, result *Imp
 					Type:    "category",
 					ID:      cat.Path,
 					Message: fmt.Sprintf("failed to create category: %v", err),
+					Level:   ImportErrorTypeFatal,
 				})
 				continue
 			}
@@ -166,6 +186,7 @@ func (i *Importer) importUsers(data []byte, opts ImportOptions, result *ImportRe
 		result.Errors = append(result.Errors, ImportError{
 			Type:    "user",
 			Message: fmt.Sprintf("failed to parse users: %v", err),
+			Level:   ImportErrorTypeFatal,
 		})
 		return
 	}
@@ -177,6 +198,7 @@ func (i *Importer) importUsers(data []byte, opts ImportOptions, result *ImportRe
 				Type:    "user",
 				ID:      eu.PublicKey,
 				Message: "cannot import user with higher level",
+				Level:   ImportErrorTypeWarning,
 			})
 			continue
 		}
@@ -186,6 +208,13 @@ func (i *Importer) importUsers(data []byte, opts ImportOptions, result *ImportRe
 			// 用户已存在
 			switch opts.ConflictStrategy {
 			case ConflictSkip:
+				// 记录跳过信息，但不算错误
+				result.Errors = append(result.Errors, ImportError{
+					Type:    "user",
+					ID:      eu.PublicKey,
+					Message: "user already exists, skipped",
+					Level:   ImportErrorTypeWarning,
+				})
 				continue
 			case ConflictOverwrite, ConflictMerge:
 				// 只更新公开字段，不修改等级
@@ -196,6 +225,7 @@ func (i *Importer) importUsers(data []byte, opts ImportOptions, result *ImportRe
 						Type:    "user",
 						ID:      eu.PublicKey,
 						Message: fmt.Sprintf("failed to update user: %v", err),
+						Level:   ImportErrorTypeFatal,
 					})
 					continue
 				}
@@ -214,6 +244,7 @@ func (i *Importer) importUsers(data []byte, opts ImportOptions, result *ImportRe
 					Type:    "user",
 					ID:      eu.PublicKey,
 					Message: fmt.Sprintf("failed to create user: %v", err),
+					Level:   ImportErrorTypeFatal,
 				})
 				continue
 			}
@@ -229,6 +260,7 @@ func (i *Importer) importEntries(data []byte, opts ImportOptions, result *Import
 		result.Errors = append(result.Errors, ImportError{
 			Type:    "entry",
 			Message: fmt.Sprintf("failed to parse entries: %v", err),
+			Level:   ImportErrorTypeFatal,
 		})
 		return
 	}
@@ -240,6 +272,12 @@ func (i *Importer) importEntries(data []byte, opts ImportOptions, result *Import
 			switch opts.ConflictStrategy {
 			case ConflictSkip:
 				result.Summary.EntriesSkipped++
+				result.Errors = append(result.Errors, ImportError{
+					Type:    "entry",
+					ID:      entry.ID,
+					Message: "entry already exists, skipped",
+					Level:   ImportErrorTypeWarning,
+				})
 				continue
 			case ConflictOverwrite:
 				if _, err := i.store.Entry.Update(nil, entry); err != nil {
@@ -247,6 +285,7 @@ func (i *Importer) importEntries(data []byte, opts ImportOptions, result *Import
 						Type:    "entry",
 						ID:      entry.ID,
 						Message: fmt.Sprintf("failed to update entry: %v", err),
+						Level:   ImportErrorTypeFatal,
 					})
 					continue
 				}
@@ -258,6 +297,7 @@ func (i *Importer) importEntries(data []byte, opts ImportOptions, result *Import
 							Type:    "entry",
 							ID:      entry.ID,
 							Message: fmt.Sprintf("failed to update entry: %v", err),
+							Level:   ImportErrorTypeFatal,
 						})
 						continue
 					}
@@ -274,6 +314,7 @@ func (i *Importer) importEntries(data []byte, opts ImportOptions, result *Import
 					Type:    "entry",
 					ID:      entry.ID,
 					Message: fmt.Sprintf("failed to create entry: %v", err),
+					Level:   ImportErrorTypeFatal,
 				})
 				continue
 			}
@@ -289,6 +330,7 @@ func (i *Importer) importRatings(data []byte, opts ImportOptions, result *Import
 		result.Errors = append(result.Errors, ImportError{
 			Type:    "rating",
 			Message: fmt.Sprintf("failed to parse ratings: %v", err),
+			Level:   ImportErrorTypeFatal,
 		})
 		return
 	}
@@ -299,6 +341,12 @@ func (i *Importer) importRatings(data []byte, opts ImportOptions, result *Import
 		if existing != nil {
 			switch opts.ConflictStrategy {
 			case ConflictSkip:
+				result.Errors = append(result.Errors, ImportError{
+					Type:    "rating",
+					ID:      rating.ID,
+					Message: "rating already exists, skipped",
+					Level:   ImportErrorTypeWarning,
+				})
 				continue
 			case ConflictOverwrite:
 				// 评分覆盖需要删除现有评分，但接口不支持
@@ -314,6 +362,7 @@ func (i *Importer) importRatings(data []byte, opts ImportOptions, result *Import
 					Type:    "rating",
 					ID:      rating.ID,
 					Message: fmt.Sprintf("failed to create rating: %v", err),
+					Level:   ImportErrorTypeFatal,
 				})
 				continue
 			}

@@ -2,6 +2,10 @@
 <!-- Chinese Version (Default) -->
 # AgentWiki
 
+[![Release](https://img.shields.io/github/v/release/daifei0527/agentwiki)](https://github.com/daifei0527/agentwiki/releases)
+[![License](https://img.shields.io/github/license/daifei0527/agentwiki)](LICENSE)
+[![Go](https://img.shields.io/badge/Go-1.22+-00ADD8?logo=go)](https://golang.org)
+
 > 知识不应该属于某个特定机构和人，应该是属于全人类的。
 
 ## 项目简介
@@ -41,7 +45,29 @@ AgentWiki 是一个分布式、永不宕机的全民知识系统。该系统以A
 
 ## 快速开始
 
-### 方式一：Docker 部署（推荐）
+### 方式一：直接下载运行（推荐）
+
+从 [GitHub Releases](https://github.com/daifei0527/agentwiki/releases) 下载最新版本：
+
+```bash
+# 下载
+wget https://github.com/daifei0527/agentwiki/releases/download/v1.0.0/agentwiki-1.0.0-linux-amd64.tar.gz
+
+# 解压
+tar -xzvf agentwiki-1.0.0-linux-amd64.tar.gz
+cd agentwiki-1.0.0-linux-amd64
+
+# 启动种子节点（首次运行需要初始化种子数据）
+./agentwiki -config configs/seed.json -init-seed
+./agentwiki -config configs/seed.json
+
+# 或启动用户节点
+./agentwiki -config configs/user.json
+```
+
+> 💡 **AI 智能体用户**：请参阅 [SKILL.md](SKILL.md) 获取详细的安装和使用指南。
+
+### 方式二：Docker 部署
 
 ```bash
 # 克隆仓库
@@ -288,7 +314,13 @@ make release
 
 ## 许可证
 
-本项目采用 [CC BY-SA 4.0](LICENSE) 许可证。
+本项目采用 [MIT License](LICENSE) 许可证。
+
+## 相关文档
+
+- [SKILL.md](SKILL.md) - AI 智能体安装使用指南（中英文）
+- [API 文档](docs/api.md) - 完整的 REST API 参考
+- [部署文档](docs/deployment.md) - 安装、配置、运维指南
 
 ---
 
@@ -337,7 +369,29 @@ AgentWiki is a distributed, always-available knowledge system for everyone. The 
 
 ## Quick Start
 
-### Option 1: Docker Deployment (Recommended)
+### Option 1: Download and Run (Recommended)
+
+Download the latest release from [GitHub Releases](https://github.com/daifei0527/agentwiki/releases):
+
+```bash
+# Download
+wget https://github.com/daifei0527/agentwiki/releases/download/v1.0.0/agentwiki-1.0.0-linux-amd64.tar.gz
+
+# Extract
+tar -xzvf agentwiki-1.0.0-linux-amd64.tar.gz
+cd agentwiki-1.0.0-linux-amd64
+
+# Start seed node (initialize seed data on first run)
+./agentwiki -config configs/seed.json -init-seed
+./agentwiki -config configs/seed.json
+
+# Or start user node
+./agentwiki -config configs/user.json
+```
+
+> 💡 **For AI Agents**: See [SKILL.md](SKILL.md) for detailed installation and usage guide.
+
+### Option 2: Docker Deployment
 
 ```bash
 # Clone repository
@@ -408,6 +462,12 @@ sudo ./awctl service status
 
 ## License
 
-This project is licensed under the [CC BY-SA 4.0](LICENSE) License.
+This project is licensed under the [MIT License](LICENSE).
+
+## Documentation
+
+- [SKILL.md](SKILL.md) - Installation and Usage Guide for AI Agents (Bilingual)
+- [API Documentation](docs/api.md) - Complete REST API reference
+- [Deployment Guide](docs/deployment.md) - Installation, configuration, and operations
 
 </details>
