@@ -367,6 +367,41 @@ func Init(dir, level string) {
 	globalLogger.Info("日志系统初始化完成，级别: %s, 文件: %s", level, filePath)
 }
 
+// InitWithConfig 使用完整配置初始化全局日志实例
+func InitWithConfig(dir, level, lang string, bilingual bool) {
+	// 解析日志级别
+	levelMap := map[string]int{
+		"debug": LevelDebug,
+		"info":  LevelInfo,
+		"warn":  LevelWarn,
+		"error": LevelError,
+	}
+
+	logLevel, ok := levelMap[level]
+	if !ok {
+		logLevel = LevelInfo
+	}
+
+	// 创建日志文件路径
+	filePath := filepath.Join(dir, "polyant.log")
+
+	// 创建日志配置
+	config := &LoggerConfig{
+		Level:      logLevel,
+		FilePath:   filePath,
+		MaxSizeMB:  100,  // 100MB 轮转
+		MaxBackups: 5,     // 保留5个备份
+		Lang:       lang,
+		Bilingual:  bilingual,
+	}
+
+	// 初始化全局日志
+	globalLogger = NewLogger(config)
+
+	// 输出初始化信息
+	globalLogger.Info("日志系统初始化完成，级别: %s, 语言: %s, 文件: %s", level, lang, filePath)
+}
+
 // Close 关闭全局日志实例
 func Close() error {
 	if globalLogger != nil {
@@ -400,6 +435,34 @@ func Warn(format string, args ...interface{}) {
 func Error(format string, args ...interface{}) {
 	if globalLogger != nil {
 		globalLogger.Error(format, args...)
+	}
+}
+
+// DebugI18n 输出调试级别的全局日志（带多语言支持）
+func DebugI18n(code string, args map[string]interface{}) {
+	if globalLogger != nil {
+		globalLogger.DebugI18n(code, args)
+	}
+}
+
+// InfoI18n 输出信息级别的全局日志（带多语言支持）
+func InfoI18n(code string, args map[string]interface{}) {
+	if globalLogger != nil {
+		globalLogger.InfoI18n(code, args)
+	}
+}
+
+// WarnI18n 输出警告级别的全局日志（带多语言支持）
+func WarnI18n(code string, args map[string]interface{}) {
+	if globalLogger != nil {
+		globalLogger.WarnI18n(code, args)
+	}
+}
+
+// ErrorI18n 输出错误级别的全局日志（带多语言支持）
+func ErrorI18n(code string, args map[string]interface{}) {
+	if globalLogger != nil {
+		globalLogger.ErrorI18n(code, args)
 	}
 }
 
