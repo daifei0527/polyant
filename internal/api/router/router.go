@@ -109,6 +109,12 @@ func NewRouterWithDeps(deps *Dependencies) (http.Handler, error) {
 	// 创建批量操作 handler
 	batchHandler := handler.NewBatchHandler(deps.EntryStore, deps.SearchEngine, deps.Backlink, deps.UserStore)
 
+	// 创建导出/导入 handler
+	var exportHandler *handler.ExportHandler
+	if deps.Store != nil {
+		exportHandler = handler.NewExportHandler(deps.Store, deps.NodeID)
+	}
+
 	// 创建认证中间件
 	authMW := middleware.NewAuthMiddleware(deps.UserStore)
 
@@ -122,7 +128,7 @@ func NewRouterWithDeps(deps *Dependencies) (http.Handler, error) {
 	registerPublicRoutes(mux, entryHandler, userHandler, categoryHandler, nodeHandler, electionHandler)
 
 	// 注册认证路由（需要 Ed25519 签名认证）
-	registerAuthRoutes(mux, authMW, entryHandler, userHandler, categoryHandler, nodeHandler, adminHandler, electionHandler, batchHandler)
+	registerAuthRoutes(mux, authMW, entryHandler, userHandler, categoryHandler, nodeHandler, adminHandler, electionHandler, batchHandler, exportHandler)
 
 	// 应用中间件链
 	var httpHandler http.Handler = mux
@@ -233,7 +239,7 @@ func registerPublicRoutes(mux *http.ServeMux, eh *handler.EntryHandler, uh *hand
 }
 
 // registerAuthRoutes 注册需要认证的路由
-func registerAuthRoutes(mux *http.ServeMux, authMW *middleware.AuthMiddleware, eh *handler.EntryHandler, uh *handler.UserHandler, ch *handler.CategoryHandler, nh *handler.NodeHandler, ah *handler.AdminHandler, elh *handler.ElectionHandler, bh *handler.BatchHandler) {
+func registerAuthRoutes(mux *http.ServeMux, authMW *middleware.AuthMiddleware, eh *handler.EntryHandler, uh *handler.UserHandler, ch *handler.CategoryHandler, nh *handler.NodeHandler, ah *handler.AdminHandler, elh *handler.ElectionHandler, bh *handler.BatchHandler, exh *handler.ExportHandler) {
 	// 创建条目（POST /api/v1/entry）
 	mux.Handle("/api/v1/entry/create", authMW.Middleware(http.HandlerFunc(eh.CreateEntryHandler)))
 
@@ -294,6 +300,15 @@ func registerAuthRoutes(mux *http.ServeMux, authMW *middleware.AuthMiddleware, e
 		// 用户统计 GET /api/v1/admin/stats/users - Lv4+ (Admin)
 		mux.Handle("/api/v1/admin/stats/users", authMW.Middleware(authMW.RequireLevel(model.UserLevelLv4, http.HandlerFunc(ah.GetUserStatsHandler))))
 	}
+
+		// ==================== 数据导出/导入路由 ====================
+		if exh != nil {
+			// 数据导出 GET /api/v1/admin/export - Lv4+ (Admin)
+			mux.Handle("/api/v1/admin/export", authMW.Middleware(authMW.RequireLevel(model.UserLevelLv4, http.HandlerFunc(exh.ExportHandler))))
+
+			// 数据导入 POST /api/v1/admin/import - Lv4+ (Admin)
+			mux.Handle("/api/v1/admin/import", authMW.Middleware(authMW.RequireLevel(model.UserLevelLv4, http.HandlerFunc(exh.ImportHandler))))
+		}
 
 	// ==================== 选举路由 ====================
 	if elh != nil {
