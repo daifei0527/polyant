@@ -1,0 +1,50 @@
+{
+  "common.success": "Success",
+  "common.invalid_params": "Invalid parameters",
+  "common.internal_error": "Internal error",
+  "common.not_found": "Resource not found",
+
+  "api.entry.created": "Entry created successfully",
+  "api.entry.updated": "Entry updated successfully",
+  "api.entry.deleted": "Entry deleted",
+  "api.entry.not_found": "Entry not found",
+  "api.entry.list_loaded": "Entry list loaded",
+
+  "api.user.registered": "User registered successfully",
+  "api.user.not_found": "User not found",
+  "api.user.updated": "User updated successfully",
+  "api.user.info_loaded": "User info loaded",
+
+  "api.auth.missing": "Missing authentication info",
+  "api.auth.invalid_signature": "Invalid signature",
+  "api.auth.expired": "Request expired",
+  "api.auth.permission_denied": "Permission denied",
+  "api.auth.user_suspended": "User is suspended",
+
+  "api.category.created": "Category created successfully",
+  "api.category.not_found": "Category not found",
+  "api.category.list_loaded": "Category list loaded",
+
+  "api.search.success": "Search completed",
+  "api.search.keyword_too_short": "Keyword too short, minimum 2 characters required",
+
+  "cli.entry.list_title": "Entry List ({{.count}} total):",
+  "cli.entry.no_result": "No entries found",
+  "cli.config.saved": "Configuration saved",
+  "cli.key.generated": "Key pair generated",
+  "cli.user.list_title": "User List ({{.count}} total):",
+  "cli.server.started": "Server started",
+  "cli.server.stopped": "Server stopped",
+
+  "log.server.started": "Server started, listening on port {{.port}}",
+  "log.server.stopped": "Server stopped",
+  "log.db.connected": "Database connected",
+  "log.db.error": "Database error: {{.error}}",
+  "log.p2p.connected": "P2P network connected, peers: {{.count}}",
+  "log.p2p.error": "P2P network error: {{.error}}",
+  "log.sync.started": "Sync started",
+  "log.sync.completed": "Sync completed, entries: {{.count}}",
+  "log.sync.error": "Sync error: {{.error}}",
+  "log.request.incoming": "Incoming request: {{.method}} {{.path}}",
+  "log.request.outgoing": "Outgoing request: {{.method}} {{.url}}"
+}

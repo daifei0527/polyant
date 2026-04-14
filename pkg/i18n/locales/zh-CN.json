@@ -1,0 +1,50 @@
+{
+  "common.success": "操作成功",
+  "common.invalid_params": "参数无效",
+  "common.internal_error": "内部错误",
+  "common.not_found": "资源不存在",
+
+  "api.entry.created": "条目创建成功",
+  "api.entry.updated": "条目更新成功",
+  "api.entry.deleted": "条目已删除",
+  "api.entry.not_found": "条目不存在",
+  "api.entry.list_loaded": "条目列表加载成功",
+
+  "api.user.registered": "用户注册成功",
+  "api.user.not_found": "用户不存在",
+  "api.user.updated": "用户信息更新成功",
+  "api.user.info_loaded": "用户信息加载成功",
+
+  "api.auth.missing": "缺少认证信息",
+  "api.auth.invalid_signature": "签名验证失败",
+  "api.auth.expired": "请求已过期",
+  "api.auth.permission_denied": "权限不足",
+  "api.auth.user_suspended": "用户已被暂停",
+
+  "api.category.created": "分类创建成功",
+  "api.category.not_found": "分类不存在",
+  "api.category.list_loaded": "分类列表加载成功",
+
+  "api.search.success": "搜索完成",
+  "api.search.keyword_too_short": "搜索关键词过短，至少需要2个字符",
+
+  "cli.entry.list_title": "条目列表 (共 {{.count}} 条):",
+  "cli.entry.no_result": "暂无条目",
+  "cli.config.saved": "配置已保存",
+  "cli.key.generated": "密钥对已生成",
+  "cli.user.list_title": "用户列表 (共 {{.count}} 条):",
+  "cli.server.started": "服务已启动",
+  "cli.server.stopped": "服务已停止",
+
+  "log.server.started": "服务启动完成，监听端口 {{.port}}",
+  "log.server.stopped": "服务已停止",
+  "log.db.connected": "数据库连接成功",
+  "log.db.error": "数据库错误: {{.error}}",
+  "log.p2p.connected": "P2P网络已连接，节点数: {{.count}}",
+  "log.p2p.error": "P2P网络错误: {{.error}}",
+  "log.sync.started": "同步任务开始",
+  "log.sync.completed": "同步任务完成，同步条目数: {{.count}}",
+  "log.sync.error": "同步错误: {{.error}}",
+  "log.request.incoming": "收到请求: {{.method}} {{.path}}",
+  "log.request.outgoing": "发送请求: {{.method}} {{.url}}"
+}
