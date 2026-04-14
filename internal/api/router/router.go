@@ -109,6 +109,14 @@ func NewRouterWithDeps(deps *Dependencies) (http.Handler, error) {
 	// 创建批量操作 handler
 	batchHandler := handler.NewBatchHandler(deps.EntryStore, deps.SearchEngine, deps.Backlink, deps.UserStore)
 
+	// 创建审计 handler 和中间件
+	var auditHandler *handler.AuditHandler
+	var auditMW *middleware.AuditMiddleware
+	if deps.Store != nil && deps.Store.Audit != nil {
+		auditHandler = handler.NewAuditHandler(deps.Store.Audit)
+		auditMW = middleware.NewAuditMiddleware(deps.Store.Audit)
+	}
+
 	// 创建导出/导入 handler
 	var exportHandler *handler.ExportHandler
 	if deps.Store != nil {
@@ -128,10 +136,13 @@ func NewRouterWithDeps(deps *Dependencies) (http.Handler, error) {
 	registerPublicRoutes(mux, entryHandler, userHandler, categoryHandler, nodeHandler, electionHandler)
 
 	// 注册认证路由（需要 Ed25519 签名认证）
-	registerAuthRoutes(mux, authMW, entryHandler, userHandler, categoryHandler, nodeHandler, adminHandler, electionHandler, batchHandler, exportHandler)
+	registerAuthRoutes(mux, authMW, entryHandler, userHandler, categoryHandler, nodeHandler, adminHandler, electionHandler, batchHandler, exportHandler, auditHandler)
 
 	// 应用中间件链
 	var httpHandler http.Handler = mux
+	if auditMW != nil {
+		httpHandler = auditMW.Middleware(httpHandler)
+	}
 	httpHandler = corsMW.Middleware(httpHandler)              // CORS
 	httpHandler = rateLimitMW.Middleware(httpHandler)         // 速率限制
 	httpHandler = middleware.RecoveryMiddleware(httpHandler)  // 异常恢复
@@ -239,7 +250,7 @@ func registerPublicRoutes(mux *http.ServeMux, eh *handler.EntryHandler, uh *hand
 }
 
 // registerAuthRoutes 注册需要认证的路由
-func registerAuthRoutes(mux *http.ServeMux, authMW *middleware.AuthMiddleware, eh *handler.EntryHandler, uh *handler.UserHandler, ch *handler.CategoryHandler, nh *handler.NodeHandler, ah *handler.AdminHandler, elh *handler.ElectionHandler, bh *handler.BatchHandler, exh *handler.ExportHandler) {
+func registerAuthRoutes(mux *http.ServeMux, authMW *middleware.AuthMiddleware, eh *handler.EntryHandler, uh *handler.UserHandler, ch *handler.CategoryHandler, nh *handler.NodeHandler, ah *handler.AdminHandler, elh *handler.ElectionHandler, bh *handler.BatchHandler, exh *handler.ExportHandler, auh *handler.AuditHandler) {
 	// 创建条目（POST /api/v1/entry）
 	mux.Handle("/api/v1/entry/create", authMW.Middleware(http.HandlerFunc(eh.CreateEntryHandler)))
 
@@ -299,6 +310,18 @@ func registerAuthRoutes(mux *http.ServeMux, authMW *middleware.AuthMiddleware, e
 
 		// 用户统计 GET /api/v1/admin/stats/users - Lv4+ (Admin)
 		mux.Handle("/api/v1/admin/stats/users", authMW.Middleware(authMW.RequireLevel(model.UserLevelLv4, http.HandlerFunc(ah.GetUserStatsHandler))))
+	}
+
+	// ==================== 审计日志路由 ====================
+	if auh != nil {
+		// 查询审计日志 GET /api/v1/admin/audit/logs - Lv5 (SuperAdmin)
+		mux.Handle("/api/v1/admin/audit/logs", authMW.Middleware(authMW.RequireLevel(model.UserLevelLv5, http.HandlerFunc(auh.ListAuditLogsHandler))))
+
+		// 获取审计统计 GET /api/v1/admin/audit/stats - Lv5 (SuperAdmin)
+		mux.Handle("/api/v1/admin/audit/stats", authMW.Middleware(authMW.RequireLevel(model.UserLevelLv5, http.HandlerFunc(auh.GetAuditStatsHandler))))
+
+		// 删除审计日志 DELETE /api/v1/admin/audit/logs - Lv5 (SuperAdmin)
+		mux.Handle("/api/v1/admin/audit/logs/delete", authMW.Middleware(authMW.RequireLevel(model.UserLevelLv5, http.HandlerFunc(auh.DeleteAuditLogsHandler))))
 	}
 
 		// ==================== 数据导出/导入路由 ====================
