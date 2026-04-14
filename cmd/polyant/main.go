@@ -24,6 +24,7 @@ import (
 	"github.com/daifei0527/polyant/internal/service/daemon"
 	"github.com/daifei0527/polyant/internal/storage"
 	"github.com/daifei0527/polyant/pkg/config"
+	"github.com/daifei0527/polyant/pkg/i18n"
 	"go.uber.org/zap"
 )
 
@@ -106,6 +107,18 @@ func loadConfig() (*config.Config, error) {
 	cfg = config.LoadWithEnv(cfg)
 	if err := config.Validate(cfg); err != nil {
 		return nil, err
+	}
+
+	// 初始化 i18n
+	localesDir := cfg.Node.DataDir + "/locales"
+	if localesDir == "/locales" {
+		localesDir = "./pkg/i18n/locales"
+	}
+	if err := i18n.Init(localesDir, i18n.Lang(cfg.I18n.DefaultLang)); err != nil {
+		// 使用默认路径重试
+		if err := i18n.Init("./pkg/i18n/locales", i18n.Lang(cfg.I18n.DefaultLang)); err != nil {
+			log.Printf("警告: i18n初始化失败: %v", err)
+		}
 	}
 
 	return cfg, nil

@@ -45,5 +45,10 @@
   "api": {
     "enabled": true,
     "cors": true
+  },
+  "i18n": {
+    "default_lang": "zh-CN",
+    "available_langs": ["zh-CN", "en-US"],
+    "log_bilingual": false
   }
 }
