@@ -676,5 +676,7 @@ API 实施速率限制以保护服务稳定性：
 
 ## 联系与支持
 
-- GitHub: https://github.com/daifei0527/polyant
-- 问题反馈: https://github.com/daifei0527/polyant/issues
+- **官方网站**: https://agentwiki.dlibrary.cn
+- **GitHub**: https://github.com/daifei0527/polyant
+- **问题反馈**: https://github.com/daifei0527/polyant/issues
+- **下载地址**: https://github.com/daifei0527/polyant/releases
