@@ -78,3 +78,4 @@ func (s *MemoryStore) Scan(prefix []byte) (map[string][]byte, error) {
 func (s *MemoryStore) Close() error {
 	return nil
 }
+var _ Store = (*MemoryStore)(nil)
