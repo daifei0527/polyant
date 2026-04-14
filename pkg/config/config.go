@@ -76,6 +76,13 @@ type StorageConfig struct {
 	SearchType string `json:"search_type"` // 搜索引擎类型: bleve, memory
 }
 
+// I18nConfig 国际化配置
+type I18nConfig struct {
+	DefaultLang    string   `json:"default_lang"`    // 默认语言
+	AvailableLangs []string `json:"available_langs"` // 可用语言列表
+	LogBilingual   bool     `json:"log_bilingual"`   // 日志双语模式
+}
+
 // Config 顶层配置结构体
 // 包含所有子模块的配置
 type Config struct {
@@ -87,6 +94,7 @@ type Config struct {
 	SMTP    SMTPConfig    `json:"smtp"`
 	API     APIConfig     `json:"api"`
 	Storage StorageConfig `json:"storage"`
+	I18n    I18nConfig    `json:"i18n"`
 }
 
 // ==================== 配置管理函数 ====================
@@ -140,6 +148,11 @@ func DefaultConfig() *Config {
 		Storage: StorageConfig{
 			KVType:     "pebble",
 			SearchType: "bleve",
+		},
+		I18n: I18nConfig{
+			DefaultLang:    "zh-CN",
+			AvailableLangs: []string{"zh-CN", "en-US"},
+			LogBilingual:   false,
 		},
 	}
 }
@@ -289,6 +302,17 @@ func LoadWithEnv(config *Config) *Config {
 	}
 	if v := os.Getenv("POLYANT_API_CORS"); v != "" {
 		config.API.CORS = parseBool(v)
+	}
+
+	// I18n 配置环境变量
+	if v := os.Getenv("POLYANT_I18N_DEFAULT_LANG"); v != "" {
+		config.I18n.DefaultLang = v
+	}
+	if v := os.Getenv("POLYANT_I18N_AVAILABLE_LANGS"); v != "" {
+		config.I18n.AvailableLangs = strings.Split(v, ",")
+	}
+	if v := os.Getenv("POLYANT_I18N_LOG_BILINGUAL"); v != "" {
+		config.I18n.LogBilingual = parseBool(v)
 	}
 
 	return config
