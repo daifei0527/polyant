@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/daifei0527/polyant/pkg/i18n"
 	"github.com/spf13/cobra"
 )
 
@@ -19,6 +20,8 @@ var (
 	serverAddr string
 	// 密钥目录
 	keyDir string
+	// 输出语言
+	langFlag string
 	// 全局客户端
 	client *Client
 )
@@ -45,6 +48,12 @@ var rootCmd = &cobra.Command{
   awctl entry get <id>            获取条目详情`,
 	Version: version,
 	PersistentPreRun: func(cmd *cobra.Command, args []string) {
+		// 初始化 i18n
+		localesDir := "pkg/i18n/locales"
+		if err := i18n.Init(localesDir, i18n.Lang(langFlag)); err != nil {
+			// 静默失败，使用默认语言
+		}
+
 		// 初始化客户端
 		client = NewClient(serverAddr)
 
@@ -62,4 +71,5 @@ func init() {
 	rootCmd.PersistentFlags().StringVarP(&dataDir, "data", "d", "", "数据目录")
 	rootCmd.PersistentFlags().StringVarP(&serverAddr, "server", "s", "http://localhost:8080", "API 服务器地址")
 	rootCmd.PersistentFlags().StringVar(&keyDir, "key-dir", "", "密钥目录 (默认 ~/.polyant/keys)")
+	rootCmd.PersistentFlags().StringVar(&langFlag, "lang", "zh-CN", "Output language (zh-CN, en-US)")
 }
