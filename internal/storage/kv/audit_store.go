@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"sort"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/daifei0527/agentwiki/internal/storage/model"
@@ -26,7 +25,6 @@ type AuditStore interface {
 // KVAuditStore KV 审计日志存储实现
 type KVAuditStore struct {
 	kv Store
-	mu sync.RWMutex
 }
 
 // NewAuditStore 创建审计日志存储
@@ -35,9 +33,6 @@ func NewAuditStore(kv Store) *KVAuditStore {
 }
 
 func (s *KVAuditStore) Create(ctx context.Context, log *model.AuditLog) error {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
 	data, err := json.Marshal(log)
 	if err != nil {
 		return fmt.Errorf("marshal audit log: %w", err)
@@ -50,9 +45,6 @@ func (s *KVAuditStore) Create(ctx context.Context, log *model.AuditLog) error {
 }
 
 func (s *KVAuditStore) Get(ctx context.Context, id string) (*model.AuditLog, error) {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-
 	// 需要扫描查找，因为 ID 嵌入在键中
 	prefix := []byte(auditPrefix)
 	items, err := s.kv.Scan(prefix)
@@ -78,9 +70,6 @@ func (s *KVAuditStore) Get(ctx context.Context, id string) (*model.AuditLog, err
 }
 
 func (s *KVAuditStore) List(ctx context.Context, filter model.AuditFilter) ([]*model.AuditLog, int64, error) {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-
 	prefix := []byte(auditPrefix)
 	items, err := s.kv.Scan(prefix)
 	if err != nil {
@@ -166,9 +155,6 @@ func (s *KVAuditStore) matchFilter(log *model.AuditLog, filter model.AuditFilter
 }
 
 func (s *KVAuditStore) DeleteBefore(ctx context.Context, timestamp int64) (int64, error) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
 	prefix := []byte(auditPrefix)
 	items, err := s.kv.Scan(prefix)
 	if err != nil {
@@ -193,9 +179,6 @@ func (s *KVAuditStore) DeleteBefore(ctx context.Context, timestamp int64) (int64
 }
 
 func (s *KVAuditStore) GetStats(ctx context.Context) (*model.AuditStats, error) {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-
 	prefix := []byte(auditPrefix)
 	items, err := s.kv.Scan(prefix)
 	if err != nil {
