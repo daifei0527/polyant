@@ -65,10 +65,14 @@ func NewLogger(config *LoggerConfig) *Logger {
 		}
 	}
 
-	// 解析语言
+	// 解析语言（验证有效性）
 	lang := i18n.LangZhCN
 	if config.Lang != "" {
-		lang = i18n.Lang(config.Lang)
+		if i18n.IsValidLang(config.Lang) {
+			lang = i18n.Lang(config.Lang)
+		} else {
+			fmt.Fprintf(os.Stderr, "警告: 无效的语言配置 '%s', 使用默认语言 zh-CN\n", config.Lang)
+		}
 	}
 
 	l := &Logger{
@@ -218,6 +222,11 @@ func (l *Logger) Error(format string, args ...interface{}) {
 	l.log(LevelError, format, args...)
 }
 
+// DebugI18n 输出调试级别的日志（带多语言支持）
+func (l *Logger) DebugI18n(code string, args map[string]interface{}) {
+	l.logI18n(LevelDebug, code, args)
+}
+
 // InfoI18n 输出信息级别的日志（带多语言支持）
 func (l *Logger) InfoI18n(code string, args map[string]interface{}) {
 	l.logI18n(LevelInfo, code, args)
@@ -286,6 +295,34 @@ func (l *Logger) GetLevel() int {
 	l.mu.Lock()
 	defer l.mu.Unlock()
 	return l.level
+}
+
+// SetLang 动态设置日志语言
+func (l *Logger) SetLang(lang i18n.Lang) {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	l.lang = lang
+}
+
+// GetLang 获取当前日志语言
+func (l *Logger) GetLang() i18n.Lang {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	return l.lang
+}
+
+// SetBilingual 动态设置双语模式
+func (l *Logger) SetBilingual(bilingual bool) {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	l.bilingual = bilingual
+}
+
+// IsBilingual 检查是否为双语模式
+func (l *Logger) IsBilingual() bool {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	return l.bilingual
 }
 
 // ==================== 全局日志实例 ====================
