@@ -1,0 +1,49 @@
+{
+  "node": {
+    "type": "local",
+    "name": "polyant-node-1",
+    "data_dir": "./data",
+    "log_dir": "./logs",
+    "log_level": "info"
+  },
+  "storage": {
+    "kv_type": "pebble",
+    "search_type": "bleve"
+  },
+  "network": {
+    "listen_port": 18530,
+    "api_port": 18531,
+    "seed_nodes": [],
+    "dht_enabled": true,
+    "mdns_enabled": true
+  },
+  "sync": {
+    "auto_sync": true,
+    "interval_seconds": 300,
+    "mirror_categories": [],
+    "max_local_size_mb": 1024,
+    "compression": "gzip"
+  },
+  "sharing": {
+    "allow_mirror": true,
+    "bandwidth_limit_mb": 100,
+    "max_concurrent": 10
+  },
+  "user": {
+    "private_key_path": "./data/keys",
+    "email": "",
+    "auto_register": true
+  },
+  "smtp": {
+    "enabled": false,
+    "host": "",
+    "port": 587,
+    "username": "",
+    "password": "",
+    "from": ""
+  },
+  "api": {
+    "enabled": true,
+    "cors": true
+  }
+}

@@ -1,4 +1,4 @@
-module github.com/daifei0527/agentwiki
+module github.com/daifei0527/polyant
 
 go 1.25.7
 
