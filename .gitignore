@@ -4,7 +4,7 @@
 *.dll
 *.so
 *.dylib
-/agentwiki
+/polyant
 /awctl
 /bin/
 
@@ -36,8 +36,8 @@ Thumbs.db
 # SSH keys
 ssh_keys/
 *.pem
-agentwiki_deploy
-agentwiki_deploy.pub
+polyant_deploy
+polyant_deploy.pub
 
 # Temp
 /data/

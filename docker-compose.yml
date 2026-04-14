@@ -1,19 +1,19 @@
 version: '3.8'
 
 services:
-  agentwiki:
+  polyant:
     build: .
-    container_name: agentwiki
+    container_name: polyant
     restart: unless-stopped
     ports:
       - "8080:8080"  # HTTP API
       - "9000:9000"  # P2P Sync
     volumes:
-      - agentwiki-data:/app/data
-      - agentwiki-config:/app/config
+      - polyant-data:/app/data
+      - polyant-config:/app/config
     environment:
-      - AGENTWIKI_DATA_DIR=/app/data
-      - AGENTWIKI_LOG_LEVEL=info
+      - POLYANT_DATA_DIR=/app/data
+      - POLYANT_LOG_LEVEL=info
     healthcheck:
       test: ["CMD", "wget", "-q", "--spider", "http://localhost:8080/api/v1/stats"]
       interval: 30s
@@ -21,5 +21,5 @@ services:
       retries: 3
 
 volumes:
-  agentwiki-data:
-  agentwiki-config:
+  polyant-data:
+  polyant-config:

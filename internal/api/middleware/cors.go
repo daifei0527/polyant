@@ -21,7 +21,7 @@ func DefaultCORSConfig() CORSConfig {
 	return CORSConfig{
 		AllowedOrigins:   []string{"*"},
 		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"},
-		AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type", "X-AgentWiki-PublicKey", "X-AgentWiki-Timestamp", "X-AgentWiki-Signature"},
+		AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type", "X-Polyant-PublicKey", "X-Polyant-Timestamp", "X-Polyant-Signature"},
 		ExposedHeaders:   []string{"Content-Length", "X-Request-Id"},
 		AllowCredentials: true,
 		MaxAge:           86400, // 24小时

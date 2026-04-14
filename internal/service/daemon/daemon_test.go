@@ -7,8 +7,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/daifei0527/agentwiki/internal/service/daemon"
-	"github.com/daifei0527/agentwiki/pkg/config"
+	"github.com/daifei0527/polyant/internal/service/daemon"
+	"github.com/daifei0527/polyant/pkg/config"
 )
 
 // ==================== Program 测试 ====================
@@ -277,7 +277,7 @@ func TestRunAsService(t *testing.T) {
 
 	// 测试 status 命令
 	t.Run("status command", func(t *testing.T) {
-		os.Args = []string{"agentwiki", "status"}
+		os.Args = []string{"polyant", "status"}
 		err := daemon.RunAsService(cfg, startFn, stopFn)
 		// status 命令在非服务环境下可能返回错误
 		// 我们验证函数可以正常执行
@@ -286,7 +286,7 @@ func TestRunAsService(t *testing.T) {
 
 	// 测试 install 命令
 	t.Run("install command", func(t *testing.T) {
-		os.Args = []string{"agentwiki", "install"}
+		os.Args = []string{"polyant", "install"}
 		err := daemon.RunAsService(cfg, startFn, stopFn)
 		// install 命令需要权限
 		_ = err
@@ -294,7 +294,7 @@ func TestRunAsService(t *testing.T) {
 
 	// 测试 uninstall 命令
 	t.Run("uninstall command", func(t *testing.T) {
-		os.Args = []string{"agentwiki", "uninstall"}
+		os.Args = []string{"polyant", "uninstall"}
 		err := daemon.RunAsService(cfg, startFn, stopFn)
 		// uninstall 命令需要权限
 		_ = err
@@ -302,7 +302,7 @@ func TestRunAsService(t *testing.T) {
 
 	// 测试 start 命令
 	t.Run("start command", func(t *testing.T) {
-		os.Args = []string{"agentwiki", "start"}
+		os.Args = []string{"polyant", "start"}
 		err := daemon.RunAsService(cfg, startFn, stopFn)
 		// start 命令需要服务已安装
 		_ = err
@@ -310,7 +310,7 @@ func TestRunAsService(t *testing.T) {
 
 	// 测试 stop 命令
 	t.Run("stop command", func(t *testing.T) {
-		os.Args = []string{"agentwiki", "stop"}
+		os.Args = []string{"polyant", "stop"}
 		err := daemon.RunAsService(cfg, startFn, stopFn)
 		// stop 命令需要服务已安装
 		_ = err
@@ -318,7 +318,7 @@ func TestRunAsService(t *testing.T) {
 
 	// 测试空参数情况 (默认 Run)
 	t.Run("no command", func(t *testing.T) {
-		os.Args = []string{"agentwiki"}
+		os.Args = []string{"polyant"}
 		// Run 会阻塞,在 goroutine 中测试
 		done := make(chan error, 1)
 		go func() {

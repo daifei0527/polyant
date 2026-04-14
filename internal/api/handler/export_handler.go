@@ -7,9 +7,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/daifei0527/agentwiki/internal/core/export"
-	"github.com/daifei0527/agentwiki/internal/storage"
-	awerrors "github.com/daifei0527/agentwiki/pkg/errors"
+	"github.com/daifei0527/polyant/internal/core/export"
+	"github.com/daifei0527/polyant/internal/storage"
+	awerrors "github.com/daifei0527/polyant/pkg/errors"
 )
 
 // ExportHandler 导出/导入处理器
@@ -57,7 +57,7 @@ func (h *ExportHandler) ExportHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// 设置响应头
-	filename := fmt.Sprintf("agentwiki-export-%s.zip", time.Now().Format("20060102"))
+	filename := fmt.Sprintf("polyant-export-%s.zip", time.Now().Format("20060102"))
 	w.Header().Set("Content-Type", "application/zip")
 	w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=\"%s\"", filename))
 	w.Header().Set("Content-Length", fmt.Sprintf("%d", len(zipData)))

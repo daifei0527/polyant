@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/daifei0527/agentwiki/internal/storage/model"
+	"github.com/daifei0527/polyant/internal/storage/model"
 )
 
 // EntryStore 提供知识条目的CRUD操作

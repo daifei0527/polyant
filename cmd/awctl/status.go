@@ -12,7 +12,7 @@ import (
 var statusCmd = &cobra.Command{
 	Use:   "status",
 	Short: "查看服务器状态",
-	Long:  "查看 AgentWiki 服务器的运行状态",
+	Long:  "查看 Polyant 服务器的运行状态",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 		defer cancel()
@@ -22,7 +22,7 @@ var statusCmd = &cobra.Command{
 			return fmt.Errorf("获取状态失败: %w", err)
 		}
 
-		fmt.Println("AgentWiki 服务器状态:")
+		fmt.Println("Polyant 服务器状态:")
 		fmt.Printf("  版本: %s\n", status.Version)
 		fmt.Printf("  运行时间: %s\n", formatDuration(status.Uptime))
 		fmt.Printf("  节点ID: %s\n", status.NodeID)

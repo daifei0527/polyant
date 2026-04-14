@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** 为 AgentWiki 添加批量操作 API，支持一次请求创建、更新、删除最多 100 个知识条目
+**Goal:** 为 Polyant 添加批量操作 API，支持一次请求创建、更新、删除最多 100 个知识条目
 
 **Architecture:** 新增 BatchHandler 处理批量请求，实现预验证模式（先验证全部条目，通过后批量执行）
 
@@ -148,11 +148,11 @@ import (
 	"encoding/json"
 	"net/http"
 
-	awerrors "github.com/daifei0527/agentwiki/internal/api/handler"
-	"github.com/daifei0527/agentwiki/internal/storage"
-	"github.com/daifei0527/agentwiki/internal/storage/index"
-	"github.com/daifei0527/agentwiki/internal/storage/linkparser"
-	"github.com/daifei0527/agentwiki/internal/storage/model"
+	awerrors "github.com/daifei0527/polyant/internal/api/handler"
+	"github.com/daifei0527/polyant/internal/storage"
+	"github.com/daifei0527/polyant/internal/storage/index"
+	"github.com/daifei0527/polyant/internal/storage/linkparser"
+	"github.com/daifei0527/polyant/internal/storage/model"
 )
 
 // BatchHandler 批量操作处理器
@@ -640,8 +640,8 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/daifei0527/agentwiki/internal/storage"
-	"github.com/daifei0527/agentwiki/internal/storage/model"
+	"github.com/daifei0527/polyant/internal/storage"
+	"github.com/daifei0527/polyant/internal/storage/model"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

@@ -1,4 +1,4 @@
-// Package errors 定义了 AgentWiki 项目的统一错误类型和预定义错误码。
+// Package errors 定义了 Polyant 项目的统一错误类型和预定义错误码。
 // 错误码结构: AABBB (AA=模块, BBB=序号)
 // 00=系统错误 01=API错误 02=认证错误
 // 03=存储错误 04=网络错误 05=同步错误
@@ -26,7 +26,7 @@ const (
 	CategoryConfig  ErrorCategory = 9 // 配置错误
 )
 
-// AWError AgentWiki 统一错误类型
+// AWError Polyant 统一错误类型
 type AWError struct {
 	Code       int           `json:"code"`
 	Category   ErrorCategory `json:"-"`

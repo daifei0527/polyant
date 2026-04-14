@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/daifei0527/agentwiki/internal/storage/model"
+	"github.com/daifei0527/polyant/internal/storage/model"
 )
 
 // UserStore 提供用户的CRUD操作

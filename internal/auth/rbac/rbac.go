@@ -1,4 +1,4 @@
-// Package rbac 提供 AgentWiki 的基于角色的访问控制（RBAC）系统
+// Package rbac 提供 Polyant 的基于角色的访问控制（RBAC）系统
 // 定义权限常量和用户级别的权限矩阵
 package rbac
 

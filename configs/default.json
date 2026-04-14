@@ -1,7 +1,7 @@
 {
   "node": {
     "type": "local",
-    "name": "agentwiki-node-1",
+    "name": "polyant-node-1",
     "data_dir": "./data",
     "log_dir": "./logs",
     "log_level": "info"

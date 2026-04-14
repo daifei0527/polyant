@@ -1,4 +1,4 @@
-// Package logger 提供 AgentWiki 项目的日志工具
+// Package logger 提供 Polyant 项目的日志工具
 // 支持多级别日志、文件输出和基于大小的日志轮转
 package logger
 
@@ -254,7 +254,7 @@ func Init(dir, level string) {
 	}
 
 	// 创建日志文件路径
-	filePath := filepath.Join(dir, "agentwiki.log")
+	filePath := filepath.Join(dir, "polyant.log")
 
 	// 创建日志配置
 	config := &LoggerConfig{

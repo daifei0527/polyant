@@ -9,11 +9,11 @@ import (
 	"strconv"
 	"strings"
 
-	awerrors "github.com/daifei0527/agentwiki/pkg/errors"
-	"github.com/daifei0527/agentwiki/internal/storage"
-	"github.com/daifei0527/agentwiki/internal/storage/index"
-	"github.com/daifei0527/agentwiki/internal/storage/linkparser"
-	"github.com/daifei0527/agentwiki/internal/storage/model"
+	awerrors "github.com/daifei0527/polyant/pkg/errors"
+	"github.com/daifei0527/polyant/internal/storage"
+	"github.com/daifei0527/polyant/internal/storage/index"
+	"github.com/daifei0527/polyant/internal/storage/linkparser"
+	"github.com/daifei0527/polyant/internal/storage/model"
 )
 
 // RemoteQuerier 远程查询接口

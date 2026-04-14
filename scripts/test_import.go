@@ -46,9 +46,9 @@ func main() {
 	exportTimestamp := strconv.FormatInt(time.Now().UnixMilli(), 10)
 	exportSignature := signRequest("GET", "/api/v1/admin/export", exportTimestamp, "", keys.TestUserPrivateKey)
 	exportReq, _ := http.NewRequest("GET", baseURL+"/api/v1/admin/export?include=entries,categories,users,ratings", nil)
-	exportReq.Header.Set("X-AgentWiki-PublicKey", keys.TestUserPublicKey)
-	exportReq.Header.Set("X-AgentWiki-Timestamp", exportTimestamp)
-	exportReq.Header.Set("X-AgentWiki-Signature", exportSignature)
+	exportReq.Header.Set("X-Polyant-PublicKey", keys.TestUserPublicKey)
+	exportReq.Header.Set("X-Polyant-Timestamp", exportTimestamp)
+	exportReq.Header.Set("X-Polyant-Signature", exportSignature)
 
 	exportResp, err := client.Do(exportReq)
 	if err != nil {
@@ -104,9 +104,9 @@ func main() {
 
 	importReq, _ := http.NewRequest("POST", baseURL+"/api/v1/admin/import", &multipartBuffer)
 	importReq.Header.Set("Content-Type", contentType)
-	importReq.Header.Set("X-AgentWiki-PublicKey", keys.TestUserPublicKey)
-	importReq.Header.Set("X-AgentWiki-Timestamp", importTimestamp)
-	importReq.Header.Set("X-AgentWiki-Signature", importSignature)
+	importReq.Header.Set("X-Polyant-PublicKey", keys.TestUserPublicKey)
+	importReq.Header.Set("X-Polyant-Timestamp", importTimestamp)
+	importReq.Header.Set("X-Polyant-Signature", importSignature)
 
 	importResp, err := client.Do(importReq)
 	if err != nil {

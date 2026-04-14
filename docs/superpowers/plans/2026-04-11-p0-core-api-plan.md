@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** 完善 AgentWiki 核心 API，修复 bug，增加条目内容签名验证
+**Goal:** 完善 Polyant 核心 API，修复 bug，增加条目内容签名验证
 
 **Architecture:** 修复 UserStore 缺失方法，增加条目创建时的内容签名验证，修复用户信息查询 bug，完善路由依赖注入
 
@@ -115,10 +115,10 @@ import (
 	"strconv"
 	"strings"
 
-	awerrors "github.com/daifei0527/agentwiki/pkg/errors"
-	"github.com/daifei0527/agentwiki/internal/storage"
-	"github.com/daifei0527/agentwiki/internal/storage/linkparser"
-	"github.com/daifei0527/agentwiki/internal/storage/model"
+	awerrors "github.com/daifei0527/polyant/pkg/errors"
+	"github.com/daifei0527/polyant/internal/storage"
+	"github.com/daifei0527/polyant/internal/storage/linkparser"
+	"github.com/daifei0527/polyant/internal/storage/model"
 )
 ```
 
@@ -218,10 +218,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/daifei0527/agentwiki/internal/core/email"
-	"github.com/daifei0527/agentwiki/internal/storage"
-	"github.com/daifei0527/agentwiki/internal/storage/model"
-	awerrors "github.com/daifei0527/agentwiki/pkg/errors"
+	"github.com/daifei0527/polyant/internal/core/email"
+	"github.com/daifei0527/polyant/internal/storage"
+	"github.com/daifei0527/polyant/internal/storage/model"
+	awerrors "github.com/daifei0527/polyant/pkg/errors"
 )
 ```
 
@@ -326,7 +326,7 @@ grep -rn "router.NewRouter" --include="*.go" .
 
 找到调用位置后，添加 `nil` 作为 `emailService` 参数（如果暂时没有邮件服务）：
 ```go
-// 例如在 cmd/agentwiki 或 internal/service/daemon 中
+// 例如在 cmd/polyant 或 internal/service/daemon 中
 httpHandler, err := router.NewRouter(store, cfg, nil)
 ```
 

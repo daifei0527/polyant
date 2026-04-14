@@ -1,4 +1,4 @@
-# AgentWiki Makefile
+# Polyant Makefile
 # 构建系统配置
 
 # 版本信息
@@ -18,7 +18,7 @@ BUILD_DIR := ./bin
 CMD_DIR := ./cmd
 
 # 目标二进制
-AGENTWIKI_BIN := $(BUILD_DIR)/agentwiki
+POLYANT_BIN := $(BUILD_DIR)/polyant
 AWCTL_BIN := $(BUILD_DIR)/awctl
 
 # 交叉编译目标
@@ -29,13 +29,13 @@ PLATFORMS := linux/amd64 linux/arm64 darwin/amd64 darwin/arm64 windows/amd64
 # 默认目标：编译所有二进制
 all: build
 
-## build: 编译 agentwiki 和 awctl 二进制
+## build: 编译 polyant 和 awctl 二进制
 build:
-	@echo ">>> 编译 AgentWiki..."
+	@echo ">>> 编译 Polyant..."
 	@mkdir -p $(BUILD_DIR)
-	$(GOBUILD) $(LDFLAGS) -o $(AGENTWIKI_BIN) $(CMD_DIR)/agentwiki/
+	$(GOBUILD) $(LDFLAGS) -o $(POLYANT_BIN) $(CMD_DIR)/polyant/
 	$(GOBUILD) $(LDFLAGS) -o $(AWCTL_BIN) $(CMD_DIR)/awctl/
-	@echo ">>> 编译完成: $(AGENTWIKI_BIN), $(AWCTL_BIN)"
+	@echo ">>> 编译完成: $(POLYANT_BIN), $(AWCTL_BIN)"
 
 ## clean: 清除编译产物
 clean:
@@ -50,10 +50,10 @@ test:
 	$(GOTEST) -v -race ./...
 	@echo ">>> 测试完成"
 
-## run: 编译并运行 agentwiki
+## run: 编译并运行 polyant
 run: build
-	@echo ">>> 启动 AgentWiki..."
-	./$(AGENTWIKI_BIN)
+	@echo ">>> 启动 Polyant..."
+	./$(POLYANT_BIN)
 
 ## init: 初始化项目（创建配置和数据目录）
 init:
@@ -64,7 +64,7 @@ init:
 build-linux:
 	@echo ">>> 编译 Linux 版本..."
 	@mkdir -p $(BUILD_DIR)
-	GOOS=linux GOARCH=amd64 $(GOBUILD) $(LDFLAGS) -o $(BUILD_DIR)/agentwiki-linux-amd64 $(CMD_DIR)/agentwiki/
+	GOOS=linux GOARCH=amd64 $(GOBUILD) $(LDFLAGS) -o $(BUILD_DIR)/polyant-linux-amd64 $(CMD_DIR)/polyant/
 	GOOS=linux GOARCH=amd64 $(GOBUILD) $(LDFLAGS) -o $(BUILD_DIR)/awctl-linux-amd64 $(CMD_DIR)/awctl/
 	@echo ">>> Linux 编译完成"
 
@@ -72,16 +72,16 @@ build-linux:
 build-darwin:
 	@echo ">>> 编译 macOS 版本..."
 	@mkdir -p $(BUILD_DIR)
-	GOOS=darwin GOARCH=amd64 $(GOBUILD) $(LDFLAGS) -o $(BUILD_DIR)/agentwiki-darwin-amd64 $(CMD_DIR)/agentwiki/
+	GOOS=darwin GOARCH=amd64 $(GOBUILD) $(LDFLAGS) -o $(BUILD_DIR)/polyant-darwin-amd64 $(CMD_DIR)/polyant/
 	GOOS=darwin GOARCH=amd64 $(GOBUILD) $(LDFLAGS) -o $(BUILD_DIR)/awctl-darwin-amd64 $(CMD_DIR)/awctl/
-	GOOS=darwin GOARCH=arm64 $(GOBUILD) $(LDFLAGS) -o $(BUILD_DIR)/agentwiki-darwin-arm64 $(CMD_DIR)/agentwiki/
+	GOOS=darwin GOARCH=arm64 $(GOBUILD) $(LDFLAGS) -o $(BUILD_DIR)/polyant-darwin-arm64 $(CMD_DIR)/polyant/
 	@echo ">>> macOS 编译完成"
 
 ## build-windows: 交叉编译 Windows 版本
 build-windows:
 	@echo ">>> 编译 Windows 版本..."
 	@mkdir -p $(BUILD_DIR)
-	GOOS=windows GOARCH=amd64 $(GOBUILD) $(LDFLAGS) -o $(BUILD_DIR)/agentwiki-windows-amd64.exe $(CMD_DIR)/agentwiki/
+	GOOS=windows GOARCH=amd64 $(GOBUILD) $(LDFLAGS) -o $(BUILD_DIR)/polyant-windows-amd64.exe $(CMD_DIR)/polyant/
 	GOOS=windows GOARCH=amd64 $(GOBUILD) $(LDFLAGS) -o $(BUILD_DIR)/awctl-windows-amd64.exe $(CMD_DIR)/awctl/
 	@echo ">>> Windows 编译完成"
 
@@ -91,10 +91,10 @@ cross-compile:
 	@mkdir -p $(BUILD_DIR)
 	@for p in $(PLATFORMS); do \
 		GOOS=$${p%/*}; GOARCH=$${p#*/}; \
-		out=$(BUILD_DIR)/agentwiki-$${GOOS}-$${GOARCH}; \
+		out=$(BUILD_DIR)/polyant-$${GOOS}-$${GOARCH}; \
 		[ "$${GOOS}" = "windows" ] && out=$${out}.exe; \
 		echo "  编译 $$out..."; \
-		GOOS=$${GOOS} GOARCH=$${GOARCH} $(GOBUILD) $(LDFLAGS) -o $$out $(CMD_DIR)/agentwiki/; \
+		GOOS=$${GOOS} GOARCH=$${GOARCH} $(GOBUILD) $(LDFLAGS) -o $$out $(CMD_DIR)/polyant/; \
 		out=$(BUILD_DIR)/awctl-$${GOOS}-$${GOARCH}; \
 		[ "$${GOOS}" = "windows" ] && out=$${out}.exe; \
 		GOOS=$${GOOS} GOARCH=$${GOARCH} $(GOBUILD) $(LDFLAGS) -o $$out $(CMD_DIR)/awctl/; \
@@ -118,7 +118,7 @@ lint: fmt vet
 
 ## help: 显示帮助信息
 help:
-	@echo "AgentWiki 构建系统"
+	@echo "Polyant 构建系统"
 	@echo ""
 	@echo "使用方法:"
 	@echo "  make <target>"

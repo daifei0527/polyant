@@ -1,4 +1,4 @@
-// Package storage 定义了 AgentWiki 存储层的接口抽象和内存实现。
+// Package storage 定义了 Polyant 存储层的接口抽象和内存实现。
 // 各 handler 通过这些接口与存储层交互，便于测试和替换底层实现。
 package storage
 
@@ -6,9 +6,9 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/daifei0527/agentwiki/internal/storage/index"
-	"github.com/daifei0527/agentwiki/internal/storage/kv"
-	"github.com/daifei0527/agentwiki/internal/storage/model"
+	"github.com/daifei0527/polyant/internal/storage/index"
+	"github.com/daifei0527/polyant/internal/storage/kv"
+	"github.com/daifei0527/polyant/internal/storage/model"
 )
 
 // EntryStore 知识条目存储接口

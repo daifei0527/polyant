@@ -1,4 +1,4 @@
-// Package model 定义了AgentWiki系统的核心数据模型
+// Package model 定义了Polyant系统的核心数据模型
 package model
 
 import (

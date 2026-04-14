@@ -1,4 +1,4 @@
-// Package middleware 定义了 AgentWiki API 的 HTTP 中间件。
+// Package middleware 定义了 Polyant API 的 HTTP 中间件。
 // 包含认证、CORS、日志等中间件实现。
 package middleware
 
@@ -17,18 +17,18 @@ import (
 	"strings"
 	"time"
 
-	"github.com/daifei0527/agentwiki/internal/storage"
-	"github.com/daifei0527/agentwiki/internal/storage/model"
-	awerrors "github.com/daifei0527/agentwiki/pkg/errors"
+	"github.com/daifei0527/polyant/internal/storage"
+	"github.com/daifei0527/polyant/internal/storage/model"
+	awerrors "github.com/daifei0527/polyant/pkg/errors"
 )
 
 const (
 	// headerPublicKey 公钥请求头
-	headerPublicKey = "X-AgentWiki-PublicKey"
+	headerPublicKey = "X-Polyant-PublicKey"
 	// headerTimestamp 时间戳请求头
-	headerTimestamp = "X-AgentWiki-Timestamp"
+	headerTimestamp = "X-Polyant-Timestamp"
 	// headerSignature 签名请求头
-	headerSignature = "X-AgentWiki-Signature"
+	headerSignature = "X-Polyant-Signature"
 	// headerAuthorization 传统 Authorization 头（兼容）
 	headerAuthorization = "Authorization"
 	// maxTimestampDrift 最大时间戳偏差（毫秒），5分钟
@@ -159,7 +159,7 @@ func (m *AuthMiddleware) RequireLevel(minLevel int32, next http.Handler) http.Ha
 
 // extractAuthHeaders 从请求头中提取认证信息
 // 支持两种格式：
-// 1. X-AgentWiki-PublicKey / X-AgentWiki-Timestamp / X-AgentWiki-Signature
+// 1. X-Polyant-PublicKey / X-Polyant-Timestamp / X-Polyant-Signature
 // 2. Authorization: Ed25519 base64signature (兼容格式)
 func extractAuthHeaders(r *http.Request) (pubKey, timestamp, signature string) {
 	pubKey = r.Header.Get(headerPublicKey)

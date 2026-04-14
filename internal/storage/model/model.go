@@ -1,4 +1,4 @@
-// Package model 定义了 AgentWiki 系统的核心数据模型。
+// Package model 定义了 Polyant 系统的核心数据模型。
 // 包含知识条目、用户、评分、分类、节点信息等结构体定义。
 // 本文件补充 models.go 中未定义的类型和常量。
 package model

@@ -1,6 +1,6 @@
-// init_data.go - AgentWiki 初始种子数据生成器
+// init_data.go - Polyant 初始种子数据生成器
 // 独立运行的 Go 程序，生成默认分类和示例知识条目
-// 输出为 JSON 文件，可导入到 AgentWiki 节点中
+// 输出为 JSON 文件，可导入到 Polyant 节点中
 package main
 
 import (
@@ -66,7 +66,7 @@ func main() {
 		outputDir = os.Args[1]
 	}
 
-	fmt.Printf("AgentWiki 种子数据生成器 %s\n", version)
+	fmt.Printf("Polyant 种子数据生成器 %s\n", version)
 	fmt.Printf("输出目录: %s\n", outputDir)
 
 	// 确保输出目录存在
@@ -179,17 +179,17 @@ func generateEntries(now int64) []KnowledgeEntry {
 		// 系统说明条目
 		{
 			ID:        "sys-001",
-			Title:     "AgentWiki 使用指南",
-			Content:   "# AgentWiki 使用指南\n\nAgentWiki 是一个分布式百科知识库系统，为 AI 智能体提供知识和技能。\n\n## 快速开始\n\n1. 启动 AgentWiki 节点\n2. 通过 REST API 访问知识库\n3. 搜索、创建和管理知识条目\n\n## API 端点\n\n- `GET /api/v1/search` - 搜索知识\n- `GET /api/v1/entry/{id}` - 获取条目\n- `POST /api/v1/entry` - 创建条目\n- `GET /api/v1/categories` - 获取分类\n\n## 认证\n\n所有写操作需要 Ed25519 签名认证。\n",
+			Title:     "Polyant 使用指南",
+			Content:   "# Polyant 使用指南\n\nPolyant 是一个分布式百科知识库系统，为 AI 智能体提供知识和技能。\n\n## 快速开始\n\n1. 启动 Polyant 节点\n2. 通过 REST API 访问知识库\n3. 搜索、创建和管理知识条目\n\n## API 端点\n\n- `GET /api/v1/search` - 搜索知识\n- `GET /api/v1/entry/{id}` - 获取条目\n- `POST /api/v1/entry` - 创建条目\n- `GET /api/v1/categories` - 获取分类\n\n## 认证\n\n所有写操作需要 Ed25519 签名认证。\n",
 			JsonData: []map[string]interface{}{
 				{
 					"type":        "skill_definition",
-					"name":        "agentwiki_usage",
-					"description": "AgentWiki 知识库使用指南",
+					"name":        "polyant_usage",
+					"description": "Polyant 知识库使用指南",
 				},
 			},
 			Category:    "tools/dev-tools",
-			Tags:        []string{"agentwiki", "guide", "api", "getting-started"},
+			Tags:        []string{"polyant", "guide", "api", "getting-started"},
 			Version:     1,
 			CreatedAt:   now,
 			UpdatedAt:   now,

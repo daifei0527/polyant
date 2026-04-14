@@ -6,7 +6,7 @@
 
 ## 概述
 
-将 AWSP (AgentWiki Sync Protocol) 从 JSON 序列化迁移到 Protobuf，并添加 QUIC 传输支持，提升网络性能和效率。
+将 AWSP (Polyant Sync Protocol) 从 JSON 序列化迁移到 Protobuf，并添加 QUIC 传输支持，提升网络性能和效率。
 
 ## 目标
 
@@ -43,7 +43,7 @@
 ### 文件结构
 
 ```
-agentwiki/
+polyant/
 ├── proto/
 │   └── awsp.proto           # Protobuf 消息定义
 ├── internal/network/
@@ -66,7 +66,7 @@ agentwiki/
 syntax = "proto3";
 package awsp;
 
-option go_package = "github.com/daifei0527/agentwiki/internal/network/protocol/proto";
+option go_package = "github.com/daifei0527/polyant/internal/network/protocol/proto";
 
 // 消息类型枚举
 enum MessageType {
@@ -302,8 +302,8 @@ func NewHost(ctx context.Context, cfg *HostConfig) (*P2PHost, error) {
 
 ## 协议版本
 
-- **旧版本**: `/agentwiki/sync/1.0.0` (JSON)
-- **新版本**: `/agentwiki/sync/2.0.0` (Protobuf + QUIC)
+- **旧版本**: `/polyant/sync/1.0.0` (JSON)
+- **新版本**: `/polyant/sync/2.0.0` (Protobuf + QUIC)
 
 **注意**: v2.0.0 不向后兼容 v1.0.0 节点。
 
@@ -362,7 +362,7 @@ func NewHost(ctx context.Context, cfg *HostConfig) (*P2PHost, error) {
 - Modify: `internal/network/host/host.go`
 
 **Steps:**
-1. 更新 AWSPProtocolID 为 `/agentwiki/sync/2.0.0`
+1. 更新 AWSPProtocolID 为 `/polyant/sync/2.0.0`
 2. 更新 UserAgent 版本号
 
 ### Task 6: 测试验证

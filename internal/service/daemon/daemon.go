@@ -6,7 +6,7 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/daifei0527/agentwiki/pkg/config"
+	"github.com/daifei0527/polyant/pkg/config"
 	"github.com/kardianos/service"
 )
 
@@ -41,8 +41,8 @@ type Daemon struct {
 
 func NewDaemon(cfg *config.Config, startFn, stopFn func() error) (*Daemon, error) {
 	svcConfig := &service.Config{
-		Name:        "AgentWiki",
-		DisplayName: "AgentWiki Distributed Knowledge Base",
+		Name:        "Polyant",
+		DisplayName: "Polyant Distributed Knowledge Base",
 		Description: "P2P distributed knowledge base for AI agents",
 	}
 

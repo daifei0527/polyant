@@ -14,8 +14,8 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/daifei0527/agentwiki/internal/storage/index"
-	"github.com/daifei0527/agentwiki/internal/storage/model"
+	"github.com/daifei0527/polyant/internal/storage/index"
+	"github.com/daifei0527/polyant/internal/storage/model"
 )
 
 // MemoryEntryStore 基于内存的知识条目存储实现

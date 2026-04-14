@@ -1,4 +1,4 @@
-// Package router 定义了 AgentWiki API 的路由注册和中间件链。
+// Package router 定义了 Polyant API 的路由注册和中间件链。
 // 使用标准库 net/http 实现，不依赖第三方路由库。
 package router
 
@@ -7,14 +7,14 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/daifei0527/agentwiki/internal/api/handler"
-	"github.com/daifei0527/agentwiki/internal/api/middleware"
-	"github.com/daifei0527/agentwiki/internal/core/email"
-	"github.com/daifei0527/agentwiki/internal/storage"
-	"github.com/daifei0527/agentwiki/internal/storage/index"
-	"github.com/daifei0527/agentwiki/internal/storage/kv"
-	"github.com/daifei0527/agentwiki/internal/storage/model"
-	"github.com/daifei0527/agentwiki/pkg/config"
+	"github.com/daifei0527/polyant/internal/api/handler"
+	"github.com/daifei0527/polyant/internal/api/middleware"
+	"github.com/daifei0527/polyant/internal/core/email"
+	"github.com/daifei0527/polyant/internal/storage"
+	"github.com/daifei0527/polyant/internal/storage/index"
+	"github.com/daifei0527/polyant/internal/storage/kv"
+	"github.com/daifei0527/polyant/internal/storage/model"
+	"github.com/daifei0527/polyant/pkg/config"
 )
 
 // RemoteQuerier 远程查询接口

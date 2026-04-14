@@ -12,10 +12,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/daifei0527/agentwiki/internal/core/email"
-	"github.com/daifei0527/agentwiki/internal/storage"
-	"github.com/daifei0527/agentwiki/internal/storage/model"
-	awerrors "github.com/daifei0527/agentwiki/pkg/errors"
+	"github.com/daifei0527/polyant/internal/core/email"
+	"github.com/daifei0527/polyant/internal/storage"
+	"github.com/daifei0527/polyant/internal/storage/model"
+	awerrors "github.com/daifei0527/polyant/pkg/errors"
 )
 
 // UserHandler 用户 HTTP 处理器
@@ -165,7 +165,7 @@ func (h *UserHandler) SendVerificationCodeHandler(w http.ResponseWriter, r *http
 
 	// 发送验证邮件
 	if h.emailService != nil {
-		verifyURL := fmt.Sprintf("https://agentwiki.org/verify?email=%s&code=%s", req.Email, code)
+		verifyURL := fmt.Sprintf("https://polyant.org/verify?email=%s&code=%s", req.Email, code)
 		if err := h.emailService.SendVerificationEmail(req.Email, code, verifyURL); err != nil {
 			// 记录错误但不暴露给用户
 			// 在开发环境可以返回具体错误
@@ -206,7 +206,7 @@ func (h *UserHandler) VerifyEmailHandler(w http.ResponseWriter, r *http.Request)
 	user := getUserFromContext(r.Context())
 	if user == nil {
 		// 尝试从请求头获取公钥查找用户
-		pubKeyStr := r.Header.Get("X-AgentWiki-PublicKey")
+		pubKeyStr := r.Header.Get("X-Polyant-PublicKey")
 		if pubKeyStr != "" {
 			pubKeyBytes, err := base64.StdEncoding.DecodeString(pubKeyStr)
 			if err == nil {
@@ -456,7 +456,7 @@ func generateSimpleCode(email string) string {
 	h := sha256.New()
 	h.Write([]byte(email))
 	h.Write([]byte(time.Now().Format("2006-01-02")))
-	h.Write([]byte("agentwiki-verification-secret"))
+	h.Write([]byte("polyant-verification-secret"))
 	return hex.EncodeToString(h.Sum(nil))[:6]
 }
 

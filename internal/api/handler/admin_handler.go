@@ -5,9 +5,9 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/daifei0527/agentwiki/internal/core/user"
-	"github.com/daifei0527/agentwiki/internal/storage"
-	awerrors "github.com/daifei0527/agentwiki/pkg/errors"
+	"github.com/daifei0527/polyant/internal/core/user"
+	"github.com/daifei0527/polyant/internal/storage"
+	awerrors "github.com/daifei0527/polyant/pkg/errors"
 )
 
 // AdminHandler 管理员 API 处理器

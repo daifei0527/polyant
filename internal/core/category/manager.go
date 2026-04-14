@@ -8,7 +8,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/daifei0527/agentwiki/internal/storage"
+	"github.com/daifei0527/polyant/internal/storage"
 )
 
 // Category 分类信息

@@ -7,9 +7,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/daifei0527/agentwiki/internal/network/host"
-	"github.com/daifei0527/agentwiki/internal/network/protocol"
-	"github.com/daifei0527/agentwiki/internal/storage/model"
+	"github.com/daifei0527/polyant/internal/network/host"
+	"github.com/daifei0527/polyant/internal/network/protocol"
+	"github.com/daifei0527/polyant/internal/storage/model"
 )
 
 // PushService 条目推送服务

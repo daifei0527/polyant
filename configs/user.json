@@ -1,7 +1,7 @@
 {
   "node": {
     "type": "user",
-    "name": "agentwiki-user-node",
+    "name": "polyant-user-node",
     "data_dir": "./data/user",
     "log_dir": "./logs",
     "log_level": "info"

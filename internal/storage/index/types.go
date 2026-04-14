@@ -4,7 +4,7 @@ package index
 import (
 	"context"
 
-	"github.com/daifei0527/agentwiki/internal/storage/model"
+	"github.com/daifei0527/polyant/internal/storage/model"
 )
 
 // SearchQuery 搜索查询参数

@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/daifei0527/agentwiki/internal/network/protocol"
+	"github.com/daifei0527/polyant/internal/network/protocol"
 	libp2p "github.com/libp2p/go-libp2p"
 	"github.com/libp2p/go-libp2p/core/network"
 	libp2p_protocol "github.com/libp2p/go-libp2p/core/protocol"
@@ -527,7 +527,7 @@ func TestMessageHeaderWithSignature(t *testing.T) {
 
 // TestAWSPProtocolID 测试协议 ID
 func TestAWSPProtocolID(t *testing.T) {
-	expected := "/agentwiki/sync/2.0.0"
+	expected := "/polyant/sync/2.0.0"
 	if protocol.AWSPProtocolID != expected {
 		t.Errorf("AWSPProtocolID 错误: got %q, want %q", protocol.AWSPProtocolID, expected)
 	}

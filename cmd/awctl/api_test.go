@@ -350,8 +350,8 @@ func TestClient_RegisterUser(t *testing.T) {
 func TestClient_CreateEntry(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// Check auth headers are present
-		if r.Header.Get("X-AgentWiki-PublicKey") == "" {
-			t.Error("X-AgentWiki-PublicKey header should be set")
+		if r.Header.Get("X-Polyant-PublicKey") == "" {
+			t.Error("X-Polyant-PublicKey header should be set")
 		}
 
 		resp := APIResponse{

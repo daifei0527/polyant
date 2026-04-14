@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""AgentWiki API 测试脚本"""
+"""Polyant API 测试脚本"""
 
 import hashlib
 import base64
@@ -62,9 +62,9 @@ def create_entry(title: str, content: str, category: str, tags: list):
     # 构造请求头
     headers = {
         "Content-Type": "application/json",
-        "X-AgentWiki-PublicKey": USER["public_key"],
-        "X-AgentWiki-Timestamp": str(timestamp),
-        "X-AgentWiki-Signature": signature
+        "X-Polyant-PublicKey": USER["public_key"],
+        "X-Polyant-Timestamp": str(timestamp),
+        "X-Polyant-Signature": signature
     }
     
     # 发送请求

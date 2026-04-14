@@ -1,7 +1,7 @@
 package protocol
 
 import (
-	awsp "github.com/daifei0527/agentwiki/internal/network/protocol/proto"
+	awsp "github.com/daifei0527/polyant/internal/network/protocol/proto"
 )
 
 // ==================== MessageType Conversion ====================

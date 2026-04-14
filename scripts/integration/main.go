@@ -70,7 +70,7 @@ func main() {
 
 	fmt.Println()
 	fmt.Println("╔══════════════════════════════════════════════╗")
-	fmt.Println("║       AgentWiki 集成测试                    ║")
+	fmt.Println("║       Polyant 集成测试                    ║")
 	fmt.Println("╚══════════════════════════════════════════════╝")
 	fmt.Println()
 
@@ -164,9 +164,9 @@ func doSignedRequest(method, path string, body interface{}, needSign bool) (*API
 			method, fullPath, timestamp, hex.EncodeToString(bodyHash[:]))
 		signature := ed25519.Sign(testPrivateKey, []byte(signContent))
 
-		req.Header.Set("X-AgentWiki-PublicKey", base64.StdEncoding.EncodeToString(testPublicKey))
-		req.Header.Set("X-AgentWiki-Timestamp", fmt.Sprintf("%d", timestamp))
-		req.Header.Set("X-AgentWiki-Signature", base64.StdEncoding.EncodeToString(signature))
+		req.Header.Set("X-Polyant-PublicKey", base64.StdEncoding.EncodeToString(testPublicKey))
+		req.Header.Set("X-Polyant-Timestamp", fmt.Sprintf("%d", timestamp))
+		req.Header.Set("X-Polyant-Signature", base64.StdEncoding.EncodeToString(signature))
 	}
 
 	client := &http.Client{Timeout: 10 * time.Second}
@@ -243,7 +243,7 @@ func testSearchEmpty() error {
 func testCreateEntry() error {
 	// 先验证邮箱升级为Lv1正式用户
 	email := "test@example.com"
-	token := sha256Hex(email + "agentwiki-email-verification-secret")[:16]
+	token := sha256Hex(email + "polyant-email-verification-secret")[:16]
 	verifyResp, err := doSignedRequest("POST", "/user/verify-email", map[string]string{
 		"email": email,
 		"token": token,

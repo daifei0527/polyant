@@ -4,7 +4,7 @@ package rbac_test
 import (
 	"testing"
 
-	"github.com/daifei0527/agentwiki/internal/auth/rbac"
+	"github.com/daifei0527/polyant/internal/auth/rbac"
 )
 
 // TestHasPermission 测试权限检查

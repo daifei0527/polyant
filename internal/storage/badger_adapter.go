@@ -12,9 +12,9 @@ import (
 	"sort"
 	"sync"
 
-	"github.com/daifei0527/agentwiki/internal/storage/index"
-	"github.com/daifei0527/agentwiki/internal/storage/kv"
-	"github.com/daifei0527/agentwiki/internal/storage/model"
+	"github.com/daifei0527/polyant/internal/storage/index"
+	"github.com/daifei0527/polyant/internal/storage/kv"
+	"github.com/daifei0527/polyant/internal/storage/model"
 )
 
 // BadgerEntryStore 适配 kv.EntryStore 到 storage.EntryStore 接口

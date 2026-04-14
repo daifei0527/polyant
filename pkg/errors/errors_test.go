@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"testing"
 
-	awerrors "github.com/daifei0527/agentwiki/pkg/errors"
+	awerrors "github.com/daifei0527/polyant/pkg/errors"
 )
 
 // ==================== AWError 基础测试 ====================

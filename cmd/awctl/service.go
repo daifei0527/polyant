@@ -7,8 +7,8 @@ import (
 	"runtime"
 	"syscall"
 
-	"github.com/daifei0527/agentwiki/internal/service/daemon"
-	"github.com/daifei0527/agentwiki/pkg/config"
+	"github.com/daifei0527/polyant/internal/service/daemon"
+	"github.com/daifei0527/polyant/pkg/config"
 	"github.com/spf13/cobra"
 )
 
@@ -16,14 +16,14 @@ import (
 var serviceCmd = &cobra.Command{
 	Use:   "service",
 	Short: "服务管理",
-	Long:  "管理 AgentWiki 系统服务（安装、启动、停止、卸载）",
+	Long:  "管理 Polyant 系统服务（安装、启动、停止、卸载）",
 }
 
 // serviceInstallCmd 安装服务
 var serviceInstallCmd = &cobra.Command{
 	Use:   "install",
 	Short: "安装系统服务",
-	Long: `安装 AgentWiki 为系统服务。
+	Long: `安装 Polyant 为系统服务。
 
 Linux (systemd): 安装到 /etc/systemd/system/
 macOS (launchd): 安装到 ~/Library/LaunchAgents/
@@ -266,8 +266,8 @@ func loadConfig(configFile string) (*config.Config, error) {
 	if configFile == "" {
 		// 尝试默认配置文件
 		defaultPaths := []string{
-			"/etc/agentwiki/config.yaml",
-			"/opt/agentwiki/config.yaml",
+			"/etc/polyant/config.yaml",
+			"/opt/polyant/config.yaml",
 			"./config.yaml",
 		}
 		for _, p := range defaultPaths {
@@ -336,31 +336,31 @@ func init() {
 	rootCmd.AddCommand(serviceCmd)
 
 	serviceCmd.AddCommand(serviceInstallCmd)
-	serviceInstallCmd.Flags().String("name", "agentwiki", "服务名称")
-	serviceInstallCmd.Flags().String("user", "agentwiki", "运行用户")
+	serviceInstallCmd.Flags().String("name", "polyant", "服务名称")
+	serviceInstallCmd.Flags().String("user", "polyant", "运行用户")
 	serviceInstallCmd.Flags().String("config", "", "配置文件路径")
 
 	serviceCmd.AddCommand(serviceUninstallCmd)
-	serviceUninstallCmd.Flags().String("name", "agentwiki", "服务名称")
+	serviceUninstallCmd.Flags().String("name", "polyant", "服务名称")
 	serviceUninstallCmd.Flags().String("config", "", "配置文件路径")
 
 	serviceCmd.AddCommand(serviceStartCmd)
-	serviceStartCmd.Flags().String("name", "agentwiki", "服务名称")
+	serviceStartCmd.Flags().String("name", "polyant", "服务名称")
 	serviceStartCmd.Flags().String("config", "", "配置文件路径")
 
 	serviceCmd.AddCommand(serviceStopCmd)
-	serviceStopCmd.Flags().String("name", "agentwiki", "服务名称")
+	serviceStopCmd.Flags().String("name", "polyant", "服务名称")
 	serviceStopCmd.Flags().String("config", "", "配置文件路径")
 
 	serviceCmd.AddCommand(serviceRestartCmd)
-	serviceRestartCmd.Flags().String("name", "agentwiki", "服务名称")
+	serviceRestartCmd.Flags().String("name", "polyant", "服务名称")
 
 	serviceCmd.AddCommand(serviceStatusCmd)
-	serviceStatusCmd.Flags().String("name", "agentwiki", "服务名称")
+	serviceStatusCmd.Flags().String("name", "polyant", "服务名称")
 	serviceStatusCmd.Flags().String("config", "", "配置文件路径")
 
 	serviceCmd.AddCommand(serviceLogsCmd)
-	serviceLogsCmd.Flags().String("name", "agentwiki", "服务名称")
+	serviceLogsCmd.Flags().String("name", "polyant", "服务名称")
 	serviceLogsCmd.Flags().BoolP("follow", "f", false, "持续输出日志")
 	serviceLogsCmd.Flags().Int("tail", 100, "显示最后 N 行")
 }

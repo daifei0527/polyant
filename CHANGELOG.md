@@ -1,6 +1,6 @@
 # Changelog
 
-All notable changes to AgentWiki will be documented in this file.
+All notable changes to Polyant will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
@@ -21,7 +21,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 #### Network & Sync
 - DHT-based peer discovery
 - mDNS local network discovery
-- AWSP (AgentWiki Sync Protocol) for data synchronization
+- AWSP (Polyant Sync Protocol) for data synchronization
 - Version vector-based conflict resolution
 - Incremental sync with mirror support
 - Push notification for entries and ratings
@@ -95,7 +95,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### v1.0.0
 
-This is the first stable release of AgentWiki. The system provides a complete P2P knowledge management platform with the following highlights:
+This is the first stable release of Polyant. The system provides a complete P2P knowledge management platform with the following highlights:
 
 1. **Decentralized Architecture**: No central server required, all nodes are equal peers
 2. **Content Integrity**: All entries are signed with Ed25519 keys

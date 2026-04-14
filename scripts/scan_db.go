@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/daifei0527/agentwiki/internal/storage/kv"
+	"github.com/daifei0527/polyant/internal/storage/kv"
 )
 
 func main() {

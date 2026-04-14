@@ -9,11 +9,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/daifei0527/agentwiki/internal/network/protocol"
-	"github.com/daifei0527/agentwiki/internal/network/sync"
-	"github.com/daifei0527/agentwiki/internal/storage"
-	"github.com/daifei0527/agentwiki/internal/storage/index"
-	"github.com/daifei0527/agentwiki/internal/storage/model"
+	"github.com/daifei0527/polyant/internal/network/protocol"
+	"github.com/daifei0527/polyant/internal/network/sync"
+	"github.com/daifei0527/polyant/internal/storage"
+	"github.com/daifei0527/polyant/internal/storage/index"
+	"github.com/daifei0527/polyant/internal/storage/model"
 )
 
 // ==================== VersionVector 测试 ====================

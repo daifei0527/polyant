@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** 完成 AgentWiki 项目 Phase 5 测试与发布阶段，将测试覆盖率提升至 80%+，完善文档，准备 v1.0.0 发布
+**Goal:** 完成 Polyant 项目 Phase 5 测试与发布阶段，将测试覆盖率提升至 80%+，完善文档，准备 v1.0.0 发布
 
 **Architecture:** 补充低覆盖率模块的单元测试，完善集成测试，编写性能基准测试，完成发布文档
 
@@ -362,8 +362,8 @@ import (
     "context"
     "testing"
 
-    "github.com/daifei0527/agentwiki/internal/storage"
-    "github.com/daifei0527/agentwiki/internal/storage/model"
+    "github.com/daifei0527/polyant/internal/storage"
+    "github.com/daifei0527/polyant/internal/storage/model"
 )
 
 // TestMemoryStore_CreateAndGetEntry 测试条目创建和获取
@@ -461,8 +461,8 @@ import (
     "context"
     "testing"
 
-    "github.com/daifei0527/agentwiki/internal/storage"
-    "github.com/daifei0527/agentwiki/internal/storage/model"
+    "github.com/daifei0527/polyant/internal/storage"
+    "github.com/daifei0527/polyant/internal/storage/model"
 )
 
 // BenchmarkEntryCreate 条目创建性能测试
@@ -553,7 +553,7 @@ Run: `go tool cover -html=coverage.out -o docs/coverage.html`
 创建 `docs/api.md`，包含所有 API 端点说明：
 
 ```markdown
-# AgentWiki API 文档
+# Polyant API 文档
 
 ## 基础信息
 
@@ -564,9 +564,9 @@ Run: `go tool cover -html=coverage.out -o docs/coverage.html`
 
 所有需要认证的接口需在请求头中携带:
 
-- `X-AgentWiki-PublicKey`: Base64 编码的公钥
-- `X-AgentWiki-Timestamp`: 请求时间戳(毫秒)
-- `X-AgentWiki-Signature`: Base64 编码的签名
+- `X-Polyant-PublicKey`: Base64 编码的公钥
+- `X-Polyant-Timestamp`: 请求时间戳(毫秒)
+- `X-Polyant-Signature`: Base64 编码的签名
 
 签名内容: `METHOD + "\n" + PATH + "\n" + TIMESTAMP + "\n" + SHA256(BODY)`
 
@@ -610,7 +610,7 @@ Run: `go tool cover -html=coverage.out -o docs/coverage.html`
 创建 `docs/deployment.md`:
 
 ```markdown
-# AgentWiki 部署指南
+# Polyant 部署指南
 
 ## 系统要求
 
@@ -623,8 +623,8 @@ Run: `go tool cover -html=coverage.out -o docs/coverage.html`
 ### 从源码构建
 
 \`\`\`bash
-git clone https://github.com/daifei0527/agentwiki.git
-cd agentwiki
+git clone https://github.com/daifei0527/polyant.git
+cd polyant
 make build
 \`\`\`
 
@@ -632,7 +632,7 @@ make build
 
 复制配置模板:
 \`\`\`bash
-cp configs/config.json.example ~/.agentwiki/config.json
+cp configs/config.json.example ~/.polyant/config.json
 \`\`\`
 
 编辑配置文件...
@@ -642,7 +642,7 @@ cp configs/config.json.example ~/.agentwiki/config.json
 ### 直接运行
 
 \`\`\`bash
-./bin/agentwiki -config ~/.agentwiki/config.json
+./bin/polyant -config ~/.polyant/config.json
 \`\`\`
 
 ### 系统服务
@@ -680,7 +680,7 @@ git commit -m "docs: 完善 API 和部署文档"
 
 - [ ] **Step 1: 更新版本号**
 
-修改 `cmd/agentwiki/main.go` 中的版本号：
+修改 `cmd/polyant/main.go` 中的版本号：
 
 ```go
 const (
@@ -719,9 +719,9 @@ const (
 Run: `make build-all`
 
 验证生成的二进制文件:
-- `bin/agentwiki-linux-amd64`
-- `bin/agentwiki-darwin-amd64`
-- `bin/agentwiki-windows-amd64.exe`
+- `bin/polyant-linux-amd64`
+- `bin/polyant-darwin-amd64`
+- `bin/polyant-windows-amd64.exe`
 
 - [ ] **Step 4: 创建 Git 标签**
 
@@ -733,7 +733,7 @@ git push origin v1.0.0
 - [ ] **Step 5: 提交**
 
 ```bash
-git add cmd/agentwiki/main.go CHANGELOG.md
+git add cmd/polyant/main.go CHANGELOG.md
 git commit -m "chore: 准备 v1.0.0 发布"
 ```
 

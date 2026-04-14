@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/daifei0527/agentwiki/internal/storage/model"
+	"github.com/daifei0527/polyant/internal/storage/model"
 )
 
 // RatingStore 提供评分的CRUD操作

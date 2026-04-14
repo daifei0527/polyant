@@ -18,19 +18,19 @@ make lint   # runs fmt + vet
 go test -v -race ./internal/storage/...
 
 # Run the server
-./bin/agentwiki -config configs/config.json
+./bin/polyant -config configs/config.json
 
 # Run with seed data initialization
-./bin/agentwiki -init-seed
+./bin/polyant -init-seed
 ```
 
 ## Architecture Overview
 
-AgentWiki is a distributed P2P knowledge system for AI agents. Key architectural decisions:
+Polyant is a distributed P2P knowledge system for AI agents. Key architectural decisions:
 
 ### Layered Structure
 
-- **`cmd/`** - Entry points: `agentwiki` (server) and `awctl` (CLI tool)
+- **`cmd/`** - Entry points: `polyant` (server) and `awctl` (CLI tool)
 - **`internal/api/`** - HTTP layer: handlers, router, middleware
 - **`internal/core/`** - Business logic: user, category, rating, email
 - **`internal/network/`** - P2P layer: host, DHT, protocol, sync
@@ -46,14 +46,14 @@ AgentWiki is a distributed P2P knowledge system for AI agents. Key architectural
 - Handlers depend on interfaces, not concrete implementations
 
 **P2P Protocol** (`internal/network/protocol/`):
-- AWSP (AgentWiki Sync Protocol) over libp2p streams
+- AWSP (Polyant Sync Protocol) over libp2p streams
 - Message types: Handshake, Query, SyncRequest, PushEntry, RatingPush
 - Codec handles serialization (currently JSON, not protobuf)
 
 **Authentication** (`internal/api/middleware/auth.go`):
 - Ed25519 signature-based authentication
 - Request signing: `METHOD + "\n" + PATH + "\n" + TIMESTAMP + "\n" + SHA256(BODY)`
-- Headers: `X-AgentWiki-PublicKey`, `X-AgentWiki-Timestamp`, `X-AgentWiki-Signature`
+- Headers: `X-Polyant-PublicKey`, `X-Polyant-Timestamp`, `X-Polyant-Signature`
 
 **Entry Content Signing** (`internal/api/handler/entry_handler.go`):
 - Entries have independent content signatures for sync verification
@@ -67,10 +67,10 @@ AgentWiki is a distributed P2P knowledge system for AI agents. Key architectural
 
 ### Configuration
 
-Config loaded from JSON + environment variables (prefix `AGENTWIKI_`):
+Config loaded from JSON + environment variables (prefix `POLYANT_`):
 ```bash
-AGENTWIKI_NODE_TYPE=seed
-AGENTWIKI_NETWORK_API_PORT=8080
+POLYANT_NODE_TYPE=seed
+POLYANT_NETWORK_API_PORT=8080
 ```
 
 ### Chinese Text Support

@@ -28,7 +28,7 @@ var syncStatusCmd = &cobra.Command{
 			// 如果 API 不可用，显示本地状态
 			fmt.Println("同步状态:")
 			fmt.Println("  服务状态: 未连接")
-			fmt.Println("  提示: 请确保 AgentWiki 服务正在运行")
+			fmt.Println("  提示: 请确保 Polyant 服务正在运行")
 			return nil
 		}
 

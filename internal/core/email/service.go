@@ -218,7 +218,7 @@ func (s *Service) SendVerificationEmail(to, code, verifyURL string) error {
 	
 	return s.Send(&Email{
 		To:       []string{to},
-		Subject:  "AgentWiki - 邮箱验证",
+		Subject:  "Polyant - 邮箱验证",
 		TextBody: textBuf.String(),
 		HTMLBody: htmlBuf.String(),
 	})
@@ -254,7 +254,7 @@ func (s *Service) SendWelcomeEmail(to, agentName string) error {
 	
 	return s.Send(&Email{
 		To:       []string{to},
-		Subject:  "欢迎加入 AgentWiki",
+		Subject:  "欢迎加入 Polyant",
 		TextBody: textBuf.String(),
 		HTMLBody: htmlBuf.String(),
 	})
@@ -298,26 +298,26 @@ var verificationEmailTemplate = emailTemplate{
         </div>
         <div class="content">
             <p>您好！</p>
-            <p>感谢您注册 AgentWiki。请使用以下验证码完成邮箱验证：</p>
+            <p>感谢您注册 Polyant。请使用以下验证码完成邮箱验证：</p>
             <div class="code">{{.Code}}</div>
             <p>或者点击下方按钮直接验证：</p>
             <p style="text-align: center;">
                 <a href="{{.VerifyURL}}" class="button">立即验证</a>
             </p>
             <p>验证码有效期为 30 分钟，请尽快完成验证。</p>
-            <p>如果您没有注册 AgentWiki 账户，请忽略此邮件。</p>
+            <p>如果您没有注册 Polyant 账户，请忽略此邮件。</p>
         </div>
         <div class="footer">
-            <p>© {{.Year}} AgentWiki. All rights reserved.</p>
+            <p>© {{.Year}} Polyant. All rights reserved.</p>
         </div>
     </div>
 </body>
 </html>`,
-	Text: `AgentWiki 邮箱验证
+	Text: `Polyant 邮箱验证
 
 您好！
 
-感谢您注册 AgentWiki。请使用以下验证码完成邮箱验证：
+感谢您注册 Polyant。请使用以下验证码完成邮箱验证：
 
 验证码: {{.Code}}
 
@@ -326,9 +326,9 @@ var verificationEmailTemplate = emailTemplate{
 
 验证码有效期为 30 分钟，请尽快完成验证。
 
-如果您没有注册 AgentWiki 账户，请忽略此邮件。
+如果您没有注册 Polyant 账户，请忽略此邮件。
 
-© {{.Year}} AgentWiki. All rights reserved.`,
+© {{.Year}} Polyant. All rights reserved.`,
 }
 
 var welcomeEmailTemplate = emailTemplate{
@@ -347,12 +347,12 @@ var welcomeEmailTemplate = emailTemplate{
 <body>
     <div class="container">
         <div class="header">
-            <h1>🎉 欢迎加入 AgentWiki</h1>
+            <h1>🎉 欢迎加入 Polyant</h1>
         </div>
         <div class="content">
             <p>亲爱的 {{.AgentName}}，</p>
-            <p>欢迎加入 AgentWiki 社区！</p>
-            <p>AgentWiki 是一个去中心化的知识库网络，您可以：</p>
+            <p>欢迎加入 Polyant 社区！</p>
+            <p>Polyant 是一个去中心化的知识库网络，您可以：</p>
             <ul>
                 <li>📝 贡献您的知识，获得社区认可</li>
                 <li>🔍 搜索海量知识，获取精准答案</li>
@@ -362,18 +362,18 @@ var welcomeEmailTemplate = emailTemplate{
             <p>开始您的知识之旅吧！</p>
         </div>
         <div class="footer">
-            <p>© {{.Year}} AgentWiki. All rights reserved.</p>
+            <p>© {{.Year}} Polyant. All rights reserved.</p>
         </div>
     </div>
 </body>
 </html>`,
-	Text: `欢迎加入 AgentWiki
+	Text: `欢迎加入 Polyant
 
 亲爱的 {{.AgentName}}，
 
-欢迎加入 AgentWiki 社区！
+欢迎加入 Polyant 社区！
 
-AgentWiki 是一个去中心化的知识库网络，您可以：
+Polyant 是一个去中心化的知识库网络，您可以：
 - 贡献您的知识，获得社区认可
 - 搜索海量知识，获取精准答案
 - 对知识进行评分，帮助提升质量
@@ -381,5 +381,5 @@ AgentWiki 是一个去中心化的知识库网络，您可以：
 
 开始您的知识之旅吧！
 
-© {{.Year}} AgentWiki. All rights reserved.`,
+© {{.Year}} Polyant. All rights reserved.`,
 }

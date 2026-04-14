@@ -68,9 +68,9 @@ func doRequest(tc *TestConfig, method, path string, body interface{}) (*APIRespo
 	}
 
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("X-AgentWiki-PublicKey", tc.UserKey.PublicKey)
-	req.Header.Set("X-AgentWiki-Timestamp", timestamp)
-	req.Header.Set("X-AgentWiki-Signature", signature)
+	req.Header.Set("X-Polyant-PublicKey", tc.UserKey.PublicKey)
+	req.Header.Set("X-Polyant-Timestamp", timestamp)
+	req.Header.Set("X-Polyant-Signature", signature)
 
 	resp, err := tc.Client.Do(req)
 	if err != nil {
@@ -164,9 +164,9 @@ func main() {
 	timestamp := strconv.FormatInt(time.Now().UnixMilli(), 10)
 	signature := signRequest("GET", "/api/v1/admin/export", timestamp, "", tc.UserKey.PrivateKey)
 	req, _ := http.NewRequest("GET", tc.BaseURL+"/api/v1/admin/export?include=entries,categories", nil)
-	req.Header.Set("X-AgentWiki-PublicKey", tc.UserKey.PublicKey)
-	req.Header.Set("X-AgentWiki-Timestamp", timestamp)
-	req.Header.Set("X-AgentWiki-Signature", signature)
+	req.Header.Set("X-Polyant-PublicKey", tc.UserKey.PublicKey)
+	req.Header.Set("X-Polyant-Timestamp", timestamp)
+	req.Header.Set("X-Polyant-Signature", signature)
 	exportResp, err := tc.Client.Do(req)
 	if err == nil && exportResp.StatusCode == 200 {
 		exportData := make([]byte, 0)
@@ -215,9 +215,9 @@ func main() {
 	signature2 := signRequest("GET", "/api/v1/admin/audit/logs", timestamp2, "", tc.UserKey.PrivateKey)
 	req2, _ := http.NewRequest("GET", tc.BaseURL+"/api/v1/admin/audit/logs?limit=10", nil)
 	req2.Header.Set("Content-Type", "application/json")
-	req2.Header.Set("X-AgentWiki-PublicKey", tc.UserKey.PublicKey)
-	req2.Header.Set("X-AgentWiki-Timestamp", timestamp2)
-	req2.Header.Set("X-AgentWiki-Signature", signature2)
+	req2.Header.Set("X-Polyant-PublicKey", tc.UserKey.PublicKey)
+	req2.Header.Set("X-Polyant-Timestamp", timestamp2)
+	req2.Header.Set("X-Polyant-Signature", signature2)
 	auditResp, err := tc.Client.Do(req2)
 	if err == nil && auditResp.StatusCode == 200 {
 		auditData, _ := io.ReadAll(auditResp.Body)

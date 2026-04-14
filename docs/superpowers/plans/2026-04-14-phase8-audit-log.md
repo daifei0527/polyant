@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** 为 AgentWiki 添加审计日志系统，记录所有敏感操作，支持安全审计和问题追溯
+**Goal:** 为 Polyant 添加审计日志系统，记录所有敏感操作，支持安全审计和问题追溯
 
 **Architecture:** 通过 HTTP 中间件拦截敏感操作请求，记录完整请求/响应信息，存储到 Pebble KV，提供 Lv5 超级管理员查询 API
 
@@ -140,7 +140,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/daifei0527/agentwiki/internal/storage/model"
+	"github.com/daifei0527/polyant/internal/storage/model"
 )
 
 const auditPrefix = "audit:"
@@ -488,8 +488,8 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/daifei0527/agentwiki/internal/storage/kv"
-	"github.com/daifei0527/agentwiki/internal/storage/model"
+	"github.com/daifei0527/polyant/internal/storage/kv"
+	"github.com/daifei0527/polyant/internal/storage/model"
 )
 
 // 敏感字段脱敏规则
@@ -732,9 +732,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/daifei0527/agentwiki/internal/core/audit"
-	"github.com/daifei0527/agentwiki/internal/storage/kv"
-	"github.com/daifei0527/agentwiki/internal/storage/model"
+	"github.com/daifei0527/polyant/internal/core/audit"
+	"github.com/daifei0527/polyant/internal/storage/kv"
+	"github.com/daifei0527/polyant/internal/storage/model"
 )
 
 // AuditMiddleware 审计中间件
@@ -911,10 +911,10 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/daifei0527/agentwiki/internal/core/audit"
-	"github.com/daifei0527/agentwiki/internal/storage/kv"
-	"github.com/daifei0527/agentwiki/internal/storage/model"
-	awerrors "github.com/daifei0527/agentwiki/pkg/errors"
+	"github.com/daifei0527/polyant/internal/core/audit"
+	"github.com/daifei0527/polyant/internal/storage/kv"
+	"github.com/daifei0527/polyant/internal/storage/model"
+	awerrors "github.com/daifei0527/polyant/pkg/errors"
 )
 
 // AuditHandler 审计 API 处理器

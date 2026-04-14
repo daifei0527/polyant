@@ -32,8 +32,8 @@ func main() {
 
 var rootCmd = &cobra.Command{
 	Use:   "awctl",
-	Short: "AgentWiki 命令行管理工具",
-	Long: `awctl 是 AgentWiki 的命令行管理工具。
+	Short: "Polyant 命令行管理工具",
+	Long: `awctl 是 Polyant 的命令行管理工具。
 
 用于管理知识库条目、用户、同步、镜像等功能。
 
@@ -61,5 +61,5 @@ func init() {
 	rootCmd.PersistentFlags().StringVarP(&configPath, "config", "c", "", "配置文件路径")
 	rootCmd.PersistentFlags().StringVarP(&dataDir, "data", "d", "", "数据目录")
 	rootCmd.PersistentFlags().StringVarP(&serverAddr, "server", "s", "http://localhost:8080", "API 服务器地址")
-	rootCmd.PersistentFlags().StringVar(&keyDir, "key-dir", "", "密钥目录 (默认 ~/.agentwiki/keys)")
+	rootCmd.PersistentFlags().StringVar(&keyDir, "key-dir", "", "密钥目录 (默认 ~/.polyant/keys)")
 }

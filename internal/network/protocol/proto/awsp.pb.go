@@ -1829,7 +1829,7 @@ const file_proto_awsp_proto_rawDesc = "" +
 	"\x0eNODE_TYPE_SEED\x10\x01*8\n" +
 	"\tQueryType\x12\x14\n" +
 	"\x10QUERY_TYPE_LOCAL\x10\x00\x12\x15\n" +
-	"\x11QUERY_TYPE_GLOBAL\x10\x01BAZ?github.com/daifei0527/agentwiki/internal/network/protocol/protob\x06proto3"
+	"\x11QUERY_TYPE_GLOBAL\x10\x01BAZ?github.com/daifei0527/polyant/internal/network/protocol/protob\x06proto3"
 
 var (
 	file_proto_awsp_proto_rawDescOnce sync.Once

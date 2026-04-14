@@ -397,7 +397,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/daifei/agentwiki/internal/storage/model"
+	"github.com/daifei/polyant/internal/storage/model"
 )
 
 func TestBleveEngine_IndexAndSearch(t *testing.T) {
@@ -658,14 +658,14 @@ import (
 	"github.com/blevesearch/bleve/v2"
 	"github.com/blevesearch/bleve/v2/analysis/analyzer/keyword"
 	"github.com/blevesearch/bleve/v2/index/upsidedown/store/boltdb"
-	"github.com/daifei/agentwiki/internal/storage"
-	"github.com/daifei/agentwiki/internal/storage/model"
+	"github.com/daifei/polyant/internal/storage"
+	"github.com/daifei/polyant/internal/storage/model"
 	"github.com/yanyiwu/gojieba"
 )
 
 const (
 	// 索引映射名称
-	indexMappingName = "agentwiki_entry"
+	indexMappingName = "polyant_entry"
 )
 
 // BleveEngine 是基于 Bleve 的全文搜索引擎实现
@@ -996,9 +996,9 @@ import (
 	"context"
 	"path/filepath"
 
-	"github.com/daifei/agentwiki/internal/storage/index"
-	"github.com/daifei/agentwiki/internal/storage/kv"
-	"github.com/daifei/agentwiki/internal/storage/model"
+	"github.com/daifei/polyant/internal/storage/index"
+	"github.com/daifei/polyant/internal/storage/kv"
+	"github.com/daifei/polyant/internal/storage/model"
 )
 
 // StoreConfig 存储配置
@@ -1086,7 +1086,7 @@ package storage
 {
   "node": {
     "type": "local",
-    "name": "agentwiki-node-1",
+    "name": "polyant-node-1",
     "data_dir": "./data",
     "log_dir": "./logs",
     "log_level": "info"
@@ -1119,11 +1119,11 @@ Co-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>"
 ## Task 5: 更新主程序使用持久化存储
 
 **Files:**
-- Modify: `cmd/agentwiki/main.go`
+- Modify: `cmd/polyant/main.go`
 
 - [ ] **Step 1: 编写持久化存储集成测试**
 
-创建 `cmd/agentwiki/storage_test.go`:
+创建 `cmd/polyant/storage_test.go`:
 
 ```go
 package main
@@ -1135,8 +1135,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/daifei/agentwiki/internal/storage"
-	"github.com/daifei/agentwiki/internal/storage/model"
+	"github.com/daifei/polyant/internal/storage"
+	"github.com/daifei/polyant/internal/storage/model"
 )
 
 func TestPersistentStore_CRUD(t *testing.T) {
@@ -1248,16 +1248,16 @@ func TestPersistentStore_Persistence(t *testing.T) {
 
 - [ ] **Step 2: 运行测试验证通过**
 
-Run: `go test ./cmd/agentwiki/... -run TestPersistentStore -v`
+Run: `go test ./cmd/polyant/... -run TestPersistentStore -v`
 Expected: PASS
 
 - [ ] **Step 3: 更新主程序初始化逻辑**
 
-修改 `cmd/agentwiki/main.go`，在 AgentWiki 结构中添加存储配置:
+修改 `cmd/polyant/main.go`，在 Polyant 结构中添加存储配置:
 
 ```go
 // 在 initializeStorage 函数中（或类似初始化函数）
-func (a *AgentWiki) initializeStorage() error {
+func (a *Polyant) initializeStorage() error {
 	dataDir := a.config.Node.DataDir
 	
 	storageCfg := &storage.StoreConfig{
@@ -1288,7 +1288,7 @@ func (a *AgentWiki) initializeStorage() error {
 - [ ] **Step 4: 提交主程序更新**
 
 ```bash
-git add cmd/agentwiki/main.go cmd/agentwiki/storage_test.go
+git add cmd/polyant/main.go cmd/polyant/storage_test.go
 git commit -m "feat: 集成持久化存储到主程序
 
 - 默认使用 Pebble KV + Bleve 搜索引擎
