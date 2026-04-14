@@ -1,7 +1,7 @@
 package model
 
 import (
-	"fmt"
+	"encoding/json"
 	"time"
 )
 
@@ -53,15 +53,20 @@ type AuditStats struct {
 	FailedCount  int64            `json:"failed_count"`  // 失败操作数
 }
 
+// ToJSON 将审计日志序列化为 JSON 字节数组
+func (l *AuditLog) ToJSON() ([]byte, error) {
+	return json.Marshal(l)
+}
+
+// FromJSON 从 JSON 字节数组反序列化为审计日志
+func (l *AuditLog) FromJSON(data []byte) error {
+	return json.Unmarshal(data, l)
+}
+
 // NewAuditLog 创建审计日志
 func NewAuditLog() *AuditLog {
 	return &AuditLog{
-		ID:        fmt.Sprintf("audit_%d_%s", time.Now().UnixMilli(), generateShortID()),
+		ID:        "audit_" + generateID(),
 		Timestamp: time.Now().UnixMilli(),
 	}
-}
-
-// generateShortID 生成短 ID
-func generateShortID() string {
-	return fmt.Sprintf("%x", time.Now().UnixNano()%0xFFFFFF)
 }
