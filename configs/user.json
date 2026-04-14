@@ -9,7 +9,7 @@
   "network": {
     "listen_port": 9001,
     "api_port": 8081,
-    "seed_nodes": ["/ip4/127.0.0.1/tcp/9000/p2p/12D3KooWCovjV4E6zKS893rt7NAMbH2eVs1LWnaP8t6LfKC4WXY3"],
+    "seed_nodes": ["/ip4/103.242.175.97/tcp/9000/p2p/12D3KooWEaTUJe8NvjbvM3mk6J9Av5mdNt2BaEjEkdZuf3kPMUgA"],
     "dht_enabled": true,
     "mdns_enabled": false
   },
@@ -17,13 +17,13 @@
     "auto_sync": true,
     "interval_seconds": 30,
     "mirror_categories": [],
-    "max_local_size_mb": 512,
+    "max_local_size_mb": 1024,
     "compression": "gzip"
   },
   "sharing": {
     "allow_mirror": true,
-    "bandwidth_limit_mb": 50,
-    "max_concurrent": 5
+    "bandwidth_limit_mb": 100,
+    "max_concurrent": 10
   },
   "user": {
     "private_key_path": "",
