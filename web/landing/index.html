@@ -113,6 +113,7 @@
             height: 100%;
             background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
             animation: shimmer 3s infinite;
+            pointer-events: none;
         }
 
         @keyframes shimmer {
@@ -126,6 +127,8 @@
             justify-content: center;
             gap: 12px;
             flex-wrap: wrap;
+            position: relative;
+            z-index: 1;
         }
 
         .agent-banner-text {
@@ -135,6 +138,8 @@
             display: flex;
             align-items: center;
             gap: 8px;
+            user-select: text;
+            cursor: text;
         }
 
         .agent-banner-text svg {
@@ -155,6 +160,8 @@
             display: flex;
             align-items: center;
             gap: 6px;
+            position: relative;
+            z-index: 2;
         }
 
         .copy-btn:hover {
