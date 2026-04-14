@@ -1,4 +1,5 @@
-// pkg/i18n/i18n.go
+// Package i18n 提供国际化支持，包括消息翻译、语言检测和上下文管理。
+// 支持模板变量替换和 HTTP 中间件集成。
 package i18n
 
 import (
@@ -34,16 +35,19 @@ type Translator struct {
 }
 
 // globalTranslator 全局翻译器实例
-var globalTranslator *Translator
+var (
+	globalTranslator *Translator
+	globalOnce       sync.Once
+	globalInitErr    error
+	globalMu         sync.RWMutex
+)
 
-// Init 初始化全局翻译器
+// Init 初始化全局翻译器（线程安全，只会初始化一次）
 func Init(localesDir string, defaultLang Lang) error {
-	t, err := NewTranslator(localesDir, defaultLang)
-	if err != nil {
-		return err
-	}
-	globalTranslator = t
-	return nil
+	globalOnce.Do(func() {
+		globalTranslator, globalInitErr = NewTranslator(localesDir, defaultLang)
+	})
+	return globalInitErr
 }
 
 // NewTranslator 创建新的翻译器
@@ -88,18 +92,26 @@ func (t *Translator) loadLocale(lang Lang) error {
 
 // T 翻译消息（使用默认语言）
 func T(code string, args ...map[string]interface{}) string {
-	if globalTranslator == nil {
+	globalMu.RLock()
+	t := globalTranslator
+	globalMu.RUnlock()
+
+	if t == nil {
 		return code
 	}
-	return globalTranslator.Translate(code, args...)
+	return t.Translate(code, args...)
 }
 
 // Tc 带上下文的翻译
 func Tc(lang Lang, code string, args ...map[string]interface{}) string {
-	if globalTranslator == nil {
+	globalMu.RLock()
+	t := globalTranslator
+	globalMu.RUnlock()
+
+	if t == nil {
 		return code
 	}
-	return globalTranslator.TranslateWithLang(lang, code, args...)
+	return t.TranslateWithLang(lang, code, args...)
 }
 
 // Translate 翻译消息
@@ -201,15 +213,23 @@ func ParseAcceptLanguage(header string) Lang {
 
 // GetGlobalLang 获取全局默认语言
 func GetGlobalLang() Lang {
-	if globalTranslator == nil {
+	globalMu.RLock()
+	t := globalTranslator
+	globalMu.RUnlock()
+
+	if t == nil {
 		return LangZhCN
 	}
-	return globalTranslator.GetLang()
+	return t.GetLang()
 }
 
 // SetGlobalLang 设置全局默认语言
 func SetGlobalLang(lang Lang) {
-	if globalTranslator != nil {
-		globalTranslator.SetLang(lang)
+	globalMu.RLock()
+	t := globalTranslator
+	globalMu.RUnlock()
+
+	if t != nil {
+		t.SetLang(lang)
 	}
 }
