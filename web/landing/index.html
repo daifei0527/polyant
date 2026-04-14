@@ -716,7 +716,7 @@
                     <line x1="16" y1="13" x2="8" y2="13"></line>
                     <line x1="16" y1="17" x2="8" y2="17"></line>
                 </svg>
-                AI智能体安装指南: /home/daifei/agentwiki/SKILL.md
+                AI智能体安装指南: https://openclaw.dlibrary.cn/SKILL.md
             </span>
             <span class="agent-banner-text" data-lang="en">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -725,7 +725,7 @@
                     <line x1="16" y1="13" x2="8" y2="13"></line>
                     <line x1="16" y1="17" x2="8" y2="17"></line>
                 </svg>
-                AI Agent Installation Guide: /home/daifei/agentwiki/SKILL.md
+                AI Agent Installation Guide: https://openclaw.dlibrary.cn/SKILL.md
             </span>
             <button class="copy-btn" onclick="copyPath()" id="copyBtn">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -1039,21 +1039,49 @@
 
         // Copy path function
         function copyPath() {
-            const path = '/home/daifei/agentwiki/SKILL.md';
-            navigator.clipboard.writeText(path).then(() => {
-                // Show toast
-                const toast = document.getElementById('toast');
-                toast.classList.add('show');
+            const path = 'https://openclaw.dlibrary.cn/SKILL.md';
 
-                // Update button
-                const btn = document.getElementById('copyBtn');
-                btn.classList.add('copied');
+            // Try modern clipboard API first
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(path).then(() => {
+                    showCopySuccess();
+                }).catch(() => {
+                    fallbackCopy(path);
+                });
+            } else {
+                fallbackCopy(path);
+            }
+        }
 
-                setTimeout(() => {
-                    toast.classList.remove('show');
-                    btn.classList.remove('copied');
-                }, 2000);
-            });
+        // Fallback copy method
+        function fallbackCopy(text) {
+            const textarea = document.createElement('textarea');
+            textarea.value = text;
+            textarea.style.position = 'fixed';
+            textarea.style.left = '-9999px';
+            document.body.appendChild(textarea);
+            textarea.select();
+            try {
+                document.execCommand('copy');
+                showCopySuccess();
+            } catch (err) {
+                alert('复制失败，请手动复制: ' + text);
+            }
+            document.body.removeChild(textarea);
+        }
+
+        // Show copy success feedback
+        function showCopySuccess() {
+            const toast = document.getElementById('toast');
+            const btn = document.getElementById('copyBtn');
+
+            toast.classList.add('show');
+            btn.classList.add('copied');
+
+            setTimeout(() => {
+                toast.classList.remove('show');
+                btn.classList.remove('copied');
+            }, 2000);
         }
 
         // Scroll Animation
