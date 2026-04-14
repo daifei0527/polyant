@@ -9,6 +9,8 @@ import (
 	"os"
 	"path/filepath"
 	"sync"
+
+	"github.com/daifei0527/polyant/pkg/i18n"
 )
 
 // 日志级别常量
@@ -33,6 +35,9 @@ type LoggerConfig struct {
 	FilePath   string // 日志文件路径，为空则仅输出到 stdout
 	MaxSizeMB  int    // 单个日志文件最大大小（MB），0 表示不限制
 	MaxBackups int    // 保留的备份日志文件数量，0 表示不保留备份
+	// 多语言支持
+	Lang      string // 日志语言
+	Bilingual bool   // 是否双语模式
 }
 
 // Logger 自定义日志结构体
@@ -46,6 +51,9 @@ type Logger struct {
 	file       *os.File
 	fileSize   int64
 	logger     *log.Logger
+	// 多语言支持
+	lang      i18n.Lang
+	bilingual bool
 }
 
 // NewLogger 根据配置创建新的 Logger 实例
@@ -57,11 +65,19 @@ func NewLogger(config *LoggerConfig) *Logger {
 		}
 	}
 
+	// 解析语言
+	lang := i18n.LangZhCN
+	if config.Lang != "" {
+		lang = i18n.Lang(config.Lang)
+	}
+
 	l := &Logger{
 		level:      config.Level,
 		filePath:   config.FilePath,
 		maxSize:    int64(config.MaxSizeMB) * 1024 * 1024,
 		maxBackups: config.MaxBackups,
+		lang:       lang,
+		bilingual:  config.Bilingual,
 	}
 
 	// 如果配置了文件路径，初始化文件输出
@@ -200,6 +216,49 @@ func (l *Logger) Warn(format string, args ...interface{}) {
 // Error 输出错误级别的日志
 func (l *Logger) Error(format string, args ...interface{}) {
 	l.log(LevelError, format, args...)
+}
+
+// InfoI18n 输出信息级别的日志（带多语言支持）
+func (l *Logger) InfoI18n(code string, args map[string]interface{}) {
+	l.logI18n(LevelInfo, code, args)
+}
+
+// WarnI18n 输出警告级别的日志（带多语言支持）
+func (l *Logger) WarnI18n(code string, args map[string]interface{}) {
+	l.logI18n(LevelWarn, code, args)
+}
+
+// ErrorI18n 输出错误级别的日志（带多语言支持）
+func (l *Logger) ErrorI18n(code string, args map[string]interface{}) {
+	l.logI18n(LevelError, code, args)
+}
+
+// logI18n 内部日志方法（带多语言支持）
+func (l *Logger) logI18n(level int, code string, args map[string]interface{}) {
+	if level < l.level {
+		return
+	}
+
+	l.mu.Lock()
+	defer l.mu.Unlock()
+
+	if err := l.rotate(); err != nil {
+		fmt.Fprintf(os.Stderr, "日志轮转失败: %v\n", err)
+	}
+
+	levelName := "UNKNOWN"
+	if name, ok := levelNames[level]; ok {
+		levelName = name
+	}
+
+	if l.bilingual {
+		msgZh := i18n.Tc(i18n.LangZhCN, code, args)
+		msgEn := i18n.Tc(i18n.LangEnUS, code, args)
+		l.logger.Printf("[%s] %s | %s", levelName, msgZh, msgEn)
+	} else {
+		msg := i18n.Tc(l.lang, code, args)
+		l.logger.Printf("[%s] %s", levelName, msg)
+	}
 }
 
 // Close 关闭日志文件句柄，释放资源
