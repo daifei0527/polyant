@@ -42,7 +42,7 @@ func (s *AdminService) ListUsers(ctx context.Context, offset, limit int, level i
 }
 
 // BanUser 封禁用户
-func (s *AdminService) BanUser(ctx context.Context, targetPublicKey, adminPublicKey, reason string) error {
+func (s *AdminService) BanUser(ctx context.Context, targetPublicKey, adminPublicKey, reason string, banType model.BanType) error {
 	hash := HashPublicKey(targetPublicKey)
 	user, err := s.store.User.Get(ctx, hash)
 	if err != nil {
@@ -54,7 +54,9 @@ func (s *AdminService) BanUser(ctx context.Context, targetPublicKey, adminPublic
 		return ErrCannotBanAdmin
 	}
 
-	user.Status = "banned"
+	// 设置封禁状态
+	user.Status = model.UserStatusBanned
+	user.BanType = banType
 	user.BanReason = reason
 	user.BannedAt = time.Now().UnixMilli()
 	user.BannedBy = adminPublicKey
@@ -71,7 +73,8 @@ func (s *AdminService) UnbanUser(ctx context.Context, targetPublicKey, adminPubl
 		return ErrUserNotFound
 	}
 
-	user.Status = "active"
+	user.Status = model.UserStatusActive
+	user.BanType = ""
 	user.BanReason = ""
 	user.BannedAt = 0
 	user.BannedBy = ""
@@ -140,7 +143,7 @@ func (s *AdminService) GetUserStats(ctx context.Context) (*model.UserStats, erro
 		}
 
 		// 统计被封禁用户
-		if u.Status == "banned" {
+		if u.Status == model.UserStatusBanned {
 			stats.BannedCount++
 		}
 
