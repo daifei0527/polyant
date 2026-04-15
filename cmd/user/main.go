@@ -97,7 +97,6 @@ func main() {
 	}
 
 	// 确定是否启用服务模式
-	useServiceMode := *serviceMode
 	if *autoDetect && networkCap != nil && networkCap.CanBeReached {
 		// 自动建议服务模式（但不强制）
 		if !*serviceMode {
@@ -111,7 +110,7 @@ func main() {
 	}
 
 	// 创建并运行应用
-	app, err := NewUserApp(cfg, seedAddrs, useServiceMode, networkCap)
+	app, err := NewUserApp(cfg, seedAddrs, *serviceMode, networkCap)
 	if err != nil {
 		log.Fatalf("Failed to initialize user node: %v", err)
 	}
@@ -154,9 +153,11 @@ func loadConfig() (*config.Config, error) {
 	cfg = config.LoadWithEnv(cfg)
 
 	// 初始化 i18n
-	localesDir := cfg.Node.DataDir + "/locales"
-	if localesDir == "/locales" {
+	localesDir := cfg.Node.DataDir
+	if localesDir == "" {
 		localesDir = "./pkg/i18n/locales"
+	} else {
+		localesDir = localesDir + "/locales"
 	}
 	if err := i18n.Init(localesDir, i18n.Lang(cfg.I18n.DefaultLang)); err != nil {
 		// 使用默认路径重试
@@ -207,6 +208,9 @@ func NewUserApp(cfg *config.Config, seedAddrs []string, serviceMode bool, networ
 	}
 
 	// 初始化同步队列（用于离线支持）
+	// Note: The sync queue is initialized here for future integration with the sync engine.
+	// Currently, the offline mode can still be tracked via IsOffline() for logging/monitoring purposes.
+	// Full integration into the sync engine flow requires modifications to the sync package.
 	app.syncQueue = queuesync.NewSyncQueue()
 	logger.Info("Sync queue initialized for offline support")
 
