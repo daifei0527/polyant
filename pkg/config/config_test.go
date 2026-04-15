@@ -523,3 +523,171 @@ func TestParseBool(t *testing.T) {
 		})
 	}
 }
+
+// ==================== SeedConfig 测试 ====================
+
+// TestSeedConfigValidation 测试种子节点配置验证
+func TestSeedConfigValidation(t *testing.T) {
+	tests := []struct {
+		name    string
+		config  *config.SeedConfig
+		wantErr bool
+		errMsg  string
+	}{
+		{
+			name: "valid seed config",
+			config: &config.SeedConfig{
+				Domain:  "seed.example.com",
+				TLSCert: "/path/to/cert.pem",
+				TLSKey:  "/path/to/key.pem",
+			},
+			wantErr: false,
+		},
+		{
+			name: "missing domain",
+			config: &config.SeedConfig{
+				TLSCert: "/path/to/cert.pem",
+				TLSKey:  "/path/to/key.pem",
+			},
+			wantErr: true,
+			errMsg:  "domain is required",
+		},
+		{
+			name: "missing tls cert",
+			config: &config.SeedConfig{
+				Domain: "seed.example.com",
+				TLSKey: "/path/to/key.pem",
+			},
+			wantErr: true,
+			errMsg:  "tls_cert is required",
+		},
+		{
+			name: "missing tls key",
+			config: &config.SeedConfig{
+				Domain:  "seed.example.com",
+				TLSCert: "/path/to/cert.pem",
+			},
+			wantErr: true,
+			errMsg:  "tls_key is required",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := tt.config.Validate()
+			if tt.wantErr {
+				if err == nil {
+					t.Error("expected error, got nil")
+					return
+				}
+				if tt.errMsg != "" && !containsString(err.Error(), tt.errMsg) {
+					t.Errorf("error message = %q, want to contain %q", err.Error(), tt.errMsg)
+				}
+			} else {
+				if err != nil {
+					t.Errorf("unexpected error: %v", err)
+				}
+			}
+		})
+	}
+}
+
+// TestValidateSeedNodeConfig 测试种子节点类型的配置验证
+func TestValidateSeedNodeConfig(t *testing.T) {
+	tests := []struct {
+		name    string
+		config  *config.Config
+		wantErr bool
+		errMsg  string
+	}{
+		{
+			name: "seed node with valid seed config",
+			config: &config.Config{
+				Node: config.NodeConfig{
+					Type:     "seed",
+					Name:     "seed-node-1",
+					LogLevel: "info",
+				},
+				Network: config.NetworkConfig{
+					ListenPort: 18530,
+					APIPort:    18531,
+				},
+				Seed: config.SeedConfig{
+					Domain:  "seed.example.com",
+					TLSCert: "/path/to/cert.pem",
+					TLSKey:  "/path/to/key.pem",
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name: "seed node missing domain",
+			config: &config.Config{
+				Node: config.NodeConfig{
+					Type:     "seed",
+					Name:     "seed-node-1",
+					LogLevel: "info",
+				},
+				Network: config.NetworkConfig{
+					ListenPort: 18530,
+					APIPort:    18531,
+				},
+				Seed: config.SeedConfig{
+					TLSCert: "/path/to/cert.pem",
+					TLSKey:  "/path/to/key.pem",
+				},
+			},
+			wantErr: true,
+			errMsg:  "domain is required",
+		},
+		{
+			name: "local node does not require seed config",
+			config: &config.Config{
+				Node: config.NodeConfig{
+					Type:     "local",
+					Name:     "local-node-1",
+					LogLevel: "info",
+				},
+				Network: config.NetworkConfig{
+					ListenPort: 18530,
+					APIPort:    18531,
+				},
+			},
+			wantErr: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := config.Validate(tt.config)
+			if tt.wantErr {
+				if err == nil {
+					t.Error("expected error, got nil")
+					return
+				}
+				if tt.errMsg != "" && !containsString(err.Error(), tt.errMsg) {
+					t.Errorf("error message = %q, want to contain %q", err.Error(), tt.errMsg)
+				}
+			} else {
+				if err != nil {
+					t.Errorf("unexpected error: %v", err)
+				}
+			}
+		})
+	}
+}
+
+// containsString 检查字符串是否包含子串
+func containsString(s, substr string) bool {
+	return len(s) >= len(substr) && (s == substr || len(substr) == 0 ||
+		(len(s) > 0 && len(substr) > 0 && findSubstring(s, substr)))
+}
+
+func findSubstring(s, substr string) bool {
+	for i := 0; i <= len(s)-len(substr); i++ {
+		if s[i:i+len(substr)] == substr {
+			return true
+		}
+	}
+	return false
+}

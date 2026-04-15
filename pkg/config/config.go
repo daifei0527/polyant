@@ -47,11 +47,52 @@ type SharingConfig struct {
 	MaxConcurrent    int  `json:"max_concurrent"`     // 最大并发连接数
 }
 
-// UserConfig 用户配置
-type UserConfig struct {
+// UserConfig 用户配置 (已弃用，请使用 AccountConfig)
+// Deprecated: Use AccountConfig instead
+type UserConfig = AccountConfig
+
+// AccountConfig 账户配置（通用）
+type AccountConfig struct {
 	PrivateKeyPath string `json:"private_key_path"` // 私钥文件路径
-	Email         string `json:"email"`            // 用户邮箱
-	AutoRegister  bool   `json:"auto_register"`    // 是否自动注册
+	Email          string `json:"email"`            // 用户邮箱
+	AutoRegister   bool   `json:"auto_register"`    // 是否自动注册
+}
+
+// SeedConfig 种子节点专用配置
+type SeedConfig struct {
+	Domain         string   `json:"domain"`          // 域名（必填）
+	TLSCert        string   `json:"tls_cert"`        // TLS 证书路径
+	TLSKey         string   `json:"tls_key"`         // TLS 密钥路径
+	BootstrapPeers []string `json:"bootstrap_peers"` // 启动时连接的其他种子节点
+}
+
+// Validate 验证种子节点配置
+func (c *SeedConfig) Validate() error {
+	if c.Domain == "" {
+		return fmt.Errorf("domain is required for seed node")
+	}
+	if c.TLSCert == "" {
+		return fmt.Errorf("tls_cert is required for seed node")
+	}
+	if c.TLSKey == "" {
+		return fmt.Errorf("tls_key is required for seed node")
+	}
+	return nil
+}
+
+// UserNodeConfig 用户节点专用配置
+type UserNodeConfig struct {
+	ServiceMode   bool `json:"service_mode"`    // 是否启用服务模式
+	RelayEnabled  bool `json:"relay_enabled"`   // 是否提供中继服务
+	MirrorEnabled bool `json:"mirror_enabled"`  // 是否提供数据镜像
+	MirrorLimitGB int  `json:"mirror_limit_gb"` // 镜像数据上限（GB）
+}
+
+// MirrorConfig 镜像配置（种子节点专用）
+type MirrorConfig struct {
+	Enabled    bool     `json:"enabled"`     // 是否启用镜像
+	Categories []string `json:"categories"`  // 镜像的分类，["*"] 表示全部
+	MaxSizeGB  int      `json:"max_size_gb"` // 最大镜像大小（GB）
 }
 
 // SMTPConfig 邮件服务配置
@@ -86,15 +127,18 @@ type I18nConfig struct {
 // Config 顶层配置结构体
 // 包含所有子模块的配置
 type Config struct {
-	Node    NodeConfig    `json:"node"`
-	Network NetworkConfig `json:"network"`
-	Sync    SyncConfig    `json:"sync"`
-	Sharing SharingConfig `json:"sharing"`
-	User    UserConfig    `json:"user"`
-	SMTP    SMTPConfig    `json:"smtp"`
-	API     APIConfig     `json:"api"`
-	Storage StorageConfig `json:"storage"`
-	I18n    I18nConfig    `json:"i18n"`
+	Seed    SeedConfig     `json:"seed"`    // 种子节点专用
+	User    UserNodeConfig `json:"user"`    // 用户节点专用
+	Account AccountConfig  `json:"account"` // 账户配置（通用）
+	Node    NodeConfig     `json:"node"`    // 节点配置（通用）
+	Network NetworkConfig  `json:"network"` // 网络配置（通用）
+	Sync    SyncConfig     `json:"sync"`    // 同步配置（通用）
+	Mirror  MirrorConfig   `json:"mirror"`  // 镜像配置（种子节点）
+	Sharing SharingConfig  `json:"sharing"` // 共享配置
+	SMTP    SMTPConfig     `json:"smtp"`    // SMTP 配置
+	API     APIConfig      `json:"api"`     // API 配置
+	Storage StorageConfig  `json:"storage"` // 存储配置
+	I18n    I18nConfig     `json:"i18n"`    // 国际化
 }
 
 // ==================== 配置管理函数 ====================
@@ -102,6 +146,23 @@ type Config struct {
 // DefaultConfig 返回包含所有默认值的配置实例
 func DefaultConfig() *Config {
 	return &Config{
+		Seed: SeedConfig{
+			Domain:         "",
+			TLSCert:        "",
+			TLSKey:         "",
+			BootstrapPeers: []string{},
+		},
+		User: UserNodeConfig{
+			ServiceMode:   false,
+			RelayEnabled:  false,
+			MirrorEnabled: false,
+			MirrorLimitGB: 10,
+		},
+		Account: AccountConfig{
+			PrivateKeyPath: "./data/keys",
+			Email:          "",
+			AutoRegister:   true,
+		},
 		Node: NodeConfig{
 			Type:     "local",
 			Name:     "polyant-node-1",
@@ -123,15 +184,15 @@ func DefaultConfig() *Config {
 			MaxLocalSizeMB:   1024,
 			Compression:      "gzip",
 		},
+		Mirror: MirrorConfig{
+			Enabled:    false,
+			Categories: []string{},
+			MaxSizeGB:  100,
+		},
 		Sharing: SharingConfig{
 			AllowMirror:      true,
 			BandwidthLimitMB: 100,
 			MaxConcurrent:    10,
-		},
-		User: UserConfig{
-			PrivateKeyPath: "./data/keys",
-			Email:          "",
-			AutoRegister:   true,
 		},
 		SMTP: SMTPConfig{
 			Enabled:  false,
@@ -187,6 +248,60 @@ func Load(path string) (*Config, error) {
 func LoadWithEnv(config *Config) *Config {
 	if config == nil {
 		config = DefaultConfig()
+	}
+
+	// 种子节点配置环境变量
+	if v := os.Getenv("POLYANT_SEED_DOMAIN"); v != "" {
+		config.Seed.Domain = v
+	}
+	if v := os.Getenv("POLYANT_SEED_TLS_CERT"); v != "" {
+		config.Seed.TLSCert = v
+	}
+	if v := os.Getenv("POLYANT_SEED_TLS_KEY"); v != "" {
+		config.Seed.TLSKey = v
+	}
+	if v := os.Getenv("POLYANT_SEED_BOOTSTRAP_PEERS"); v != "" {
+		config.Seed.BootstrapPeers = strings.Split(v, ",")
+	}
+
+	// 用户节点配置环境变量
+	if v := os.Getenv("POLYANT_USER_SERVICE_MODE"); v != "" {
+		config.User.ServiceMode = parseBool(v)
+	}
+	if v := os.Getenv("POLYANT_USER_RELAY_ENABLED"); v != "" {
+		config.User.RelayEnabled = parseBool(v)
+	}
+	if v := os.Getenv("POLYANT_USER_MIRROR_ENABLED"); v != "" {
+		config.User.MirrorEnabled = parseBool(v)
+	}
+	if v := os.Getenv("POLYANT_USER_MIRROR_LIMIT_GB"); v != "" {
+		if limit, err := strconv.Atoi(v); err == nil {
+			config.User.MirrorLimitGB = limit
+		}
+	}
+
+	// 账户配置环境变量
+	if v := os.Getenv("POLYANT_ACCOUNT_PRIVATE_KEY_PATH"); v != "" {
+		config.Account.PrivateKeyPath = v
+	}
+	if v := os.Getenv("POLYANT_ACCOUNT_EMAIL"); v != "" {
+		config.Account.Email = v
+	}
+	if v := os.Getenv("POLYANT_ACCOUNT_AUTO_REGISTER"); v != "" {
+		config.Account.AutoRegister = parseBool(v)
+	}
+
+	// 镜像配置环境变量
+	if v := os.Getenv("POLYANT_MIRROR_ENABLED"); v != "" {
+		config.Mirror.Enabled = parseBool(v)
+	}
+	if v := os.Getenv("POLYANT_MIRROR_CATEGORIES"); v != "" {
+		config.Mirror.Categories = strings.Split(v, ",")
+	}
+	if v := os.Getenv("POLYANT_MIRROR_MAX_SIZE_GB"); v != "" {
+		if size, err := strconv.Atoi(v); err == nil {
+			config.Mirror.MaxSizeGB = size
+		}
 	}
 
 	// 节点配置环境变量
@@ -263,17 +378,6 @@ func LoadWithEnv(config *Config) *Config {
 		}
 	}
 
-	// 用户配置环境变量
-	if v := os.Getenv("POLYANT_USER_PRIVATE_KEY_PATH"); v != "" {
-		config.User.PrivateKeyPath = v
-	}
-	if v := os.Getenv("POLYANT_USER_EMAIL"); v != "" {
-		config.User.Email = v
-	}
-	if v := os.Getenv("POLYANT_USER_AUTO_REGISTER"); v != "" {
-		config.User.AutoRegister = parseBool(v)
-	}
-
 	// SMTP 配置环境变量
 	if v := os.Getenv("POLYANT_SMTP_ENABLED"); v != "" {
 		config.SMTP.Enabled = parseBool(v)
@@ -336,6 +440,13 @@ func Validate(config *Config) error {
 	validLogLevels := map[string]bool{"debug": true, "info": true, "warn": true, "error": true}
 	if !validLogLevels[config.Node.LogLevel] {
 		return fmt.Errorf("无效的日志级别: %s，必须是 debug/info/warn/error", config.Node.LogLevel)
+	}
+
+	// 验证种子节点专用配置
+	if config.Node.Type == "seed" {
+		if err := config.Seed.Validate(); err != nil {
+			return err
+		}
 	}
 
 	// 验证网络配置
