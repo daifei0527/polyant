@@ -136,6 +136,18 @@ func (m *AuthMiddleware) Middleware(next http.Handler) http.Handler {
 			return
 		}
 
+		// 检查完全封禁用户
+		if user.IsFullBanned() {
+			writeAuthError(w, awerrors.New(403, awerrors.CategoryAPI, "用户已被封禁", http.StatusForbidden))
+			return
+		}
+
+		// 检查只读模式用户
+		if user.IsReadOnly() && isWriteOperation(r.Method, r.URL.Path) {
+			writeAuthError(w, awerrors.New(403, awerrors.CategoryAPI, "用户处于只读模式", http.StatusForbidden))
+			return
+		}
+
 		// 将用户信息注入上下文
 		ctx := context.WithValue(r.Context(), UserKey, user)
 		ctx = context.WithValue(ctx, PublicKeyKey, user.PublicKey)
@@ -212,4 +224,13 @@ func absInt64(n int64) int64 {
 		return -n
 	}
 	return n
+}
+
+// isWriteOperation 判断是否为写操作
+func isWriteOperation(method, path string) bool {
+	// GET 和 HEAD 是读操作
+	if method == http.MethodGet || method == http.MethodHead || method == http.MethodOptions {
+		return false
+	}
+	return true
 }
