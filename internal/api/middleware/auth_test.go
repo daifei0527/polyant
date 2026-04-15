@@ -72,19 +72,16 @@ func TestAuthMiddleware_ValidSignature(t *testing.T) {
 	bodyHash := sha256.Sum256(body)
 
 	// Create signature content
-	_ = req.Method + "\n" + req.URL.Path + "\n" + string(rune(timestamp)) + "\n" + hex.EncodeToString(bodyHash[:])
-
-	// Sign the content
 	pubKeyB64 := user.PublicKey
 	pubKeyBytes, _ := base64.StdEncoding.DecodeString(pubKeyB64)
 	_ = pubKeyBytes // pubKeyBytes is used for verification
 
-	signContent = "POST\n/api/v1/test\n" + string(rune(timestamp)) + "\n" + hex.EncodeToString(bodyHash[:])
+	signContent := fmt.Sprintf("POST\n/api/v1/test\n%d\n%s", timestamp, hex.EncodeToString(bodyHash[:]))
 	signature := ed25519.Sign(privKey, []byte(signContent))
 
 	// Set headers
 	req.Header.Set("X-Polyant-PublicKey", pubKeyB64)
-	req.Header.Set("X-Polyant-Timestamp", string(rune(timestamp)))
+	req.Header.Set("X-Polyant-Timestamp", fmt.Sprintf("%d", timestamp))
 	req.Header.Set("X-Polyant-Signature", base64.StdEncoding.EncodeToString(signature))
 
 	rec := httptest.NewRecorder()

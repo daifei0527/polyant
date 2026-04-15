@@ -41,3 +41,7 @@ polyant_deploy.pub
 
 # Temp
 /data/
+
+# Web
+web/admin/node_modules/
+pactl
