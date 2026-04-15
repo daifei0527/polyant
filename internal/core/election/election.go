@@ -10,12 +10,21 @@ import (
 )
 
 var (
-	ErrElectionNotFound  = fmt.Errorf("选举不存在")
-	ErrElectionClosed    = fmt.Errorf("选举已关闭")
-	ErrAlreadyNominated  = fmt.Errorf("已被提名")
-	ErrAlreadyVoted      = fmt.Errorf("已投票")
-	ErrCandidateNotFound = fmt.Errorf("候选人不存在")
+	ErrElectionNotFound   = fmt.Errorf("选举不存在")
+	ErrElectionClosed     = fmt.Errorf("选举已关闭")
+	ErrAlreadyNominated   = fmt.Errorf("已被提名")
+	ErrAlreadyVoted       = fmt.Errorf("已投票")
+	ErrCandidateNotFound  = fmt.Errorf("候选人不存在")
+	ErrCandidateNotReady  = fmt.Errorf("候选人尚未确认接受提名")
 )
+
+// VoteResult 投票结果
+type VoteResult struct {
+	Success     bool   `json:"success"`
+	VoteCount   int32  `json:"voteCount"`
+	AutoElected bool   `json:"autoElected,omitempty"`
+	Message     string `json:"message,omitempty"`
+}
 
 // ElectionService 选举服务
 type ElectionService struct {
@@ -38,13 +47,13 @@ func NewElectionService(
 }
 
 // CreateElection 创建选举
-func (s *ElectionService) CreateElection(ctx context.Context, title, description, createdBy string, voteThreshold int32, durationDays int) (*model.Election, error) {
+func (s *ElectionService) CreateElection(ctx context.Context, title, description, createdBy string, voteThreshold int32, durationDays int, autoElect bool) (*model.Election, error) {
 	duration := time.Duration(durationDays) * 24 * time.Hour
 	if duration == 0 {
 		duration = 7 * 24 * time.Hour // 默认7天
 	}
 
-	election := model.NewElection(title, description, createdBy, voteThreshold, duration)
+	election := model.NewElection(title, description, createdBy, voteThreshold, duration, autoElect)
 	if err := s.electionStore.Create(ctx, election); err != nil {
 		return nil, fmt.Errorf("create election: %w", err)
 	}
@@ -97,29 +106,33 @@ func (s *ElectionService) NominateCandidate(ctx context.Context, electionID, use
 }
 
 // Vote 投票
-func (s *ElectionService) Vote(ctx context.Context, electionID, voterID, candidateID string) error {
+func (s *ElectionService) Vote(ctx context.Context, electionID, voterID, candidateID string) (*VoteResult, error) {
 	election, err := s.electionStore.Get(ctx, electionID)
 	if err != nil {
-		return ErrElectionNotFound
+		return nil, ErrElectionNotFound
 	}
 
 	if election.Status != model.ElectionStatusActive {
-		return ErrElectionClosed
+		return nil, ErrElectionClosed
+	}
+
+	// 检查候选人是否存在且已确认
+	candidate, err := s.candidateStore.Get(ctx, electionID, candidateID)
+	if err != nil {
+		return nil, ErrCandidateNotFound
+	}
+
+	if !candidate.IsReady() {
+		return nil, ErrCandidateNotReady
 	}
 
 	// 检查是否已投票
 	hasVoted, err := s.voteStore.HasVoted(ctx, voterID, electionID)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	if hasVoted {
-		return ErrAlreadyVoted
-	}
-
-	// 检查候选人是否存在
-	candidate, err := s.candidateStore.Get(ctx, electionID, candidateID)
-	if err != nil {
-		return ErrCandidateNotFound
+		return nil, ErrAlreadyVoted
 	}
 
 	// 创建投票记录
@@ -132,20 +145,28 @@ func (s *ElectionService) Vote(ctx context.Context, electionID, voterID, candida
 	}
 
 	if err := s.voteStore.Create(ctx, vote); err != nil {
-		return fmt.Errorf("create vote: %w", err)
+		return nil, fmt.Errorf("create vote: %w", err)
 	}
 
 	// 更新候选人票数
+	newVoteCount := candidate.VoteCount + 1
 	if err := s.candidateStore.UpdateVoteCount(ctx, electionID, candidateID, 1); err != nil {
-		return fmt.Errorf("update vote count: %w", err)
+		return nil, fmt.Errorf("update vote count: %w", err)
 	}
 
-	// 检查是否达到当选阈值
-	if candidate.VoteCount+1 >= election.VoteThreshold {
+	result := &VoteResult{
+		Success:   true,
+		VoteCount: newVoteCount,
+	}
+
+	// 检查是否自动当选
+	if election.ShouldAutoElect() && newVoteCount >= election.VoteThreshold {
 		s.candidateStore.UpdateStatus(ctx, electionID, candidateID, model.CandidateStatusElected)
+		result.AutoElected = true
+		result.Message = "恭喜！候选人已自动当选"
 	}
 
-	return nil
+	return result, nil
 }
 
 // HasVoted 检查是否已投票
