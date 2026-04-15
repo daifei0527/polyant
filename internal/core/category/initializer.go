@@ -75,15 +75,15 @@ func (ci *CategoryInitializer) Initialize(ctx context.Context) error {
 	created := 0
 	for _, seed := range seedData.Categories {
 		cat := &model.Category{
-			ID:          seed.ID,
-			Path:        seed.Path,
-			Name:        seed.Name,
-			ParentId:    seed.ParentID,
-			Level:       seed.Level,
-			SortOrder:   seed.SortOrder,
-			IsBuiltin:   seed.IsBuiltin,
+			ID:           seed.ID,
+			Path:         seed.Path,
+			Name:         seed.Name,
+			ParentId:     seed.ParentID,
+			Level:        seed.Level,
+			SortOrder:    seed.SortOrder,
+			IsBuiltin:    seed.IsBuiltin,
 			MaintainedBy: "",
-			CreatedAt:   0,
+			CreatedAt:    0,
 		}
 
 		_, err := ci.store.Create(ctx, cat)
@@ -176,14 +176,14 @@ func (ci *CategoryInitializer) InitializeFromJSON(ctx context.Context, jsonData 
 		}
 
 		cat := &model.Category{
-			ID:          seed.ID,
-			Path:        seed.Path,
-			Name:        seed.Name,
-			ParentId:    seed.ParentID,
-			Level:       seed.Level,
-			SortOrder:   seed.SortOrder,
-			IsBuiltin:   seed.IsBuiltin,
-			CreatedAt:   0,
+			ID:        seed.ID,
+			Path:      seed.Path,
+			Name:      seed.Name,
+			ParentId:  seed.ParentID,
+			Level:     seed.Level,
+			SortOrder: seed.SortOrder,
+			IsBuiltin: seed.IsBuiltin,
+			CreatedAt: 0,
 		}
 
 		_, err := ci.store.Create(ctx, cat)

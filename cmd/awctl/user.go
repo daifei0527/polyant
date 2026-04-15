@@ -114,7 +114,7 @@ var userLevelCmd = &cobra.Command{
   3 - 高级用户
   4 - 管理员
   5 - 超级管理员`,
-	Args:  cobra.ExactArgs(2),
+	Args: cobra.ExactArgs(2),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		pubKey := args[0]
 		levelStr := args[1]

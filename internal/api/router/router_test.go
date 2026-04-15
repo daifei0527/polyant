@@ -115,7 +115,7 @@ func TestRouter_PublicRoutes(t *testing.T) {
 	}{
 		{"GET", "/api/v1/node/status", http.StatusOK},
 		{"GET", "/api/v1/categories", http.StatusOK},
-		{"GET", "/api/v1/search", http.StatusBadRequest}, // Missing query param
+		{"GET", "/api/v1/search", http.StatusBadRequest},         // Missing query param
 		{"POST", "/api/v1/user/register", http.StatusBadRequest}, // Missing body
 	}
 

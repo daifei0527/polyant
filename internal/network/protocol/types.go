@@ -35,7 +35,7 @@ const (
 type CapabilityType int
 
 const (
-	CapabilityRelay CapabilityType = iota + 1 // 中继服务
+	CapabilityRelay  CapabilityType = iota + 1 // 中继服务
 	CapabilityMirror                           // 数据镜像
 	CapabilityDHT                              // DHT 路由
 )
@@ -83,12 +83,12 @@ type HandshakeAck struct {
 }
 
 type Query struct {
-	QueryID    string     `json:"query_id"`
-	Keyword    string     `json:"keyword"`
-	Categories []string   `json:"categories"`
-	Limit      int32      `json:"limit"`
-	Offset     int32      `json:"offset"`
-	QueryType  QueryType  `json:"query_type"`
+	QueryID    string    `json:"query_id"`
+	Keyword    string    `json:"keyword"`
+	Categories []string  `json:"categories"`
+	Limit      int32     `json:"limit"`
+	Offset     int32     `json:"offset"`
+	QueryType  QueryType `json:"query_type"`
 }
 
 type QueryResult struct {
@@ -99,20 +99,20 @@ type QueryResult struct {
 }
 
 type SyncRequest struct {
-	RequestID           string            `json:"request_id"`
-	LastSyncTimestamp   int64             `json:"last_sync_timestamp"`
-	VersionVector       map[string]int64  `json:"version_vector"`
-	RequestedCategories []string          `json:"requested_categories"`
+	RequestID           string           `json:"request_id"`
+	LastSyncTimestamp   int64            `json:"last_sync_timestamp"`
+	VersionVector       map[string]int64 `json:"version_vector"`
+	RequestedCategories []string         `json:"requested_categories"`
 }
 
 type SyncResponse struct {
-	RequestID            string            `json:"request_id"`
-	NewEntries           [][]byte          `json:"new_entries"`
-	UpdatedEntries       [][]byte          `json:"updated_entries"`
-	DeletedEntryIDs      []string          `json:"deleted_entry_ids"`
-	NewRatings           [][]byte          `json:"new_ratings"`
-	ServerVersionVector  map[string]int64  `json:"server_version_vector"`
-	ServerTimestamp      int64             `json:"server_timestamp"`
+	RequestID           string           `json:"request_id"`
+	NewEntries          [][]byte         `json:"new_entries"`
+	UpdatedEntries      [][]byte         `json:"updated_entries"`
+	DeletedEntryIDs     []string         `json:"deleted_entry_ids"`
+	NewRatings          [][]byte         `json:"new_ratings"`
+	ServerVersionVector map[string]int64 `json:"server_version_vector"`
+	ServerTimestamp     int64            `json:"server_timestamp"`
 }
 
 type MirrorRequest struct {
@@ -123,11 +123,11 @@ type MirrorRequest struct {
 }
 
 type MirrorData struct {
-	RequestID   string   `json:"request_id"`
-	BatchIndex  int32    `json:"batch_index"`
-	TotalBatches int32   `json:"total_batches"`
-	Entries     [][]byte `json:"entries"`
-	Categories  [][]byte `json:"categories"`
+	RequestID    string   `json:"request_id"`
+	BatchIndex   int32    `json:"batch_index"`
+	TotalBatches int32    `json:"total_batches"`
+	Entries      [][]byte `json:"entries"`
+	Categories   [][]byte `json:"categories"`
 }
 
 type MirrorAck struct {
@@ -138,8 +138,8 @@ type MirrorAck struct {
 }
 
 type PushEntry struct {
-	EntryID         string `json:"entry_id"`
-	Entry           []byte `json:"entry"`
+	EntryID          string `json:"entry_id"`
+	Entry            []byte `json:"entry"`
 	CreatorSignature []byte `json:"creator_signature"`
 }
 
@@ -151,7 +151,7 @@ type PushAck struct {
 }
 
 type RatingPush struct {
-	Rating       []byte `json:"rating"`
+	Rating         []byte `json:"rating"`
 	RaterSignature []byte `json:"rater_signature"`
 }
 
@@ -162,14 +162,14 @@ type RatingAck struct {
 }
 
 type Heartbeat struct {
-	NodeID     string `json:"node_id"`
-	UptimeSeconds int64 `json:"uptime_seconds"`
-	EntryCount int64  `json:"entry_count"`
-	Timestamp  int64  `json:"timestamp"`
+	NodeID        string `json:"node_id"`
+	UptimeSeconds int64  `json:"uptime_seconds"`
+	EntryCount    int64  `json:"entry_count"`
+	Timestamp     int64  `json:"timestamp"`
 }
 
 type Bitfield struct {
-	NodeID        string            `json:"node_id"`
-	VersionVector map[string]int64  `json:"version_vector"`
-	EntryCount    int64             `json:"entry_count"`
+	NodeID        string           `json:"node_id"`
+	VersionVector map[string]int64 `json:"version_vector"`
+	EntryCount    int64            `json:"entry_count"`
 }

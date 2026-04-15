@@ -41,10 +41,10 @@ func TestExporter_Export(t *testing.T) {
 	store.Category.Create(nil, cat)
 
 	user := &model.User{
-		PublicKey:    "user-1",
-		AgentName:    "TestAgent",
-		UserLevel:    1,
-		Status:       model.UserStatusActive,
+		PublicKey: "user-1",
+		AgentName: "TestAgent",
+		UserLevel: 1,
+		Status:    model.UserStatusActive,
 	}
 	store.User.Create(nil, user)
 
@@ -188,11 +188,11 @@ func TestExporter_ExportUserPrivacy(t *testing.T) {
 
 	// 创建用户，包含敏感字段
 	user := &model.User{
-		PublicKey:    "user-1",
-		AgentName:    "TestAgent",
-		UserLevel:    1,
-		Status:       model.UserStatusActive,
-		Email:        "secret@example.com", // 敏感字段
+		PublicKey: "user-1",
+		AgentName: "TestAgent",
+		UserLevel: 1,
+		Status:    model.UserStatusActive,
+		Email:     "secret@example.com", // 敏感字段
 	}
 	store.User.Create(nil, user)
 

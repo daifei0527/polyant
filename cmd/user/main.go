@@ -48,19 +48,19 @@ const (
 
 // UserApp 用户节点应用
 type UserApp struct {
-	config         *config.Config
-	logger         *zap.Logger
-	store          *storage.Store
-	p2pHost        *host.P2PHost
-	dhtNode        *dht.DHTNode
-	syncEngine     *networksync.SyncEngine
-	pushService    *networksync.PushService
-	syncQueue      *queuesync.SyncQueue
-	httpServer     *http.Server
-	cancel         context.CancelFunc
-	serviceMode    bool
-	networkCap     *detect.NetworkCapability
-	seedNodeAddrs  []string
+	config        *config.Config
+	logger        *zap.Logger
+	store         *storage.Store
+	p2pHost       *host.P2PHost
+	dhtNode       *dht.DHTNode
+	syncEngine    *networksync.SyncEngine
+	pushService   *networksync.PushService
+	syncQueue     *queuesync.SyncQueue
+	httpServer    *http.Server
+	cancel        context.CancelFunc
+	serviceMode   bool
+	networkCap    *detect.NetworkCapability
+	seedNodeAddrs []string
 }
 
 func main() {

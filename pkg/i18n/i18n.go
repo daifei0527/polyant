@@ -28,10 +28,10 @@ var SupportedLangs = []Lang{LangZhCN, LangEnUS}
 
 // Translator 翻译器
 type Translator struct {
-	mu       sync.RWMutex
-	locales  map[Lang]map[string]string
-	lang     Lang
-	loaddir  string
+	mu      sync.RWMutex
+	locales map[Lang]map[string]string
+	lang    Lang
+	loaddir string
 }
 
 // globalTranslator 全局翻译器实例

@@ -8,7 +8,7 @@ import (
 // SyncTask 同步任务
 type SyncTask struct {
 	EntryID    string    `json:"entry_id"`
-	Action     string    `json:"action"`     // create, update, delete
+	Action     string    `json:"action"` // create, update, delete
 	CreatedAt  time.Time `json:"created_at"`
 	RetryCount int       `json:"retry_count"`
 	MaxRetry   int       `json:"max_retry"`

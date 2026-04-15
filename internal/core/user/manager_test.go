@@ -201,12 +201,12 @@ func TestUserManager_CheckLevelUpgrade(t *testing.T) {
 	mgr := NewUserManager(store)
 
 	tests := []struct {
-		name           string
-		level          int32
-		contributions  int32
-		ratings        int32
-		expectedLevel  int32
-		expectUpgrade  bool
+		name          string
+		level         int32
+		contributions int32
+		ratings       int32
+		expectedLevel int32
+		expectUpgrade bool
 	}{
 		{"Lv0 stays Lv0", model.UserLevelLv0, 0, 0, model.UserLevelLv0, false},
 		{"Lv1 -> Lv2", model.UserLevelLv1, 10, 20, model.UserLevelLv2, true},
@@ -268,7 +268,7 @@ func TestUserManager_IncrementContribution(t *testing.T) {
 func TestHashPublicKey(t *testing.T) {
 	// Test with base64 encoded string
 	hash1 := HashPublicKey("dGVzdC1rZXk=") // base64 of "test-key"
-	if len(hash1) != 64 { // SHA256 produces 64 hex characters
+	if len(hash1) != 64 {                  // SHA256 produces 64 hex characters
 		t.Errorf("Hash length should be 64, got %d", len(hash1))
 	}
 

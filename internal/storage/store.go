@@ -184,7 +184,7 @@ func NewPersistentStore(cfg *StoreConfig) (*Store, error) {
 		Rating:   NewBadgerRatingStore(kvStore),
 		Category: NewBadgerCategoryStore(kvStore),
 		Search:   searchEngine,
-		Backlink: NewMemoryBacklinkIndex(), // 反向链接仍使用内存实现
+		Backlink: NewMemoryBacklinkIndex(),  // 反向链接仍使用内存实现
 		Audit:    kv.NewAuditStore(kvStore), // 共享 KV 存储
 		kvStore:  kvStore,                   // Store reference for cleanup
 	}, nil

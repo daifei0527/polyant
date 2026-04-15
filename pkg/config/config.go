@@ -24,20 +24,20 @@ type NodeConfig struct {
 
 // NetworkConfig 网络配置
 type NetworkConfig struct {
-	ListenPort int      `json:"listen_port"` // P2P 监听端口
-	APIPort    int      `json:"api_port"`    // API 服务端口
-	SeedNodes  []string `json:"seed_nodes"`  // 种子节点列表
-	DHTEnabled bool     `json:"dht_enabled"` // 是否启用 DHT
-	MDNSEnabled bool    `json:"mdns_enabled"` // 是否启用 mDNS 发现
+	ListenPort  int      `json:"listen_port"`  // P2P 监听端口
+	APIPort     int      `json:"api_port"`     // API 服务端口
+	SeedNodes   []string `json:"seed_nodes"`   // 种子节点列表
+	DHTEnabled  bool     `json:"dht_enabled"`  // 是否启用 DHT
+	MDNSEnabled bool     `json:"mdns_enabled"` // 是否启用 mDNS 发现
 }
 
 // SyncConfig 同步配置
 type SyncConfig struct {
-	AutoSync         bool     `json:"auto_sync"`          // 是否自动同步
-	IntervalSeconds  int      `json:"interval_seconds"`   // 同步间隔（秒）
-	MirrorCategories []string `json:"mirror_categories"`  // 镜像的分类列表
-	MaxLocalSizeMB   int      `json:"max_local_size_mb"`  // 本地最大存储大小（MB）
-	Compression      string   `json:"compression"`        // 压缩算法: gzip, zlib, none
+	AutoSync         bool     `json:"auto_sync"`         // 是否自动同步
+	IntervalSeconds  int      `json:"interval_seconds"`  // 同步间隔（秒）
+	MirrorCategories []string `json:"mirror_categories"` // 镜像的分类列表
+	MaxLocalSizeMB   int      `json:"max_local_size_mb"` // 本地最大存储大小（MB）
+	Compression      string   `json:"compression"`       // 压缩算法: gzip, zlib, none
 }
 
 // SharingConfig 共享配置

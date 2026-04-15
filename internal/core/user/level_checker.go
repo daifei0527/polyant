@@ -13,12 +13,12 @@ import (
 // LevelUpgradeChecker 用户层级升级检查器
 // 定期检查所有用户是否满足升级条件
 type LevelUpgradeChecker struct {
-	store        *storage.Store
-	interval     time.Duration
-	running      bool
-	mu           sync.RWMutex
-	cancel       context.CancelFunc
-	wg           sync.WaitGroup
+	store    *storage.Store
+	interval time.Duration
+	running  bool
+	mu       sync.RWMutex
+	cancel   context.CancelFunc
+	wg       sync.WaitGroup
 }
 
 // NewLevelUpgradeChecker 创建升级检查器
@@ -186,10 +186,10 @@ func GetLevelThresholds() map[int32]struct {
 		Contribution int32
 		Rating       int32
 	}{
-		model.UserLevelLv1: {Contribution: 0, Rating: 0},      // 邮箱验证
-		model.UserLevelLv2: {Contribution: 10, Rating: 20},    // 活跃贡献者
-		model.UserLevelLv3: {Contribution: 50, Rating: 100},   // 资深贡献者
-		model.UserLevelLv4: {Contribution: 200, Rating: 500},  // 专家贡献者
-		model.UserLevelLv5: {Contribution: 0, Rating: 0},      // 投票选举
+		model.UserLevelLv1: {Contribution: 0, Rating: 0},     // 邮箱验证
+		model.UserLevelLv2: {Contribution: 10, Rating: 20},   // 活跃贡献者
+		model.UserLevelLv3: {Contribution: 50, Rating: 100},  // 资深贡献者
+		model.UserLevelLv4: {Contribution: 200, Rating: 500}, // 专家贡献者
+		model.UserLevelLv5: {Contribution: 0, Rating: 0},     // 投票选举
 	}
 }

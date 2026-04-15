@@ -41,9 +41,9 @@ type Dependencies struct {
 	Backlink        storage.BacklinkIndex
 	EmailService    *email.Service
 	VerificationMgr *email.VerificationManager
-	RemoteQuerier   RemoteQuerier   // 远程查询服务
-	EntryPusher     EntryPusher     // 条目推送服务
-	KVStore         kv.Store        // KV 存储（选举等功能需要）
+	RemoteQuerier   RemoteQuerier // 远程查询服务
+	EntryPusher     EntryPusher   // 条目推送服务
+	KVStore         kv.Store      // KV 存储（选举等功能需要）
 	NodeID          string
 	NodeType        string
 	Version         string
@@ -342,14 +342,14 @@ func registerAuthRoutes(mux *http.ServeMux, authMW *middleware.AuthMiddleware, e
 		mux.Handle("/api/v1/admin/audit/logs/delete", authMW.Middleware(authMW.RequireLevel(model.UserLevelLv5, http.HandlerFunc(auh.DeleteAuditLogsHandler))))
 	}
 
-		// ==================== 数据导出/导入路由 ====================
-		if exh != nil {
-			// 数据导出 GET /api/v1/admin/export - Lv4+ (Admin)
-			mux.Handle("/api/v1/admin/export", authMW.Middleware(authMW.RequireLevel(model.UserLevelLv4, http.HandlerFunc(exh.ExportHandler))))
+	// ==================== 数据导出/导入路由 ====================
+	if exh != nil {
+		// 数据导出 GET /api/v1/admin/export - Lv4+ (Admin)
+		mux.Handle("/api/v1/admin/export", authMW.Middleware(authMW.RequireLevel(model.UserLevelLv4, http.HandlerFunc(exh.ExportHandler))))
 
-			// 数据导入 POST /api/v1/admin/import - Lv4+ (Admin)
-			mux.Handle("/api/v1/admin/import", authMW.Middleware(authMW.RequireLevel(model.UserLevelLv4, http.HandlerFunc(exh.ImportHandler))))
-		}
+		// 数据导入 POST /api/v1/admin/import - Lv4+ (Admin)
+		mux.Handle("/api/v1/admin/import", authMW.Middleware(authMW.RequireLevel(model.UserLevelLv4, http.HandlerFunc(exh.ImportHandler))))
+	}
 
 	// ==================== 选举路由 ====================
 	if elh != nil {

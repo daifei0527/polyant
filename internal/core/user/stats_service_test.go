@@ -225,9 +225,9 @@ func TestStatsService_GetActivityTrend(t *testing.T) {
 	// Create user active today
 	now := time.Now()
 	store.User.Create(ctx, &model.User{
-		PublicKey:   "pk1",
-		AgentName:   "Active",
-		LastActive:  now.UnixMilli(),
+		PublicKey:    "pk1",
+		AgentName:    "Active",
+		LastActive:   now.UnixMilli(),
 		RegisteredAt: now.UnixMilli(),
 	})
 

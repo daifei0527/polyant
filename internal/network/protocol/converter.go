@@ -306,13 +306,13 @@ func fromProtoSyncResponse(r *awsp.SyncResponse) *SyncResponse {
 		return nil
 	}
 	return &SyncResponse{
-		RequestID:            r.RequestId,
-		NewEntries:           r.NewEntries,
-		UpdatedEntries:       r.UpdatedEntries,
-		DeletedEntryIDs:      r.DeletedEntryIds,
-		NewRatings:           r.NewRatings,
-		ServerVersionVector:  r.ServerVersionVector,
-		ServerTimestamp:      r.ServerTimestamp,
+		RequestID:           r.RequestId,
+		NewEntries:          r.NewEntries,
+		UpdatedEntries:      r.UpdatedEntries,
+		DeletedEntryIDs:     r.DeletedEntryIds,
+		NewRatings:          r.NewRatings,
+		ServerVersionVector: r.ServerVersionVector,
+		ServerTimestamp:     r.ServerTimestamp,
 	}
 }
 

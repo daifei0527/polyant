@@ -207,12 +207,12 @@ func getCharType(r rune) int {
 
 // isCJKRune 判断是否为CJK字符
 func isCJKRune(r rune) bool {
-	return (r >= 0x4E00 && r <= 0x9FFF) ||   // CJK统一汉字
-		(r >= 0x3400 && r <= 0x4DBF) ||   // CJK扩展A
+	return (r >= 0x4E00 && r <= 0x9FFF) || // CJK统一汉字
+		(r >= 0x3400 && r <= 0x4DBF) || // CJK扩展A
 		(r >= 0x20000 && r <= 0x2A6DF) || // CJK扩展B
-		(r >= 0x3000 && r <= 0x303F) ||   // CJK标点符号
-		(r >= 0xFF00 && r <= 0xFFEF) ||   // 全角字符
-		(r >= 0xF900 && r <= 0xFAFF)      // CJK兼容汉字
+		(r >= 0x3000 && r <= 0x303F) || // CJK标点符号
+		(r >= 0xFF00 && r <= 0xFFEF) || // 全角字符
+		(r >= 0xF900 && r <= 0xFAFF) // CJK兼容汉字
 }
 
 // isCJKSegment 判断字符串是否为CJK文本段

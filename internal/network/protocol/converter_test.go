@@ -8,8 +8,8 @@ import (
 
 func TestMessageTypeConversion(t *testing.T) {
 	testCases := []struct {
-		domain    MessageType
-		proto     awsp.MessageType
+		domain MessageType
+		proto  awsp.MessageType
 	}{
 		{MessageTypeHandshake, awsp.MessageType_MESSAGE_TYPE_HANDSHAKE},
 		{MessageTypeHandshakeAck, awsp.MessageType_MESSAGE_TYPE_HANDSHAKE_ACK},

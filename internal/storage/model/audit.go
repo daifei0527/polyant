@@ -7,8 +7,8 @@ import (
 
 // AuditLog 审计日志
 type AuditLog struct {
-	ID           string `json:"id"`            // 日志唯一 ID
-	Timestamp    int64  `json:"timestamp"`     // 操作时间戳（毫秒）
+	ID        string `json:"id"`        // 日志唯一 ID
+	Timestamp int64  `json:"timestamp"` // 操作时间戳（毫秒）
 
 	// 操作者信息
 	OperatorPubkey string `json:"operator_pubkey"` // 操作者公钥
@@ -17,20 +17,20 @@ type AuditLog struct {
 	UserAgent      string `json:"user_agent"`      // User-Agent
 
 	// 操作信息
-	Method        string `json:"method"`        // HTTP 方法（GET/POST/PUT/DELETE）
-	Path          string `json:"path"`          // 请求路径
-	ActionType    string `json:"action_type"`   // 操作类型（如 entry.create, user.ban）
-	TargetID      string `json:"target_id"`     // 目标对象 ID
-	TargetType    string `json:"target_type"`   // 目标类型（entry/user/category等）
+	Method     string `json:"method"`      // HTTP 方法（GET/POST/PUT/DELETE）
+	Path       string `json:"path"`        // 请求路径
+	ActionType string `json:"action_type"` // 操作类型（如 entry.create, user.ban）
+	TargetID   string `json:"target_id"`   // 目标对象 ID
+	TargetType string `json:"target_type"` // 目标类型（entry/user/category等）
 
 	// 请求/响应
-	RequestBody   string `json:"request_body"`  // 请求体（脱敏后）
-	ResponseCode  int    `json:"response_code"` // HTTP 响应码
-	ResponseBody  string `json:"response_body"` // 响应体（截断）
+	RequestBody  string `json:"request_body"`  // 请求体（脱敏后）
+	ResponseCode int    `json:"response_code"` // HTTP 响应码
+	ResponseBody string `json:"response_body"` // 响应体（截断）
 
 	// 结果
-	Success       bool   `json:"success"`       // 操作是否成功
-	ErrorMessage  string `json:"error_message"` // 错误信息（失败时）
+	Success      bool   `json:"success"`       // 操作是否成功
+	ErrorMessage string `json:"error_message"` // 错误信息（失败时）
 }
 
 // AuditFilter 查询过滤器

@@ -28,11 +28,11 @@ func TestExportHandler_ExportHandler(t *testing.T) {
 
 	// Create some test data
 	entry := &model.KnowledgeEntry{
-		ID:        "test-entry-1",
-		Title:     "Test Entry",
-		Content:   "Test Content",
-		Category:  "test",
-		Status:    model.EntryStatusPublished,
+		ID:       "test-entry-1",
+		Title:    "Test Entry",
+		Content:  "Test Content",
+		Category: "test",
+		Status:   model.EntryStatusPublished,
 	}
 	store.Entry.Create(context.Background(), entry)
 
@@ -88,11 +88,11 @@ func TestExportHandler_ImportHandler(t *testing.T) {
 
 	// Create test data and export it first
 	entry := &model.KnowledgeEntry{
-		ID:        "test-entry-import",
-		Title:     "Test Entry for Import",
-		Content:   "Test Content",
-		Category:  "test",
-		Status:    model.EntryStatusPublished,
+		ID:       "test-entry-import",
+		Title:    "Test Entry for Import",
+		Content:  "Test Content",
+		Category: "test",
+		Status:   model.EntryStatusPublished,
 	}
 	store.Entry.Create(context.Background(), entry)
 

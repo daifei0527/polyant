@@ -185,16 +185,16 @@ func TestAuditStore_GetStats(t *testing.T) {
 
 	// Create some logs
 	auditStore.Create(context.Background(), &model.AuditLog{
-		ID:             "1",
-		Timestamp:      time.Now().UnixMilli(),
-		ActionType:     "entry.create",
-		Success:        true,
+		ID:         "1",
+		Timestamp:  time.Now().UnixMilli(),
+		ActionType: "entry.create",
+		Success:    true,
 	})
 	auditStore.Create(context.Background(), &model.AuditLog{
-		ID:             "2",
-		Timestamp:      time.Now().UnixMilli(),
-		ActionType:     "entry.delete",
-		Success:        false,
+		ID:         "2",
+		Timestamp:  time.Now().UnixMilli(),
+		ActionType: "entry.delete",
+		Success:    false,
 	})
 
 	stats, err := auditStore.GetStats(context.Background())

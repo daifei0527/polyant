@@ -72,7 +72,7 @@ func TestAuthMiddleware_ValidSignature(t *testing.T) {
 	bodyHash := sha256.Sum256(body)
 
 	// Create signature content
-	signContent := req.Method + "\n" + req.URL.Path + "\n" + string(rune(timestamp)) + "\n" + hex.EncodeToString(bodyHash[:])
+	_ = req.Method + "\n" + req.URL.Path + "\n" + string(rune(timestamp)) + "\n" + hex.EncodeToString(bodyHash[:])
 
 	// Sign the content
 	pubKeyB64 := user.PublicKey

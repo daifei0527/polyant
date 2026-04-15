@@ -18,11 +18,11 @@ const (
 // ==================== 用户级别常量 ====================
 
 const (
-	LevelAnonymous = 0 // 匿名用户
-	LevelReader    = 1 // 普通读者
-	LevelEditor    = 2 // 编辑者
-	LevelModerator = 3 // 版主
-	LevelAdmin     = 4 // 管理员
+	LevelAnonymous  = 0 // 匿名用户
+	LevelReader     = 1 // 普通读者
+	LevelEditor     = 2 // 编辑者
+	LevelModerator  = 3 // 版主
+	LevelAdmin      = 4 // 管理员
 	LevelSuperAdmin = 5 // 超级管理员
 )
 

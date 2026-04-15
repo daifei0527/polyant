@@ -14,11 +14,11 @@ import (
 )
 
 var (
-	ErrUserAlreadyExists   = fmt.Errorf("用户已存在")
-	ErrUserNotFound        = fmt.Errorf("用户不存在")
-	ErrInvalidSignature    = fmt.Errorf("签名验证失败")
-	ErrEmailAlreadyUsed    = fmt.Errorf("邮箱已被使用")
-	ErrInvalidEmail        = fmt.Errorf("无效的邮箱地址")
+	ErrUserAlreadyExists = fmt.Errorf("用户已存在")
+	ErrUserNotFound      = fmt.Errorf("用户不存在")
+	ErrInvalidSignature  = fmt.Errorf("签名验证失败")
+	ErrEmailAlreadyUsed  = fmt.Errorf("邮箱已被使用")
+	ErrInvalidEmail      = fmt.Errorf("无效的邮箱地址")
 )
 
 type UserManager struct {
@@ -41,17 +41,17 @@ func (m *UserManager) Register(ctx context.Context, publicKey, agentName string)
 	now := time.Now().UnixMilli()
 
 	user := &model.User{
-		PublicKey:      publicKey,
-		AgentName:      agentName,
-		UserLevel:      model.UserLevelLv0,
-		Email:          "",
-		EmailVerified:  false,
-		RegisteredAt:   now,
-		LastActive:     now,
+		PublicKey:       publicKey,
+		AgentName:       agentName,
+		UserLevel:       model.UserLevelLv0,
+		Email:           "",
+		EmailVerified:   false,
+		RegisteredAt:    now,
+		LastActive:      now,
 		ContributionCnt: 0,
-		RatingCnt:      0,
-		NodeId:         "",
-		Status:         "active",
+		RatingCnt:       0,
+		NodeId:          "",
+		Status:          "active",
 	}
 
 	_, err = m.store.User.Create(ctx, user)

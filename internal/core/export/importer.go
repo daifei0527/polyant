@@ -47,17 +47,17 @@ const (
 
 // ImportError 导入错误
 type ImportError struct {
-	Type    string          `json:"type"`              // 资源类型：entry, user, category, rating
-	ID      string          `json:"id"`                // 资源标识
-	Message string          `json:"message"`           // 错误信息
-	Level   ImportErrorType `json:"level,omitempty"`   // 错误级别：fatal 或 warning
+	Type    string          `json:"type"`            // 资源类型：entry, user, category, rating
+	ID      string          `json:"id"`              // 资源标识
+	Message string          `json:"message"`         // 错误信息
+	Level   ImportErrorType `json:"level,omitempty"` // 错误级别：fatal 或 warning
 }
 
 // ImportResult 导入结果
 type ImportResult struct {
-	Success bool           `json:"success"`
-	Summary ImportSummary  `json:"summary"`
-	Errors  []ImportError  `json:"errors,omitempty"`
+	Success bool          `json:"success"`
+	Summary ImportSummary `json:"summary"`
+	Errors  []ImportError `json:"errors,omitempty"`
 }
 
 // Importer 导入服务

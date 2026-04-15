@@ -141,10 +141,10 @@ func TestClient_SignRequest(t *testing.T) {
 	}
 
 	tests := []struct {
-		name    string
-		method  string
-		path    string
-		body    []byte
+		name   string
+		method string
+		path   string
+		body   []byte
 	}{
 		{"GET request", "GET", "/api/v1/test", nil},
 		{"POST request", "POST", "/api/v1/entry/create", []byte(`{"title":"test"}`)},

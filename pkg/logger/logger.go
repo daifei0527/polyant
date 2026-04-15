@@ -171,8 +171,7 @@ func (l *Logger) rotate() error {
 	l.fileSize = 0
 
 	// 更新 logger 的输出目标
-	var output io.Writer = os.Stdout
-	output = io.MultiWriter(os.Stdout, l.file)
+	output := io.MultiWriter(os.Stdout, l.file)
 	l.logger = log.New(output, "", 0)
 
 	return nil
@@ -356,8 +355,8 @@ func Init(dir, level string) {
 	config := &LoggerConfig{
 		Level:      logLevel,
 		FilePath:   filePath,
-		MaxSizeMB:  100,  // 100MB 轮转
-		MaxBackups: 5,     // 保留5个备份
+		MaxSizeMB:  100, // 100MB 轮转
+		MaxBackups: 5,   // 保留5个备份
 	}
 
 	// 初始化全局日志
@@ -389,8 +388,8 @@ func InitWithConfig(dir, level, lang string, bilingual bool) {
 	config := &LoggerConfig{
 		Level:      logLevel,
 		FilePath:   filePath,
-		MaxSizeMB:  100,  // 100MB 轮转
-		MaxBackups: 5,     // 保留5个备份
+		MaxSizeMB:  100, // 100MB 轮转
+		MaxBackups: 5,   // 保留5个备份
 		Lang:       lang,
 		Bilingual:  bilingual,
 	}

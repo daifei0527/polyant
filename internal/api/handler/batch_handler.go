@@ -548,8 +548,8 @@ func (h *BatchHandler) executeBatchDelete(r *http.Request, ids []string, user *m
 
 		response.Summary.Deleted++
 		response.Results = append(response.Results, BatchResult{
-			Index: i,
-			ID:    id,
+			Index:  i,
+			ID:     id,
 			Status: "deleted",
 		})
 	}

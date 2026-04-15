@@ -182,9 +182,9 @@ func TestCORSMiddleware_DisallowedOrigin(t *testing.T) {
 // TestIsOriginAllowed 测试来源检查
 func TestIsOriginAllowed(t *testing.T) {
 	tests := []struct {
-		origins   []string
-		request   string
-		expected  bool
+		origins  []string
+		request  string
+		expected bool
 	}{
 		{[]string{"*"}, "https://any.com", true},
 		{[]string{"https://example.com"}, "https://example.com", true},

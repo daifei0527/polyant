@@ -29,10 +29,10 @@ import (
 )
 
 var (
-	configFile  = flag.String("config", "", "配置文件路径 (JSON)")
-	showVersion = flag.Bool("version", false, "显示版本信息")
-	initSeed    = flag.Bool("init-seed", false, "初始化种子数据并退出")
-	useMemoryDB = flag.Bool("memory", false, "使用内存存储（仅用于测试）")
+	configFile   = flag.String("config", "", "配置文件路径 (JSON)")
+	showVersion  = flag.Bool("version", false, "显示版本信息")
+	initSeed     = flag.Bool("init-seed", false, "初始化种子数据并退出")
+	useMemoryDB  = flag.Bool("memory", false, "使用内存存储（仅用于测试）")
 	runAsService = flag.Bool("service", false, "作为系统服务运行")
 )
 

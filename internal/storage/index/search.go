@@ -32,18 +32,18 @@ type indexedEntry struct {
 	Category string
 	Tags     []string
 	// 各字段的词频统计
-	titleTokens    []string
-	contentTokens  []string
-	tagTokens      []string
-	titleTF        map[string]float64
-	contentTF      map[string]float64
+	titleTokens   []string
+	contentTokens []string
+	tagTokens     []string
+	titleTF       map[string]float64
+	contentTF     map[string]float64
 }
 
 // SimpleSearchEngine 是一个简单的全文搜索引擎实现
 // 使用TF-IDF类似的评分算法，支持中英文混合搜索
 type SimpleSearchEngine struct {
-	mu       sync.RWMutex
-	entries  map[string]*indexedEntry
+	mu      sync.RWMutex
+	entries map[string]*indexedEntry
 	// 文档频率：每个词出现在多少个文档中
 	docFreq map[string]int
 	// 总文档数
@@ -53,8 +53,8 @@ type SimpleSearchEngine struct {
 // NewSimpleSearchEngine 创建一个新的简单搜索引擎实例
 func NewSimpleSearchEngine() *SimpleSearchEngine {
 	return &SimpleSearchEngine{
-		entries:  make(map[string]*indexedEntry),
-		docFreq:  make(map[string]int),
+		entries:   make(map[string]*indexedEntry),
+		docFreq:   make(map[string]int),
 		totalDocs: 0,
 	}
 }
@@ -162,8 +162,8 @@ func (se *SimpleSearchEngine) Search(query string, categories []string, limit, o
 
 	// 对每个文档计算相关度得分
 	type scoredEntry struct {
-		entry *indexedEntry
-		score float64
+		entry         *indexedEntry
+		score         float64
 		matchedFields []string
 	}
 
@@ -296,7 +296,7 @@ func (se *SimpleSearchEngine) computeIDF(token string) float64 {
 		return 0
 	}
 	// 使用平滑IDF避免除零
-	return math.Log(float64(se.totalDocs+1) / (df + 1)) + 1
+	return math.Log(float64(se.totalDocs+1)/(df+1)) + 1
 }
 
 // removeDocFreq 移除文档的词频贡献

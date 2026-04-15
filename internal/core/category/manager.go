@@ -31,10 +31,10 @@ type Category struct {
 
 // Manager 分类管理器
 type Manager struct {
-	mu      sync.RWMutex
-	store   *storage.Store
-	cached  map[string]*Category
-	loaded  bool
+	mu     sync.RWMutex
+	store  *storage.Store
+	cached map[string]*Category
+	loaded bool
 }
 
 // NewManager 创建分类管理器
@@ -160,15 +160,15 @@ func GetInitialCategories() []*Category {
 func (m *Manager) Initialize(ctx context.Context) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	
+
 	if m.loaded {
 		return nil
 	}
-	
+
 	categories := GetInitialCategories()
 	m.flattenAndCache(categories, "")
 	m.loaded = true
-	
+
 	return nil
 }
 
@@ -177,7 +177,7 @@ func (m *Manager) flattenAndCache(categories []*Category, parentID string) {
 	for _, cat := range categories {
 		cat.ParentID = parentID
 		m.cached[cat.ID] = cat
-		
+
 		if len(cat.Children) > 0 {
 			m.flattenAndCache(cat.Children, cat.ID)
 			cat.Children = nil // 清空子分类引用，避免循环
@@ -189,7 +189,7 @@ func (m *Manager) flattenAndCache(categories []*Category, parentID string) {
 func (m *Manager) Get(id string) (*Category, error) {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
-	
+
 	cat, exists := m.cached[id]
 	if !exists {
 		return nil, fmt.Errorf("分类不存在: %s", id)
@@ -201,17 +201,17 @@ func (m *Manager) Get(id string) (*Category, error) {
 func (m *Manager) List() []*Category {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
-	
+
 	result := make([]*Category, 0, len(m.cached))
 	for _, cat := range m.cached {
 		result = append(result, cat)
 	}
-	
+
 	// 按ID排序
 	sort.Slice(result, func(i, j int) bool {
 		return result[i].ID < result[j].ID
 	})
-	
+
 	return result
 }
 
@@ -219,7 +219,7 @@ func (m *Manager) List() []*Category {
 func (m *Manager) ListTopLevel() []*Category {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
-	
+
 	var result []*Category
 	for _, cat := range m.cached {
 		if cat.ParentID == "" {
@@ -229,11 +229,11 @@ func (m *Manager) ListTopLevel() []*Category {
 			result = append(result, &catCopy)
 		}
 	}
-	
+
 	sort.Slice(result, func(i, j int) bool {
 		return result[i].ID < result[j].ID
 	})
-	
+
 	return result
 }
 
@@ -245,11 +245,11 @@ func (m *Manager) getChildren(parentID string) []*Category {
 			children = append(children, cat)
 		}
 	}
-	
+
 	sort.Slice(children, func(i, j int) bool {
 		return children[i].ID < children[j].ID
 	})
-	
+
 	return children
 }
 
@@ -257,14 +257,14 @@ func (m *Manager) getChildren(parentID string) []*Category {
 func (m *Manager) GetTree() []*Category {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
-	
+
 	return m.buildTree("")
 }
 
 // buildTree 构建分类树
 func (m *Manager) buildTree(parentID string) []*Category {
 	var result []*Category
-	
+
 	for _, cat := range m.cached {
 		if cat.ParentID == parentID {
 			catCopy := *cat
@@ -272,11 +272,11 @@ func (m *Manager) buildTree(parentID string) []*Category {
 			result = append(result, &catCopy)
 		}
 	}
-	
+
 	sort.Slice(result, func(i, j int) bool {
 		return result[i].ID < result[j].ID
 	})
-	
+
 	return result
 }
 
@@ -284,7 +284,7 @@ func (m *Manager) buildTree(parentID string) []*Category {
 func (m *Manager) Validate(categoryID string) bool {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
-	
+
 	_, exists := m.cached[categoryID]
 	return exists
 }
@@ -293,10 +293,10 @@ func (m *Manager) Validate(categoryID string) bool {
 func (m *Manager) GetBreadcrumb(categoryID string) []*Category {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
-	
+
 	var breadcrumb []*Category
 	currentID := categoryID
-	
+
 	for currentID != "" {
 		cat, exists := m.cached[currentID]
 		if !exists {
@@ -305,7 +305,7 @@ func (m *Manager) GetBreadcrumb(categoryID string) []*Category {
 		breadcrumb = append([]*Category{cat}, breadcrumb...)
 		currentID = cat.ParentID
 	}
-	
+
 	return breadcrumb
 }
 
@@ -313,21 +313,21 @@ func (m *Manager) GetBreadcrumb(categoryID string) []*Category {
 func (m *Manager) Search(query string) []*Category {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
-	
+
 	query = strings.ToLower(query)
 	var result []*Category
-	
+
 	for _, cat := range m.cached {
 		if strings.Contains(strings.ToLower(cat.Name), query) ||
 			strings.Contains(strings.ToLower(cat.Description), query) {
 			result = append(result, cat)
 		}
 	}
-	
+
 	sort.Slice(result, func(i, j int) bool {
 		return result[i].ID < result[j].ID
 	})
-	
+
 	return result
 }
 
@@ -335,7 +335,7 @@ func (m *Manager) Search(query string) []*Category {
 func (m *Manager) UpdateEntryCount(categoryID string, delta int) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	
+
 	cat, exists := m.cached[categoryID]
 	if exists {
 		cat.EntryCount += delta

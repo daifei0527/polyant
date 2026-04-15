@@ -44,11 +44,11 @@ func TestMemoryEntryStore_Get(t *testing.T) {
 	ctx := context.Background()
 
 	entry := &model.KnowledgeEntry{
-		ID:        "test-entry-1",
-		Title:     "Test Entry",
-		Content:   "Content",
-		Category:  "test",
-		Status:    model.EntryStatusPublished,
+		ID:       "test-entry-1",
+		Title:    "Test Entry",
+		Content:  "Content",
+		Category: "test",
+		Status:   model.EntryStatusPublished,
 	}
 
 	_, _ = store.Create(ctx, entry)
@@ -74,11 +74,11 @@ func TestMemoryEntryStore_Update(t *testing.T) {
 	ctx := context.Background()
 
 	entry := &model.KnowledgeEntry{
-		ID:        "test-entry-1",
-		Title:     "Original Title",
-		Content:   "Content",
-		Category:  "test",
-		Status:    model.EntryStatusPublished,
+		ID:       "test-entry-1",
+		Title:    "Original Title",
+		Content:  "Content",
+		Category: "test",
+		Status:   model.EntryStatusPublished,
 	}
 	_, _ = store.Create(ctx, entry)
 
@@ -105,11 +105,11 @@ func TestMemoryEntryStore_Delete(t *testing.T) {
 	ctx := context.Background()
 
 	entry := &model.KnowledgeEntry{
-		ID:        "test-entry-1",
-		Title:     "Test Entry",
-		Content:   "Content",
-		Category:  "test",
-		Status:    model.EntryStatusPublished,
+		ID:       "test-entry-1",
+		Title:    "Test Entry",
+		Content:  "Content",
+		Category: "test",
+		Status:   model.EntryStatusPublished,
 	}
 	_, _ = store.Create(ctx, entry)
 
@@ -185,11 +185,11 @@ func TestMemoryEntryStore_Count(t *testing.T) {
 	// Add entries
 	for i := 0; i < 3; i++ {
 		entry := &model.KnowledgeEntry{
-			ID:        string(rune('a' + i)),
-			Title:     "Entry",
-			Content:   "Content",
-			Category:  "test",
-			Status:    model.EntryStatusPublished,
+			ID:       string(rune('a' + i)),
+			Title:    "Entry",
+			Content:  "Content",
+			Category: "test",
+			Status:   model.EntryStatusPublished,
 		}
 		_, _ = store.Create(ctx, entry)
 	}
@@ -597,14 +597,14 @@ func TestMemoryUserStore_List(t *testing.T) {
 
 	// 测试用户等级过滤（Level=0 表示不过滤，所以测试 Level=1）
 	filter = UserFilter{Level: 1, Limit: 10}
-	users, total, _ = store.List(ctx, filter)
+	_, total, _ = store.List(ctx, filter)
 	if total != 2 {
 		t.Errorf("Expected 2 Lv1 users, got %d", total)
 	}
 
 	// 测试状态过滤
 	filter = UserFilter{Status: model.UserStatusActive, Limit: 10}
-	users, total, _ = store.List(ctx, filter)
+	_, total, _ = store.List(ctx, filter)
 	if total != 5 {
 		t.Errorf("Expected 5 active users, got %d", total)
 	}
