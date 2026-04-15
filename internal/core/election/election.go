@@ -76,7 +76,7 @@ func (s *ElectionService) ListElections(ctx context.Context, status model.Electi
 }
 
 // NominateCandidate 提名候选人
-func (s *ElectionService) NominateCandidate(ctx context.Context, electionID, userID, userName, nominatedBy string) error {
+func (s *ElectionService) NominateCandidate(ctx context.Context, electionID, userID, userName, nominatedBy string, selfNominated bool) error {
 	election, err := s.electionStore.Get(ctx, electionID)
 	if err != nil {
 		return ErrElectionNotFound
@@ -92,16 +92,31 @@ func (s *ElectionService) NominateCandidate(ctx context.Context, electionID, use
 		return ErrAlreadyNominated
 	}
 
-	candidate := &model.Candidate{
-		ElectionID:  electionID,
-		UserID:      userID,
-		UserName:    userName,
-		NominatedBy: nominatedBy,
-		VoteCount:   0,
-		Status:      model.CandidateStatusNominated,
-		NominatedAt: time.Now().UnixMilli(),
+	candidate := model.NewCandidate(electionID, userID, userName, nominatedBy, selfNominated)
+	return s.candidateStore.Add(ctx, candidate)
+}
+
+// ConfirmNomination 确认接受提名
+func (s *ElectionService) ConfirmNomination(ctx context.Context, electionID, userID string) error {
+	election, err := s.electionStore.Get(ctx, electionID)
+	if err != nil {
+		return ErrElectionNotFound
 	}
 
+	if election.Status != model.ElectionStatusActive {
+		return ErrElectionClosed
+	}
+
+	candidate, err := s.candidateStore.Get(ctx, electionID, userID)
+	if err != nil {
+		return ErrCandidateNotFound
+	}
+
+	if candidate.Confirmed {
+		return fmt.Errorf("已确认接受提名")
+	}
+
+	candidate.Confirm()
 	return s.candidateStore.Add(ctx, candidate)
 }
 
