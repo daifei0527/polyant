@@ -1,45 +1,40 @@
 {
+  "user": {
+    "service_mode": false,
+    "relay_enabled": false,
+    "mirror_enabled": false,
+    "mirror_limit_gb": 10
+  },
   "node": {
     "type": "user",
-    "name": "polyant-user-node",
+    "name": "polyant-user-1",
     "data_dir": "./data/user",
     "log_dir": "./logs",
     "log_level": "info"
   },
   "network": {
-    "listen_port": 9001,
-    "api_port": 8081,
-    "seed_nodes": ["/ip4/103.242.175.97/tcp/9000/p2p/12D3KooWEaTUJe8NvjbvM3mk6J9Av5mdNt2BaEjEkdZuf3kPMUgA"],
-    "dht_enabled": true,
-    "mdns_enabled": false
+    "listen_port": 0,
+    "api_port": 8080,
+    "seed_nodes": ["/dns4/seed.polyant.top/tcp/9000/p2p/12D3Koo..."],
+    "dht_enabled": false,
+    "mdns_enabled": true
+  },
+  "account": {
+    "private_key_path": "./data/keys",
+    "email": "",
+    "auto_register": true
   },
   "sync": {
     "auto_sync": true,
-    "interval_seconds": 30,
-    "mirror_categories": [],
-    "max_local_size_mb": 1024,
-    "compression": "gzip"
+    "interval_seconds": 300
   },
-  "sharing": {
-    "allow_mirror": true,
-    "bandwidth_limit_mb": 100,
-    "max_concurrent": 10
+  "storage": {
+    "kv_type": "pebble",
+    "search_type": "bleve"
   },
-  "user": {
-    "private_key_path": "",
-    "email": "",
-    "auto_register": false
-  },
-  "smtp": {
-    "enabled": false,
-    "host": "",
-    "port": 587,
-    "username": "",
-    "password": "",
-    "from": ""
-  },
-  "api": {
-    "enabled": true,
-    "cors": true
+  "i18n": {
+    "default_lang": "zh-CN",
+    "available_langs": ["zh-CN", "en-US"],
+    "log_bilingual": false
   }
 }

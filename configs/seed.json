@@ -1,10 +1,16 @@
 {
+  "seed": {
+    "domain": "seed.polyant.top",
+    "tls_cert": "/etc/letsencrypt/live/seed.polyant.top/fullchain.pem",
+    "tls_key": "/etc/letsencrypt/live/seed.polyant.top/privkey.pem",
+    "bootstrap_peers": []
+  },
   "node": {
     "type": "seed",
-    "name": "polyant-seed-node",
+    "name": "polyant-seed-1",
     "data_dir": "./data/seed",
     "log_dir": "./logs",
-    "log_level": "debug"
+    "log_level": "info"
   },
   "network": {
     "listen_port": 9000,
@@ -13,34 +19,14 @@
     "dht_enabled": true,
     "mdns_enabled": false
   },
-  "sync": {
-    "auto_sync": true,
-    "interval_seconds": 60,
-    "mirror_categories": [],
-    "max_local_size_mb": 1024,
-    "compression": "gzip"
-  },
-  "sharing": {
-    "allow_mirror": true,
-    "bandwidth_limit_mb": 100,
-    "max_concurrent": 10
-  },
-  "user": {
-    "private_key_path": "",
-    "email": "",
-    "auto_register": false
-  },
-  "smtp": {
-    "enabled": false,
-    "host": "",
-    "port": 587,
-    "username": "",
-    "password": "",
-    "from": ""
-  },
-  "api": {
+  "mirror": {
     "enabled": true,
-    "cors": true
+    "categories": ["*"],
+    "max_size_gb": 100
+  },
+  "storage": {
+    "kv_type": "pebble",
+    "search_type": "bleve"
   },
   "i18n": {
     "default_lang": "zh-CN",
