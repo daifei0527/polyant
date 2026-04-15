@@ -85,12 +85,12 @@ func TestStatsHandler_GetContributionStatsHandler(t *testing.T) {
 		pubKeyB64 := base64.StdEncoding.EncodeToString(pubKey)
 
 		user := &model.User{
-			PublicKey:     pubKeyB64,
-			AgentName:     "contributor-" + string(rune('a'+i)),
-			UserLevel:     model.UserLevelLv1,
-			Status:        model.UserStatusActive,
+			PublicKey:       pubKeyB64,
+			AgentName:       "contributor-" + string(rune('a'+i)),
+			UserLevel:       model.UserLevelLv1,
+			Status:          model.UserStatusActive,
 			ContributionCnt: int32((i + 1) * 10),
-			RatingCnt:     int32((i + 1) * 5),
+			RatingCnt:       int32((i + 1) * 5),
 		}
 		store.User.Create(context.Background(), user)
 	}

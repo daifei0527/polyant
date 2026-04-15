@@ -923,14 +923,14 @@ func TestCodecEncodeWithLargePayload(t *testing.T) {
 
 // mockHandler 实现 protocol.Handler 接口用于测试
 type mockHandler struct {
-	handshakeFunc    func(ctx context.Context, h *protocol.Handshake) (*protocol.HandshakeAck, error)
-	queryFunc        func(ctx context.Context, q *protocol.Query) (*protocol.QueryResult, error)
-	syncRequestFunc  func(ctx context.Context, r *protocol.SyncRequest) (*protocol.SyncResponse, error)
+	handshakeFunc     func(ctx context.Context, h *protocol.Handshake) (*protocol.HandshakeAck, error)
+	queryFunc         func(ctx context.Context, q *protocol.Query) (*protocol.QueryResult, error)
+	syncRequestFunc   func(ctx context.Context, r *protocol.SyncRequest) (*protocol.SyncResponse, error)
 	mirrorRequestFunc func(ctx context.Context, r *protocol.MirrorRequest) (<-chan *protocol.MirrorData, error)
-	pushEntryFunc    func(ctx context.Context, e *protocol.PushEntry) (*protocol.PushAck, error)
-	ratingPushFunc   func(ctx context.Context, r *protocol.RatingPush) (*protocol.RatingAck, error)
-	heartbeatFunc    func(ctx context.Context, h *protocol.Heartbeat) error
-	bitfieldFunc     func(ctx context.Context, b *protocol.Bitfield) error
+	pushEntryFunc     func(ctx context.Context, e *protocol.PushEntry) (*protocol.PushAck, error)
+	ratingPushFunc    func(ctx context.Context, r *protocol.RatingPush) (*protocol.RatingAck, error)
+	heartbeatFunc     func(ctx context.Context, h *protocol.Heartbeat) error
+	bitfieldFunc      func(ctx context.Context, b *protocol.Bitfield) error
 }
 
 func (m *mockHandler) HandleHandshake(ctx context.Context, h *protocol.Handshake) (*protocol.HandshakeAck, error) {
@@ -1216,8 +1216,8 @@ func TestProtocolHandlerMirrorRequest(t *testing.T) {
 		mirrorRequestFunc: func(ctx context.Context, r *protocol.MirrorRequest) (<-chan *protocol.MirrorData, error) {
 			ch := make(chan *protocol.MirrorData, 1)
 			ch <- &protocol.MirrorData{
-				RequestID:   r.RequestID,
-				BatchIndex:  0,
+				RequestID:    r.RequestID,
+				BatchIndex:   0,
 				TotalBatches: 1,
 			}
 			close(ch)
@@ -1239,19 +1239,21 @@ type mockStream struct {
 	w *bytes.Buffer
 }
 
-func (m *mockStream) Read(b []byte) (n int, err error)  { return m.r.Read(b) }
-func (m *mockStream) Write(b []byte) (n int, err error) { return m.w.Write(b) }
-func (m *mockStream) Close() error                      { return nil }
-func (m *mockStream) Reset() error                      { return nil }
-func (m *mockStream) SetDeadline(t time.Time) error     { return nil }
-func (m *mockStream) SetReadDeadline(t time.Time) error { return nil }
+func (m *mockStream) Read(b []byte) (n int, err error)   { return m.r.Read(b) }
+func (m *mockStream) Write(b []byte) (n int, err error)  { return m.w.Write(b) }
+func (m *mockStream) Close() error                       { return nil }
+func (m *mockStream) Reset() error                       { return nil }
+func (m *mockStream) SetDeadline(t time.Time) error      { return nil }
+func (m *mockStream) SetReadDeadline(t time.Time) error  { return nil }
 func (m *mockStream) SetWriteDeadline(t time.Time) error { return nil }
-func (m *mockStream) ID() string                        { return "mock-stream" }
-func (m *mockStream) Protocol() libp2p_protocol.ID      { return libp2p_protocol.ID(protocol.AWSPProtocolID) }
-func (m *mockStream) SetProtocol(p libp2p_protocol.ID)  {}
-func (m *mockStream) Conn() network.Conn                { return nil }
-func (m *mockStream) Scope() network.StreamScope        { return nil }
-func (m *mockStream) Stat() network.Stats               { return network.Stats{} }
+func (m *mockStream) ID() string                         { return "mock-stream" }
+func (m *mockStream) Protocol() libp2p_protocol.ID {
+	return libp2p_protocol.ID(protocol.AWSPProtocolID)
+}
+func (m *mockStream) SetProtocol(p libp2p_protocol.ID) {}
+func (m *mockStream) Conn() network.Conn               { return nil }
+func (m *mockStream) Scope() network.StreamScope       { return nil }
+func (m *mockStream) Stat() network.Stats              { return network.Stats{} }
 
 // TestProcessMessageHandshake 测试处理握手消息
 func TestProcessMessageHandshake(t *testing.T) {

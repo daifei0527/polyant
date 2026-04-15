@@ -95,9 +95,9 @@ func TestVersionVectorDiff(t *testing.T) {
 	vv1["entry-2"] = 3
 
 	vv2 := make(sync.VersionVector)
-	vv2["entry-1"] = 7  // 比 vv1 新
-	vv2["entry-2"] = 3  // 相同
-	vv2["entry-3"] = 2  // vv1 没有
+	vv2["entry-1"] = 7 // 比 vv1 新
+	vv2["entry-2"] = 3 // 相同
+	vv2["entry-3"] = 2 // vv1 没有
 
 	// vv2 相比 vv1 的新条目
 	diff := vv1.Diff(vv2)
@@ -875,9 +875,9 @@ func TestCategoryMatches(t *testing.T) {
 
 	// 测试分类过滤
 	req := &protocol.SyncRequest{
-		RequestID:         "test-1",
-		LastSyncTimestamp: 0,
-		VersionVector:     map[string]int64{},
+		RequestID:           "test-1",
+		LastSyncTimestamp:   0,
+		VersionVector:       map[string]int64{},
 		RequestedCategories: []string{"tech"},
 	}
 
@@ -954,9 +954,9 @@ func TestCategoryMatchesPrefix(t *testing.T) {
 
 	// 使用前缀过滤
 	req := &protocol.SyncRequest{
-		RequestID:         "test-1",
-		LastSyncTimestamp: 0,
-		VersionVector:     map[string]int64{},
+		RequestID:           "test-1",
+		LastSyncTimestamp:   0,
+		VersionVector:       map[string]int64{},
 		RequestedCategories: []string{"tech/programming"},
 	}
 
@@ -1091,8 +1091,8 @@ func TestHandleSyncRequestWithVersionFilter(t *testing.T) {
 
 	// 客户端已有版本 5
 	req := &protocol.SyncRequest{
-		RequestID: "test-1",
-		VersionVector: map[string]int64{"entry-1": 5},
+		RequestID:         "test-1",
+		VersionVector:     map[string]int64{"entry-1": 5},
 		LastSyncTimestamp: now + 1000, // 设置较新的时间戳
 	}
 
@@ -1127,8 +1127,8 @@ func TestHandleSyncRequestWithDeletedEntries(t *testing.T) {
 	engine := sync.NewSyncEngine(nil, nil, store, cfg)
 
 	req := &protocol.SyncRequest{
-		RequestID: "test-1",
-		VersionVector: map[string]int64{},
+		RequestID:         "test-1",
+		VersionVector:     map[string]int64{},
 		LastSyncTimestamp: 0,
 	}
 
@@ -1651,11 +1651,11 @@ func TestHandleRatingPush_Valid(t *testing.T) {
 	engine := sync.NewSyncEngine(nil, nil, store, cfg)
 
 	rating := &model.Rating{
-		ID:           "rating-1",
-		EntryId:      "entry-1",
-		RaterPubkey:  "user-pubkey",
-		Score:        5,
-		RatedAt:      time.Now().UnixMilli(),
+		ID:          "rating-1",
+		EntryId:     "entry-1",
+		RaterPubkey: "user-pubkey",
+		Score:       5,
+		RatedAt:     time.Now().UnixMilli(),
 	}
 	ratingData, _ := rating.ToJSON()
 
@@ -1681,11 +1681,11 @@ func TestHandleRatingPush_Duplicate(t *testing.T) {
 	engine := sync.NewSyncEngine(nil, nil, store, cfg)
 
 	rating := &model.Rating{
-		ID:           "rating-1",
-		EntryId:      "entry-1",
-		RaterPubkey:  "user-pubkey",
-		Score:        5,
-		RatedAt:      time.Now().UnixMilli(),
+		ID:          "rating-1",
+		EntryId:     "entry-1",
+		RaterPubkey: "user-pubkey",
+		Score:       5,
+		RatedAt:     time.Now().UnixMilli(),
 	}
 	ratingData, _ := rating.ToJSON()
 
@@ -2030,9 +2030,9 @@ func TestCategoryMatchesExactMatch(t *testing.T) {
 	engine := sync.NewSyncEngine(nil, nil, store, cfg)
 
 	req := &protocol.SyncRequest{
-		RequestID: "test-1",
-		VersionVector: map[string]int64{},
-		LastSyncTimestamp: 0,
+		RequestID:           "test-1",
+		VersionVector:       map[string]int64{},
+		LastSyncTimestamp:   0,
 		RequestedCategories: []string{"tech"}, // 精确匹配
 	}
 
@@ -2065,9 +2065,9 @@ func TestCategoryMatchesNoMatch(t *testing.T) {
 	engine := sync.NewSyncEngine(nil, nil, store, cfg)
 
 	req := &protocol.SyncRequest{
-		RequestID: "test-1",
-		VersionVector: map[string]int64{},
-		LastSyncTimestamp: 0,
+		RequestID:           "test-1",
+		VersionVector:       map[string]int64{},
+		LastSyncTimestamp:   0,
 		RequestedCategories: []string{"tech"}, // 不匹配
 	}
 
@@ -2321,8 +2321,8 @@ func TestHandleSyncRequest_UpdatedEntries(t *testing.T) {
 
 	// 客户端时间戳为 0，版本向量为空
 	req := &protocol.SyncRequest{
-		RequestID: "test-1",
-		VersionVector: map[string]int64{},
+		RequestID:         "test-1",
+		VersionVector:     map[string]int64{},
 		LastSyncTimestamp: 0,
 	}
 
@@ -2353,8 +2353,8 @@ func TestHandleSyncRequest_ServerVersionVector(t *testing.T) {
 	})
 
 	req := &protocol.SyncRequest{
-		RequestID: "test-1",
-		VersionVector: map[string]int64{},
+		RequestID:         "test-1",
+		VersionVector:     map[string]int64{},
 		LastSyncTimestamp: 0,
 	}
 
@@ -2617,8 +2617,8 @@ func TestHandleSyncRequest_NilVersionVector(t *testing.T) {
 	engine := sync.NewSyncEngine(nil, nil, store, cfg)
 
 	req := &protocol.SyncRequest{
-		RequestID: "test-1",
-		VersionVector: nil,
+		RequestID:         "test-1",
+		VersionVector:     nil,
 		LastSyncTimestamp: 0,
 	}
 
@@ -2658,8 +2658,8 @@ func TestHandleSyncRequest_WithMirrorCategories(t *testing.T) {
 
 	// 请求不指定分类，应使用服务器配置
 	req := &protocol.SyncRequest{
-		RequestID: "test-1",
-		VersionVector: map[string]int64{},
+		RequestID:         "test-1",
+		VersionVector:     map[string]int64{},
 		LastSyncTimestamp: 0,
 	}
 
@@ -2942,8 +2942,8 @@ func TestHandleSyncRequest_EntryUpdate(t *testing.T) {
 
 	// 客户端已有版本 1
 	req := &protocol.SyncRequest{
-		RequestID: "test-1",
-		VersionVector: map[string]int64{"entry-1": 1},
+		RequestID:         "test-1",
+		VersionVector:     map[string]int64{"entry-1": 1},
 		LastSyncTimestamp: 0,
 	}
 
@@ -2982,8 +2982,8 @@ func TestHandleSyncRequest_EntryAlreadySynced(t *testing.T) {
 
 	// 客户端已有最新版本
 	req := &protocol.SyncRequest{
-		RequestID: "test-1",
-		VersionVector: map[string]int64{"entry-1": 1},
+		RequestID:         "test-1",
+		VersionVector:     map[string]int64{"entry-1": 1},
 		LastSyncTimestamp: now + 1000, // 时间戳更新
 	}
 

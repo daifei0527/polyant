@@ -6,13 +6,14 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/daifei0527/polyant/pkg/config"
+	dht "github.com/libp2p/go-libp2p-kad-dht"
 	"github.com/libp2p/go-libp2p/core/host"
 	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/libp2p/go-libp2p/core/routing"
-	dht "github.com/libp2p/go-libp2p-kad-dht"
 	"github.com/multiformats/go-multiaddr"
 	"go.uber.org/zap"
+
+	"github.com/daifei0527/polyant/pkg/config"
 )
 
 // DHTNode DHT 路由节点
@@ -50,7 +51,7 @@ func (d *DHTNode) Bootstrap(ctx context.Context) error {
 	// 如果配置了种子节点，使用配置的，否则使用默认
 	peers := dht.GetDefaultBootstrapPeerAddrInfos()
 	// 将配置的添加进去
-	if d.cfg.Network.SeedNodes != nil && len(d.cfg.Network.SeedNodes) > 0 {
+	if len(d.cfg.Network.SeedNodes) > 0 {
 		for _, addrInfoStr := range d.cfg.Network.SeedNodes {
 			// 解析 multiaddr 字符串
 			maddr, err := multiaddr.NewMultiaddr(addrInfoStr)

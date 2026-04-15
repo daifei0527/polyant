@@ -25,7 +25,7 @@ func NewAdminHandler(store *storage.Store) *AdminHandler {
 
 // BanUserRequest 封禁用户请求
 type BanUserRequest struct {
-	Reason  string         `json:"reason"`
+	Reason  string        `json:"reason"`
 	BanType model.BanType `json:"ban_type"` // full 或 readonly
 }
 

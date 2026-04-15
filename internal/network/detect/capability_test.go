@@ -172,9 +172,9 @@ func TestNATTypeString(t *testing.T) {
 
 func TestNetworkCapability_RecommendedMode(t *testing.T) {
 	tests := []struct {
-		name           string
-		canBeReached   bool
-		expectedMode   string
+		name         string
+		canBeReached bool
+		expectedMode string
 	}{
 		{
 			name:         "reachable becomes service",

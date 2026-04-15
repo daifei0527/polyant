@@ -30,13 +30,13 @@ import (
 )
 
 var (
-	configFile = flag.String("config", "", "Configuration file path (JSON)")
-	domain     = flag.String("domain", "", "Domain name (required)")
-	tlsCert    = flag.String("tls-cert", "", "TLS certificate path")
-	tlsKey     = flag.String("tls-key", "", "TLS key path")
-	p2pPort    = flag.Int("p2p-port", 9000, "P2P listen port")
-	apiPort    = flag.Int("api-port", 8080, "API service port")
-	dataDir    = flag.String("data-dir", "./data/seed", "Data directory")
+	configFile  = flag.String("config", "", "Configuration file path (JSON)")
+	domain      = flag.String("domain", "", "Domain name (required)")
+	tlsCert     = flag.String("tls-cert", "", "TLS certificate path")
+	tlsKey      = flag.String("tls-key", "", "TLS key path")
+	p2pPort     = flag.Int("p2p-port", 9000, "P2P listen port")
+	apiPort     = flag.Int("api-port", 8080, "API service port")
+	dataDir     = flag.String("data-dir", "./data/seed", "Data directory")
 	showVersion = flag.Bool("version", false, "Show version info")
 )
 
@@ -271,18 +271,18 @@ func (app *SeedApp) Start() error {
 
 	// 创建 P2P Host 配置 - 种子节点启用中继服务
 	hostCfg := &host.HostConfig{
-		ListenAddrs:    []string{listenAddr},
-		SeedPeers:      app.config.Seed.BootstrapPeers,
-		EnableDHT:      true, // 种子节点必须启用 DHT
-		EnableMDNS:     false, // 种子节点不需要 mDNS
-		EnableNAT:      false, // 种子节点有公网 IP，不需要 NAT 映射
-		EnableRelay:    true,
-		EnableAutoRelay: false, // 种子节点不需要自动中继
-		RelayService:   true,  // 种子节点提供中继服务
-		EnableWebSocket: true, // 启用 WebSocket 传输
-		EnableQUIC:     true,
+		ListenAddrs:        []string{listenAddr},
+		SeedPeers:          app.config.Seed.BootstrapPeers,
+		EnableDHT:          true,  // 种子节点必须启用 DHT
+		EnableMDNS:         false, // 种子节点不需要 mDNS
+		EnableNAT:          false, // 种子节点有公网 IP，不需要 NAT 映射
+		EnableRelay:        true,
+		EnableAutoRelay:    false, // 种子节点不需要自动中继
+		RelayService:       true,  // 种子节点提供中继服务
+		EnableWebSocket:    true,  // 启用 WebSocket 传输
+		EnableQUIC:         true,
 		EnableHolePunching: false, // 种子节点不需要打洞
-		PrivateKey:     nil,
+		PrivateKey:         nil,
 	}
 
 	// 创建 P2P Host

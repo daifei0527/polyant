@@ -118,6 +118,7 @@ func detectPublicIP() string {
 //  1. 许多 NAT/防火墙允许内部回环连接
 //  2. 真正的外部可达性需要从外部网络测试
 //  3. 结果可能产生假阳性（本机能连但外部不能）
+//
 // 生产环境应考虑使用外部可达性检测服务。
 func (d *Detector) testPortReachability(publicIP string) bool {
 	// 1. 监听临时端口

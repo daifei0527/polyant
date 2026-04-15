@@ -63,12 +63,12 @@ func TestImporter_ConflictSkip(t *testing.T) {
 
 	// 预先创建条目
 	existing := &model.KnowledgeEntry{
-		ID:        "entry-1",
-		Title:     "Existing",
-		Content:   "Old Content",
-		Category:  "test",
-		Status:    "published",
-		Version:   1,
+		ID:       "entry-1",
+		Title:    "Existing",
+		Content:  "Old Content",
+		Category: "test",
+		Status:   "published",
+		Version:  1,
 	}
 	store.Entry.Create(nil, existing)
 
@@ -108,12 +108,12 @@ func TestImporter_ConflictOverwrite(t *testing.T) {
 	store := newTestStore(t)
 
 	existing := &model.KnowledgeEntry{
-		ID:        "entry-1",
-		Title:     "Existing",
-		Content:   "Old",
-		Category:  "test",
-		Status:    "published",
-		Version:   1,
+		ID:       "entry-1",
+		Title:    "Existing",
+		Content:  "Old",
+		Category: "test",
+		Status:   "published",
+		Version:  1,
 	}
 	store.Entry.Create(nil, existing)
 
@@ -152,12 +152,12 @@ func TestImporter_ConflictMerge(t *testing.T) {
 
 	// 现有条目版本较高
 	existing := &model.KnowledgeEntry{
-		ID:        "entry-1",
-		Title:     "Existing",
-		Content:   "Old",
-		Category:  "test",
-		Status:    "published",
-		Version:   5,
+		ID:       "entry-1",
+		Title:    "Existing",
+		Content:  "Old",
+		Category: "test",
+		Status:   "published",
+		Version:  5,
 	}
 	store.Entry.Create(nil, existing)
 
@@ -294,11 +294,11 @@ func TestImporter_ImportRatings(t *testing.T) {
 
 	// 创建条目供评分关联
 	entry := &model.KnowledgeEntry{
-		ID:        "entry-1",
-		Title:     "Test",
-		Content:   "Content",
-		Category:  "test",
-		Status:    "published",
+		ID:       "entry-1",
+		Title:    "Test",
+		Content:  "Content",
+		Category: "test",
+		Status:   "published",
 	}
 	store.Entry.Create(nil, entry)
 
@@ -585,11 +585,11 @@ func TestImporter_ImportRatings_ExistingRating_Skip(t *testing.T) {
 
 	// 创建条目
 	entry := &model.KnowledgeEntry{
-		ID:        "entry-1",
-		Title:     "Test",
-		Content:   "Content",
-		Category:  "test",
-		Status:    "published",
+		ID:       "entry-1",
+		Title:    "Test",
+		Content:  "Content",
+		Category: "test",
+		Status:   "published",
 	}
 	store.Entry.Create(nil, entry)
 
@@ -634,11 +634,11 @@ func TestImporter_ImportRatings_ExistingRating_Overwrite(t *testing.T) {
 	store := newTestStore(t)
 
 	entry := &model.KnowledgeEntry{
-		ID:        "entry-1",
-		Title:     "Test",
-		Content:   "Content",
-		Category:  "test",
-		Status:    "published",
+		ID:       "entry-1",
+		Title:    "Test",
+		Content:  "Content",
+		Category: "test",
+		Status:   "published",
 	}
 	store.Entry.Create(nil, entry)
 
@@ -680,11 +680,11 @@ func TestImporter_ImportRatings_ExistingRating_Merge(t *testing.T) {
 	store := newTestStore(t)
 
 	entry := &model.KnowledgeEntry{
-		ID:        "entry-1",
-		Title:     "Test",
-		Content:   "Content",
-		Category:  "test",
-		Status:    "published",
+		ID:       "entry-1",
+		Title:    "Test",
+		Content:  "Content",
+		Category: "test",
+		Status:   "published",
 	}
 	store.Entry.Create(nil, entry)
 
@@ -774,12 +774,12 @@ func TestImporter_ConflictMerge_NewerVersion(t *testing.T) {
 	store := newTestStore(t)
 
 	existing := &model.KnowledgeEntry{
-		ID:        "entry-1",
-		Title:     "Old",
-		Content:   "Old Content",
-		Category:  "test",
-		Status:    "published",
-		Version:   1,
+		ID:       "entry-1",
+		Title:    "Old",
+		Content:  "Old Content",
+		Category: "test",
+		Status:   "published",
+		Version:  1,
 	}
 	store.Entry.Create(nil, existing)
 
@@ -1031,12 +1031,12 @@ func TestImporter_ConflictOverwrite_EntryUpdate(t *testing.T) {
 
 	// 预先创建条目
 	existing := &model.KnowledgeEntry{
-		ID:        "entry-1",
-		Title:     "Old Title",
-		Content:   "Old Content",
-		Category:  "test",
-		Status:    "published",
-		Version:   1,
+		ID:       "entry-1",
+		Title:    "Old Title",
+		Content:  "Old Content",
+		Category: "test",
+		Status:   "published",
+		Version:  1,
 	}
 	store.Entry.Create(nil, existing)
 

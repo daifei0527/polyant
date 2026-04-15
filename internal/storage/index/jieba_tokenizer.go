@@ -1,4 +1,5 @@
 // Package index 提供全文搜索功能
+//go:build cgo
 // +build cgo
 
 package index
@@ -13,8 +14,8 @@ import (
 
 // JiebaTokenizer 结巴分词器实现
 type JiebaTokenizer struct {
-	jieba    *gojieba.Jieba
-	mu       sync.RWMutex
+	jieba       *gojieba.Jieba
+	mu          sync.RWMutex
 	initialized bool
 }
 
@@ -27,7 +28,7 @@ var (
 // NewJiebaTokenizer 创建结巴分词器
 func NewJiebaTokenizer() *JiebaTokenizer {
 	var j *gojieba.Jieba
-	
+
 	jiebaOnce.Do(func() {
 		// 使用默认词典路径
 		j = gojieba.NewJieba()
@@ -38,7 +39,7 @@ func NewJiebaTokenizer() *JiebaTokenizer {
 			}
 		}
 	})
-	
+
 	return jiebaInstance
 }
 
@@ -47,15 +48,15 @@ func (t *JiebaTokenizer) Tokenize(text string) []string {
 	if text == "" || !t.initialized {
 		return nil
 	}
-	
+
 	t.mu.RLock()
 	defer t.mu.RUnlock()
-	
+
 	var tokens []string
-	
+
 	// 将文本按字符类型分段处理
 	segments := segmentText(text)
-	
+
 	for _, segment := range segments {
 		if isCJKSegment(segment) {
 			// 中文段：使用jieba分词
@@ -67,10 +68,10 @@ func (t *JiebaTokenizer) Tokenize(text string) []string {
 			tokens = append(tokens, engTokens...)
 		}
 	}
-	
+
 	// 过滤停用词
 	tokens = filterStopWords(tokens)
-	
+
 	return tokens
 }
 
@@ -80,17 +81,17 @@ func (t *JiebaTokenizer) tokenizeCJKWithJieba(text string) []string {
 		// 降级到bigram
 		return tokenizeCJK(text)
 	}
-	
+
 	// 使用搜索引擎模式分词，更适合搜索场景
 	words := t.jieba.CutForSearch(text, true)
-	
+
 	var tokens []string
 	for _, word := range words {
 		word = strings.TrimSpace(word)
 		if len(word) == 0 {
 			continue
 		}
-		
+
 		// 过滤纯标点
 		allPunct := true
 		for _, r := range word {
@@ -102,10 +103,10 @@ func (t *JiebaTokenizer) tokenizeCJKWithJieba(text string) []string {
 		if allPunct {
 			continue
 		}
-		
+
 		tokens = append(tokens, word)
 	}
-	
+
 	return tokens
 }
 
@@ -114,10 +115,10 @@ func (t *JiebaTokenizer) TokenizeForSearch(text string) []string {
 	if text == "" || !t.initialized || t.jieba == nil {
 		return nil
 	}
-	
+
 	t.mu.RLock()
 	defer t.mu.RUnlock()
-	
+
 	// 直接使用搜索引擎模式
 	return t.jieba.CutForSearch(text, true)
 }
@@ -127,10 +128,10 @@ func (t *JiebaTokenizer) TokenizePrecise(text string) []string {
 	if text == "" || !t.initialized || t.jieba == nil {
 		return nil
 	}
-	
+
 	t.mu.RLock()
 	defer t.mu.RUnlock()
-	
+
 	return t.jieba.Cut(text, false)
 }
 
@@ -139,10 +140,10 @@ func (t *JiebaTokenizer) TokenizeAll(text string) []string {
 	if text == "" || !t.initialized || t.jieba == nil {
 		return nil
 	}
-	
+
 	t.mu.RLock()
 	defer t.mu.RUnlock()
-	
+
 	return t.jieba.CutAll(text)
 }
 
@@ -151,10 +152,10 @@ func (t *JiebaTokenizer) Tag(text string) []string {
 	if text == "" || !t.initialized || t.jieba == nil {
 		return nil
 	}
-	
+
 	t.mu.RLock()
 	defer t.mu.RUnlock()
-	
+
 	return t.jieba.Tag(text)
 }
 
@@ -163,10 +164,10 @@ func (t *JiebaTokenizer) ExtractTags(text string, topN int) []string {
 	if text == "" || !t.initialized || t.jieba == nil {
 		return nil
 	}
-	
+
 	t.mu.RLock()
 	defer t.mu.RUnlock()
-	
+
 	return t.jieba.Extract(text, topN)
 }
 
@@ -174,7 +175,7 @@ func (t *JiebaTokenizer) ExtractTags(text string, topN int) []string {
 func (t *JiebaTokenizer) Close() {
 	t.mu.Lock()
 	defer t.mu.Unlock()
-	
+
 	if t.jieba != nil {
 		t.jieba.Free()
 		t.jieba = nil

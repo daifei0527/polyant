@@ -160,15 +160,15 @@ func (cs *CategoryStore) InitBuiltinCategories() error {
 
 	for _, bc := range builtinCategories {
 		cat := &model.Category{
-			ID:          bc.path,
-			Path:        bc.path,
-			Name:        bc.name,
-			ParentId:    bc.parentId,
-			Level:       bc.level,
-			SortOrder:   bc.sortOrder,
-			IsBuiltin:   true,
+			ID:           bc.path,
+			Path:         bc.path,
+			Name:         bc.name,
+			ParentId:     bc.parentId,
+			Level:        bc.level,
+			SortOrder:    bc.sortOrder,
+			IsBuiltin:    true,
 			MaintainedBy: "",
-			CreatedAt:   now,
+			CreatedAt:    now,
 		}
 
 		// 如果分类已存在则跳过

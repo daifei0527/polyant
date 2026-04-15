@@ -30,8 +30,8 @@ const (
 type AWError struct {
 	Code       int           `json:"code"`
 	Category   ErrorCategory `json:"-"`
-	Message    string        `json:"message"`      // 默认英文消息
-	I18nCode   string        `json:"i18n_code"`    // i18n 消息码
+	Message    string        `json:"message"`   // 默认英文消息
+	I18nCode   string        `json:"i18n_code"` // i18n 消息码
 	HTTPStatus int           `json:"-"`
 	Cause      error         `json:"-"`
 	Retryable  bool          `json:"-"`
@@ -106,9 +106,9 @@ var (
 	ErrRateLimited = NewWithI18n(2, CategorySystem, "common.internal_error", "rate limited", 429)
 
 	// API错误 (1xxxx)
-	ErrInvalidParams    = NewWithI18n(100, CategoryAPI, "common.invalid_params", "invalid params", 400)
-	ErrJSONParse        = NewWithI18n(102, CategoryAPI, "common.invalid_params", "json parse failed", 400)
-	ErrScoreOutOfRange  = NewWithI18n(103, CategoryAPI, "common.invalid_params", "score must be between 1.0 and 5.0", 400)
+	ErrInvalidParams   = NewWithI18n(100, CategoryAPI, "common.invalid_params", "invalid params", 400)
+	ErrJSONParse       = NewWithI18n(102, CategoryAPI, "common.invalid_params", "json parse failed", 400)
+	ErrScoreOutOfRange = NewWithI18n(103, CategoryAPI, "common.invalid_params", "score must be between 1.0 and 5.0", 400)
 
 	// 认证错误 (2xxxx)
 	ErrMissingAuth      = NewWithI18n(200, CategoryAuth, "api.auth.missing", "missing auth info", 401)

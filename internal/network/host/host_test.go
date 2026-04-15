@@ -201,13 +201,13 @@ func TestNewHostAsRelayServer(t *testing.T) {
 	defer cancel()
 
 	cfg := &HostConfig{
-		ListenAddrs:   []string{"/ip4/127.0.0.1/tcp/0"},
-		RelayService:  true,
-		EnableDHT:     false,
-		EnableMDNS:    false,
-		EnableNAT:     false,
-		EnableRelay:   true,
-		EnableWebSocket: false,
+		ListenAddrs:        []string{"/ip4/127.0.0.1/tcp/0"},
+		RelayService:       true,
+		EnableDHT:          false,
+		EnableMDNS:         false,
+		EnableNAT:          false,
+		EnableRelay:        true,
+		EnableWebSocket:    false,
 		EnableHolePunching: false,
 	}
 

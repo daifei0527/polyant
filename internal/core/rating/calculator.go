@@ -6,9 +6,9 @@ import (
 	"sync"
 	"time"
 
+	"github.com/daifei0527/polyant/internal/core/user"
 	"github.com/daifei0527/polyant/internal/storage"
 	"github.com/daifei0527/polyant/internal/storage/model"
-	"github.com/daifei0527/polyant/internal/core/user"
 )
 
 var (
@@ -37,8 +37,8 @@ func GetLevelWeight(level int32) float64 {
 }
 
 type RatingCalculator struct {
-	store  *storage.Store
-	mu     sync.RWMutex
+	store *storage.Store
+	mu    sync.RWMutex
 }
 
 func NewRatingCalculator(store *storage.Store) *RatingCalculator {
@@ -122,12 +122,12 @@ func (rc *RatingCalculator) RecalculateEntryScore(ctx context.Context, entryID s
 func (rc *RatingCalculator) GetUserRatings(ctx context.Context, publicKey string) ([]*model.Rating, error) {
 	raterHash := user.HashPublicKey(publicKey)
 	allRatings := make([]*model.Rating, 0)
-	
+
 	entries, _, err := rc.store.Entry.List(ctx, storage.EntryFilter{Limit: 10000})
 	if err != nil {
 		return nil, err
 	}
-	
+
 	for _, entry := range entries {
 		ratings, err := rc.store.Rating.ListByEntry(ctx, entry.ID)
 		if err != nil {
@@ -139,7 +139,7 @@ func (rc *RatingCalculator) GetUserRatings(ctx context.Context, publicKey string
 			}
 		}
 	}
-	
+
 	return allRatings, nil
 }
 

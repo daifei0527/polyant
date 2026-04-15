@@ -232,10 +232,10 @@ func TestEntryHandler_CreateEntryHandler_InsufficientPermission(t *testing.T) {
 
 	// Lv0 user cannot create entries
 	user := &model.User{
-		PublicKey:     "test-key",
-		AgentName:     "test-user",
-		UserLevel:     model.UserLevelLv0,
-		Status:        model.UserStatusActive,
+		PublicKey: "test-key",
+		AgentName: "test-user",
+		UserLevel: model.UserLevelLv0,
+		Status:    model.UserStatusActive,
 	}
 
 	body := `{"title": "Test", "content": "Content", "category": "test"}`
@@ -258,11 +258,11 @@ func TestEntryHandler_GetEntryHandler(t *testing.T) {
 
 	// Create test entry
 	entry := &model.KnowledgeEntry{
-		ID:        "test-entry-1",
-		Title:     "Test Entry",
-		Content:   "Content",
-		Category:  "test",
-		Status:    model.EntryStatusPublished,
+		ID:       "test-entry-1",
+		Title:    "Test Entry",
+		Content:  "Content",
+		Category: "test",
+		Status:   model.EntryStatusPublished,
 	}
 	_, _ = store.Entry.Create(context.Background(), entry)
 
@@ -309,12 +309,12 @@ func TestEntryHandler_SearchHandler(t *testing.T) {
 	// Create test entries
 	for i := 0; i < 5; i++ {
 		entry := &model.KnowledgeEntry{
-			ID:        string(rune('a' + i)),
-			Title:     "Go Programming Tutorial",
-			Content:   "Learn Go programming language",
-			Category:  "programming",
-			Status:    model.EntryStatusPublished,
-			Score:     float64(5 - i),
+			ID:       string(rune('a' + i)),
+			Title:    "Go Programming Tutorial",
+			Content:  "Learn Go programming language",
+			Category: "programming",
+			Status:   model.EntryStatusPublished,
+			Score:    float64(5 - i),
 		}
 		_, _ = store.Entry.Create(context.Background(), entry)
 		_ = store.Search.IndexEntry(entry)
@@ -371,10 +371,10 @@ func TestEntryHandler_DeleteEntryHandler(t *testing.T) {
 	pubKeyB64 := base64.StdEncoding.EncodeToString(pubKey)
 
 	user := &model.User{
-		PublicKey:     pubKeyB64,
-		AgentName:     "test-user",
-		UserLevel:     model.UserLevelLv1,
-		Status:        model.UserStatusActive,
+		PublicKey: pubKeyB64,
+		AgentName: "test-user",
+		UserLevel: model.UserLevelLv1,
+		Status:    model.UserStatusActive,
 	}
 
 	entry := &model.KnowledgeEntry{
@@ -451,10 +451,10 @@ func TestUserHandler_SendVerificationCodeHandler(t *testing.T) {
 	pubKeyB64 := base64.StdEncoding.EncodeToString(pubKey)
 
 	user := &model.User{
-		PublicKey:     pubKeyB64,
-		AgentName:     "test-user",
-		UserLevel:     model.UserLevelLv1,
-		Status:        model.UserStatusActive,
+		PublicKey: pubKeyB64,
+		AgentName: "test-user",
+		UserLevel: model.UserLevelLv1,
+		Status:    model.UserStatusActive,
 	}
 
 	body := `{"email": "test@example.com"}`
@@ -490,10 +490,10 @@ func TestUserHandler_SendVerificationCodeHandler_InvalidEmail(t *testing.T) {
 	handler, _ := newTestUserHandler(t)
 
 	user := &model.User{
-		PublicKey:     "test-key",
-		AgentName:     "test-user",
-		UserLevel:     model.UserLevelLv1,
-		Status:        model.UserStatusActive,
+		PublicKey: "test-key",
+		AgentName: "test-user",
+		UserLevel: model.UserLevelLv1,
+		Status:    model.UserStatusActive,
 	}
 
 	body := `{"email": "invalid-email"}`
@@ -520,10 +520,10 @@ func TestUserHandler_VerifyEmailHandler(t *testing.T) {
 	pubKeyHashStr := hex.EncodeToString(pubKeyHash[:])
 
 	user := &model.User{
-		PublicKey:     pubKeyB64,
-		AgentName:     "test-user",
-		UserLevel:     model.UserLevelLv0,
-		Status:        model.UserStatusActive,
+		PublicKey: pubKeyB64,
+		AgentName: "test-user",
+		UserLevel: model.UserLevelLv0,
+		Status:    model.UserStatusActive,
 	}
 	store.User.Create(context.Background(), user)
 
@@ -582,10 +582,10 @@ func TestUserHandler_VerifyEmailHandler_InvalidCode(t *testing.T) {
 	handler, _ := newTestUserHandler(t)
 
 	user := &model.User{
-		PublicKey:     "test-key",
-		AgentName:     "test-user",
-		UserLevel:     model.UserLevelLv0,
-		Status:        model.UserStatusActive,
+		PublicKey: "test-key",
+		AgentName: "test-user",
+		UserLevel: model.UserLevelLv0,
+		Status:    model.UserStatusActive,
 	}
 
 	body := `{"email": "test@example.com", "code": "wrong-code"}`
@@ -610,10 +610,10 @@ func TestUserHandler_UpdateUserInfoHandler(t *testing.T) {
 	pubKeyB64 := base64.StdEncoding.EncodeToString(pubKey)
 
 	user := &model.User{
-		PublicKey:     pubKeyB64,
-		AgentName:     "old-name",
-		UserLevel:     model.UserLevelLv1,
-		Status:        model.UserStatusActive,
+		PublicKey: pubKeyB64,
+		AgentName: "old-name",
+		UserLevel: model.UserLevelLv1,
+		Status:    model.UserStatusActive,
 	}
 	store.User.Create(context.Background(), user)
 
@@ -639,19 +639,19 @@ func TestUserHandler_RateEntryHandler(t *testing.T) {
 	pubKeyB64 := base64.StdEncoding.EncodeToString(pubKey)
 
 	user := &model.User{
-		PublicKey:     pubKeyB64,
-		AgentName:     "test-user",
-		UserLevel:     model.UserLevelLv1,
-		Status:        model.UserStatusActive,
+		PublicKey: pubKeyB64,
+		AgentName: "test-user",
+		UserLevel: model.UserLevelLv1,
+		Status:    model.UserStatusActive,
 	}
 
 	// Create test entry
 	entry := &model.KnowledgeEntry{
-		ID:        "test-entry-1",
-		Title:     "Test Entry",
-		Content:   "Content",
-		Category:  "test",
-		Status:    model.EntryStatusPublished,
+		ID:       "test-entry-1",
+		Title:    "Test Entry",
+		Content:  "Content",
+		Category: "test",
+		Status:   model.EntryStatusPublished,
 	}
 	store.Entry.Create(context.Background(), entry)
 
@@ -674,18 +674,18 @@ func TestUserHandler_RateEntryHandler_ScoreOutOfRange(t *testing.T) {
 	handler, store := newTestUserHandler(t)
 
 	user := &model.User{
-		PublicKey:     "test-key",
-		AgentName:     "test-user",
-		UserLevel:     model.UserLevelLv1,
-		Status:        model.UserStatusActive,
+		PublicKey: "test-key",
+		AgentName: "test-user",
+		UserLevel: model.UserLevelLv1,
+		Status:    model.UserStatusActive,
 	}
 
 	entry := &model.KnowledgeEntry{
-		ID:        "test-entry-1",
-		Title:     "Test",
-		Content:   "Content",
-		Category:  "test",
-		Status:    model.EntryStatusPublished,
+		ID:       "test-entry-1",
+		Title:    "Test",
+		Content:  "Content",
+		Category: "test",
+		Status:   model.EntryStatusPublished,
 	}
 	store.Entry.Create(context.Background(), entry)
 
@@ -724,10 +724,10 @@ func TestUserHandler_RateEntryHandler_EntryNotFound(t *testing.T) {
 	handler, _ := newTestUserHandler(t)
 
 	user := &model.User{
-		PublicKey:     "test-key",
-		AgentName:     "test-user",
-		UserLevel:     model.UserLevelLv1,
-		Status:        model.UserStatusActive,
+		PublicKey: "test-key",
+		AgentName: "test-user",
+		UserLevel: model.UserLevelLv1,
+		Status:    model.UserStatusActive,
 	}
 
 	body := `{"score": 4.0}`
@@ -756,10 +756,10 @@ func TestEntryHandler_UpdateEntryHandler(t *testing.T) {
 	pubKeyB64 := base64.StdEncoding.EncodeToString(pubKey)
 
 	user := &model.User{
-		PublicKey:     pubKeyB64,
-		AgentName:     "test-user",
-		UserLevel:     model.UserLevelLv1,
-		Status:        model.UserStatusActive,
+		PublicKey: pubKeyB64,
+		AgentName: "test-user",
+		UserLevel: model.UserLevelLv1,
+		Status:    model.UserStatusActive,
 	}
 
 	// Create test entry
@@ -804,10 +804,10 @@ func TestEntryHandler_UpdateEntryHandler_NotOwner(t *testing.T) {
 
 	// Create test user (not the owner)
 	user := &model.User{
-		PublicKey:     "different-key",
-		AgentName:     "test-user",
-		UserLevel:     model.UserLevelLv1, // Lv1 but not owner
-		Status:        model.UserStatusActive,
+		PublicKey: "different-key",
+		AgentName: "test-user",
+		UserLevel: model.UserLevelLv1, // Lv1 but not owner
+		Status:    model.UserStatusActive,
 	}
 
 	// Create test entry owned by someone else
@@ -842,10 +842,10 @@ func TestEntryHandler_UpdateEntryHandler_Lv3CanUpdateAny(t *testing.T) {
 
 	// Lv3 user can update any entry
 	user := &model.User{
-		PublicKey:     "lv3-user-key",
-		AgentName:     "lv3-user",
-		UserLevel:     model.UserLevelLv3,
-		Status:        model.UserStatusActive,
+		PublicKey: "lv3-user-key",
+		AgentName: "lv3-user",
+		UserLevel: model.UserLevelLv3,
+		Status:    model.UserStatusActive,
 	}
 
 	entry := &model.KnowledgeEntry{
@@ -879,10 +879,10 @@ func TestEntryHandler_DeleteEntryHandler_NotOwner(t *testing.T) {
 
 	// Lv1 user who is not the owner
 	user := &model.User{
-		PublicKey:     "different-key",
-		AgentName:     "test-user",
-		UserLevel:     model.UserLevelLv1,
-		Status:        model.UserStatusActive,
+		PublicKey: "different-key",
+		AgentName: "test-user",
+		UserLevel: model.UserLevelLv1,
+		Status:    model.UserStatusActive,
 	}
 
 	entry := &model.KnowledgeEntry{
@@ -914,10 +914,10 @@ func TestEntryHandler_DeleteEntryHandler_Lv4CanDeleteAny(t *testing.T) {
 
 	// Lv4 user can delete any entry
 	user := &model.User{
-		PublicKey:     "lv4-user-key",
-		AgentName:     "lv4-user",
-		UserLevel:     model.UserLevelLv4,
-		Status:        model.UserStatusActive,
+		PublicKey: "lv4-user-key",
+		AgentName: "lv4-user",
+		UserLevel: model.UserLevelLv4,
+		Status:    model.UserStatusActive,
 	}
 
 	entry := &model.KnowledgeEntry{
@@ -949,11 +949,11 @@ func TestEntryHandler_GetBacklinksHandler(t *testing.T) {
 
 	// Create test entry
 	entry := &model.KnowledgeEntry{
-		ID:        "test-entry-1",
-		Title:     "Test Entry",
-		Content:   "Content",
-		Category:  "test",
-		Status:    model.EntryStatusPublished,
+		ID:       "test-entry-1",
+		Title:    "Test Entry",
+		Content:  "Content",
+		Category: "test",
+		Status:   model.EntryStatusPublished,
 	}
 	store.Entry.Create(context.Background(), entry)
 
@@ -977,11 +977,11 @@ func TestEntryHandler_GetOutlinksHandler(t *testing.T) {
 
 	// Create test entry with links
 	entry := &model.KnowledgeEntry{
-		ID:        "test-entry-1",
-		Title:     "Test Entry",
-		Content:   "See [[other-entry]] for more",
-		Category:  "test",
-		Status:    model.EntryStatusPublished,
+		ID:       "test-entry-1",
+		Title:    "Test Entry",
+		Content:  "See [[other-entry]] for more",
+		Category: "test",
+		Status:   model.EntryStatusPublished,
 	}
 	store.Entry.Create(context.Background(), entry)
 
@@ -1072,11 +1072,11 @@ func TestCategoryHandler_GetCategoryEntriesHandler(t *testing.T) {
 	// Create test entries
 	for i := 0; i < 3; i++ {
 		entry := &model.KnowledgeEntry{
-			ID:        fmt.Sprintf("entry-%d", i),
-			Title:     fmt.Sprintf("Entry %d", i),
-			Content:   "Content",
-			Category:  "programming",
-			Status:    model.EntryStatusPublished,
+			ID:       fmt.Sprintf("entry-%d", i),
+			Title:    fmt.Sprintf("Entry %d", i),
+			Content:  "Content",
+			Category: "programming",
+			Status:   model.EntryStatusPublished,
 		}
 		store.Entry.Create(context.Background(), entry)
 	}
@@ -1098,10 +1098,10 @@ func TestCategoryHandler_CreateCategoryHandler(t *testing.T) {
 
 	// Create test user (Lv2 can create categories)
 	user := &model.User{
-		PublicKey:     "test-key",
-		AgentName:     "test-user",
-		UserLevel:     model.UserLevelLv2,
-		Status:        model.UserStatusActive,
+		PublicKey: "test-key",
+		AgentName: "test-user",
+		UserLevel: model.UserLevelLv2,
+		Status:    model.UserStatusActive,
 	}
 
 	body := `{"path": "programming/rust", "name": "Rust"}`
@@ -1124,10 +1124,10 @@ func TestCategoryHandler_CreateCategoryHandler_InsufficientPermission(t *testing
 
 	// Lv1 user cannot create categories
 	user := &model.User{
-		PublicKey:     "test-key",
-		AgentName:     "test-user",
-		UserLevel:     model.UserLevelLv1,
-		Status:        model.UserStatusActive,
+		PublicKey: "test-key",
+		AgentName: "test-user",
+		UserLevel: model.UserLevelLv1,
+		Status:    model.UserStatusActive,
 	}
 
 	body := `{"path": "test", "name": "Test"}`

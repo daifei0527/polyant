@@ -97,8 +97,8 @@ func TestGetActionType(t *testing.T) {
 		{"POST", "/api/v1/admin/users/user-pk/unban", "admin.user_unban"},
 		{"PUT", "/api/v1/admin/users/user-pk/level", "admin.user_level"},
 		{"GET", "/api/v1/admin/export", "admin.export"},
-		{"GET", "/api/v1/search", ""},           // 非敏感操作
-		{"GET", "/api/v1/entry/entry-123", ""},  // 非敏感操作
+		{"GET", "/api/v1/search", ""},          // 非敏感操作
+		{"GET", "/api/v1/entry/entry-123", ""}, // 非敏感操作
 	}
 
 	for _, tt := range tests {

@@ -11,9 +11,9 @@ import (
 )
 
 type Program struct {
-	Config   *config.Config
-	StartFn  func() error
-	StopFn   func() error
+	Config  *config.Config
+	StartFn func() error
+	StopFn  func() error
 }
 
 func (p *Program) Start(s service.Service) error {

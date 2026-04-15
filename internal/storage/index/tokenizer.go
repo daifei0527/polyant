@@ -58,7 +58,7 @@ func NewTokenizerManager(ttype TokenizerType) *TokenizerManager {
 	tm := &TokenizerManager{
 		ttype: ttype,
 	}
-	
+
 	switch ttype {
 	case TokenizerJieba:
 		// 尝试初始化jieba分词器
@@ -73,7 +73,7 @@ func NewTokenizerManager(ttype TokenizerType) *TokenizerManager {
 	default:
 		tm.tokenizer = NewSimpleTokenizer()
 	}
-	
+
 	return tm
 }
 
@@ -81,7 +81,7 @@ func NewTokenizerManager(ttype TokenizerType) *TokenizerManager {
 func (tm *TokenizerManager) Tokenize(text string) []string {
 	tm.mu.RLock()
 	defer tm.mu.RUnlock()
-	
+
 	if tm.tokenizer == nil {
 		return Tokenize(text)
 	}
@@ -92,17 +92,17 @@ func (tm *TokenizerManager) Tokenize(text string) []string {
 func (tm *TokenizerManager) SwitchTokenizer(ttype TokenizerType) bool {
 	tm.mu.Lock()
 	defer tm.mu.Unlock()
-	
+
 	// 已经是目标类型
 	if tm.ttype == ttype && tm.tokenizer != nil {
 		return true
 	}
-	
+
 	// 关闭旧分词器
 	if tm.tokenizer != nil {
 		tm.tokenizer.Close()
 	}
-	
+
 	switch ttype {
 	case TokenizerJieba:
 		jieba := NewJiebaTokenizer()
@@ -133,7 +133,7 @@ func (tm *TokenizerManager) Type() TokenizerType {
 func (tm *TokenizerManager) Close() {
 	tm.mu.Lock()
 	defer tm.mu.Unlock()
-	
+
 	if tm.tokenizer != nil {
 		tm.tokenizer.Close()
 		tm.tokenizer = nil
@@ -146,7 +146,7 @@ func (tm *TokenizerManager) Close() {
 func IsCJKText(text string) bool {
 	cjkCount := 0
 	totalCount := 0
-	
+
 	for _, r := range text {
 		if unicode.IsLetter(r) {
 			totalCount++
@@ -155,7 +155,7 @@ func IsCJKText(text string) bool {
 			}
 		}
 	}
-	
+
 	// 如果CJK字符占比超过30%，认为是中文文本
 	if totalCount == 0 {
 		return false
@@ -166,24 +166,24 @@ func IsCJKText(text string) bool {
 // ExtractKeywords 从文本中提取关键词
 func ExtractKeywords(text string, topN int) []string {
 	tokens := GlobalTokenizer.Tokenize(text)
-	
+
 	// 统计词频
 	freq := make(map[string]int)
 	for _, token := range tokens {
 		freq[token]++
 	}
-	
+
 	// 转换为切片并排序
 	type kw struct {
 		word  string
 		count int
 	}
-	
+
 	var kws []kw
 	for w, c := range freq {
 		kws = append(kws, kw{word: w, count: c})
 	}
-	
+
 	// 简单排序（实际应用中可使用TF-IDF）
 	for i := 0; i < len(kws); i++ {
 		for j := i + 1; j < len(kws); j++ {
@@ -192,13 +192,13 @@ func ExtractKeywords(text string, topN int) []string {
 			}
 		}
 	}
-	
+
 	// 返回前N个
 	result := make([]string, 0, topN)
 	for i := 0; i < len(kws) && i < topN; i++ {
 		result = append(result, kws[i].word)
 	}
-	
+
 	return result
 }
 
@@ -208,12 +208,12 @@ func HighlightMatch(text string, query string, prefix, suffix string) string {
 	if len(queryTokens) == 0 {
 		return text
 	}
-	
+
 	result := text
 	for _, token := range queryTokens {
 		// 简单替换（实际应用中可能需要更复杂的高亮逻辑）
 		result = strings.ReplaceAll(result, token, prefix+token+suffix)
 	}
-	
+
 	return result
 }

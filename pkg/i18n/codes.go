@@ -22,10 +22,10 @@ const (
 
 // API 用户相关消息码
 const (
-	CodeUserRegistered  = "api.user.registered"
-	CodeUserNotFound    = "api.user.not_found"
-	CodeUserUpdated     = "api.user.updated"
-	CodeUserInfoLoaded  = "api.user.info_loaded"
+	CodeUserRegistered = "api.user.registered"
+	CodeUserNotFound   = "api.user.not_found"
+	CodeUserUpdated    = "api.user.updated"
+	CodeUserInfoLoaded = "api.user.info_loaded"
 )
 
 // API 认证相关消息码
@@ -46,7 +46,7 @@ const (
 
 // API 搜索相关消息码
 const (
-	CodeSearchSuccess    = "api.search.success"
+	CodeSearchSuccess      = "api.search.success"
 	CodeSearchKeywordShort = "api.search.keyword_too_short"
 )
 
@@ -63,15 +63,15 @@ const (
 
 // 日志消息码
 const (
-	CodeLogServerStarted  = "log.server.started"
-	CodeLogServerStopped  = "log.server.stopped"
-	CodeLogDBConnected    = "log.db.connected"
-	CodeLogDBError        = "log.db.error"
-	CodeLogP2PConnected   = "log.p2p.connected"
-	CodeLogP2PError       = "log.p2p.error"
-	CodeLogSyncStarted    = "log.sync.started"
-	CodeLogSyncCompleted  = "log.sync.completed"
-	CodeLogSyncError      = "log.sync.error"
-	CodeLogRequestIn      = "log.request.incoming"
-	CodeLogRequestOut     = "log.request.outgoing"
+	CodeLogServerStarted = "log.server.started"
+	CodeLogServerStopped = "log.server.stopped"
+	CodeLogDBConnected   = "log.db.connected"
+	CodeLogDBError       = "log.db.error"
+	CodeLogP2PConnected  = "log.p2p.connected"
+	CodeLogP2PError      = "log.p2p.error"
+	CodeLogSyncStarted   = "log.sync.started"
+	CodeLogSyncCompleted = "log.sync.completed"
+	CodeLogSyncError     = "log.sync.error"
+	CodeLogRequestIn     = "log.request.incoming"
+	CodeLogRequestOut    = "log.request.outgoing"
 )

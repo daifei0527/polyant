@@ -193,10 +193,10 @@ func TestErrorChain(t *testing.T) {
 // TestHTTPStatusCodes 测试 HTTP 状态码分配
 func TestHTTPStatusCodes(t *testing.T) {
 	tests := []struct {
-		name   string
-		err    *awerrors.AWError
-		min    int
-		max    int
+		name string
+		err  *awerrors.AWError
+		min  int
+		max  int
 	}{
 		{"客户端错误", awerrors.ErrInvalidParams, 400, 499},
 		{"服务端错误", awerrors.ErrInternal, 500, 599},

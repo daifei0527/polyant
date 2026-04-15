@@ -18,10 +18,10 @@ import (
 type SyncState string
 
 const (
-	SyncStateIdle      SyncState = "idle"
-	SyncStateSyncing   SyncState = "syncing"
-	SyncStateError     SyncState = "error"
-	SyncStateComplete  SyncState = "complete"
+	SyncStateIdle     SyncState = "idle"
+	SyncStateSyncing  SyncState = "syncing"
+	SyncStateError    SyncState = "error"
+	SyncStateComplete SyncState = "complete"
 )
 
 type SyncConfig struct {
@@ -314,8 +314,8 @@ func (se *SyncEngine) processSyncResponse(ctx context.Context, resp *protocol.Sy
 			log.Printf("[Sync] Failed to create rating: %v", err)
 			continue
 		}
-			// 更新条目的平均分
-			se.updateEntryScore(ctx, rating.EntryId)
+		// 更新条目的平均分
+		se.updateEntryScore(ctx, rating.EntryId)
 	}
 
 	return nil

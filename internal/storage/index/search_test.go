@@ -292,9 +292,9 @@ func TestTokenizeEnglish(t *testing.T) {
 
 	// 验证提取了单词
 	expectedWords := map[string]bool{
-		"machine": false,
+		"machine":  false,
 		"learning": false,
-		"amazing": false,
+		"amazing":  false,
 	}
 
 	for _, token := range tokens {

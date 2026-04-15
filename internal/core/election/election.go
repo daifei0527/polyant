@@ -10,12 +10,12 @@ import (
 )
 
 var (
-	ErrElectionNotFound   = fmt.Errorf("选举不存在")
-	ErrElectionClosed     = fmt.Errorf("选举已关闭")
-	ErrAlreadyNominated   = fmt.Errorf("已被提名")
-	ErrAlreadyVoted       = fmt.Errorf("已投票")
-	ErrCandidateNotFound  = fmt.Errorf("候选人不存在")
-	ErrCandidateNotReady  = fmt.Errorf("候选人尚未确认接受提名")
+	ErrElectionNotFound  = fmt.Errorf("选举不存在")
+	ErrElectionClosed    = fmt.Errorf("选举已关闭")
+	ErrAlreadyNominated  = fmt.Errorf("已被提名")
+	ErrAlreadyVoted      = fmt.Errorf("已投票")
+	ErrCandidateNotFound = fmt.Errorf("候选人不存在")
+	ErrCandidateNotReady = fmt.Errorf("候选人尚未确认接受提名")
 )
 
 // VoteResult 投票结果

@@ -21,7 +21,7 @@ type VerificationCode struct {
 type VerificationManager struct {
 	mu    sync.RWMutex
 	codes map[string]*VerificationCode // code -> record
-	
+
 	// 配置
 	codeLength    int
 	codeValidity  time.Duration
@@ -36,10 +36,10 @@ func NewVerificationManager() *VerificationManager {
 		codeValidity:  30 * time.Minute,
 		cleanupPeriod: 5 * time.Minute,
 	}
-	
+
 	// 启动定期清理
 	go vm.cleanupLoop()
-	
+
 	return vm
 }
 
@@ -47,9 +47,9 @@ func NewVerificationManager() *VerificationManager {
 func (vm *VerificationManager) GenerateCode(email string) string {
 	vm.mu.Lock()
 	defer vm.mu.Unlock()
-	
+
 	code := vm.generateRandomCode()
-	
+
 	vm.codes[code] = &VerificationCode{
 		Code:      code,
 		Email:     email,
@@ -57,7 +57,7 @@ func (vm *VerificationManager) GenerateCode(email string) string {
 		ExpiresAt: time.Now().Add(vm.codeValidity),
 		Used:      false,
 	}
-	
+
 	return code
 }
 
@@ -65,31 +65,31 @@ func (vm *VerificationManager) GenerateCode(email string) string {
 func (vm *VerificationManager) Verify(code, email string) bool {
 	vm.mu.Lock()
 	defer vm.mu.Unlock()
-	
+
 	record, exists := vm.codes[code]
 	if !exists {
 		return false
 	}
-	
+
 	// 检查是否已使用
 	if record.Used {
 		return false
 	}
-	
+
 	// 检查是否过期
 	if time.Now().After(record.ExpiresAt) {
 		delete(vm.codes, code)
 		return false
 	}
-	
+
 	// 检查邮箱是否匹配
 	if record.Email != email {
 		return false
 	}
-	
+
 	// 标记为已使用
 	record.Used = true
-	
+
 	return true
 }
 
@@ -97,7 +97,7 @@ func (vm *VerificationManager) Verify(code, email string) bool {
 func (vm *VerificationManager) Invalidate(code string) {
 	vm.mu.Lock()
 	defer vm.mu.Unlock()
-	
+
 	delete(vm.codes, code)
 }
 
@@ -112,7 +112,7 @@ func (vm *VerificationManager) generateRandomCode() string {
 func (vm *VerificationManager) cleanupLoop() {
 	ticker := time.NewTicker(vm.cleanupPeriod)
 	defer ticker.Stop()
-	
+
 	for range ticker.C {
 		vm.cleanup()
 	}
@@ -122,7 +122,7 @@ func (vm *VerificationManager) cleanupLoop() {
 func (vm *VerificationManager) cleanup() {
 	vm.mu.Lock()
 	defer vm.mu.Unlock()
-	
+
 	now := time.Now()
 	for code, record := range vm.codes {
 		if now.After(record.ExpiresAt) {

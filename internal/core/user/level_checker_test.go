@@ -69,12 +69,12 @@ func TestLevelUpgradeChecker_StartStop(t *testing.T) {
 
 func TestLevelUpgradeChecker_checkUpgrade(t *testing.T) {
 	tests := []struct {
-		name           string
-		level          int32
-		contributions  int32
-		ratings        int32
-		expectedLevel  int32
-		expectUpgrade  bool
+		name          string
+		level         int32
+		contributions int32
+		ratings       int32
+		expectedLevel int32
+		expectUpgrade bool
 	}{
 		{"Lv0 no auto upgrade", model.UserLevelLv0, 100, 100, model.UserLevelLv0, false},
 		{"Lv1 meets requirements", model.UserLevelLv1, 10, 20, model.UserLevelLv2, true},

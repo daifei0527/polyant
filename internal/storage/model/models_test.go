@@ -111,9 +111,9 @@ func TestKnowledgeEntry_ComputeContentHash(t *testing.T) {
 
 	// Different content should produce different hash
 	entry3 := &KnowledgeEntry{
-		Title:    "Different Title",
-		Content:  "Content",
-		Version:  1,
+		Title:   "Different Title",
+		Content: "Content",
+		Version: 1,
 	}
 	hash3 := entry3.ComputeContentHash()
 
@@ -240,13 +240,13 @@ func TestRating_ToJSON_FromJSON(t *testing.T) {
 
 func TestCategory_ToJSON_FromJSON(t *testing.T) {
 	cat := &Category{
-		ID:          "cat-1",
-		Path:        "tech/programming",
-		Name:        "Programming",
-		ParentId:    "cat-tech",
-		Level:       2,
-		SortOrder:   1,
-		IsBuiltin:   true,
+		ID:           "cat-1",
+		Path:         "tech/programming",
+		Name:         "Programming",
+		ParentId:     "cat-tech",
+		Level:        2,
+		SortOrder:    1,
+		IsBuiltin:    true,
 		MaintainedBy: "admin",
 	}
 
@@ -314,9 +314,9 @@ func TestIsCJK(t *testing.T) {
 		{'ａ', true},  // 全角字符
 		{'ｚ', true},  // 全角字符
 		{'０', true},  // 全角数字
-		{'a', false},  // ASCII
-		{'Z', false},  // ASCII
-		{' ', false},  // Space
+		{'a', false}, // ASCII
+		{'Z', false}, // ASCII
+		{' ', false}, // Space
 		{'あ', false}, // Hiragana (不在 CJK 范围内)
 	}
 

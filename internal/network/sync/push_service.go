@@ -185,8 +185,8 @@ func (s *PushService) processPushTask(ctx context.Context, task *pushTask) {
 
 	// 构建推送消息
 	pushMsg := &protocol.PushEntry{
-		EntryID:         task.entry.ID,
-		Entry:           entryData,
+		EntryID:          task.entry.ID,
+		Entry:            entryData,
 		CreatorSignature: task.signature,
 	}
 

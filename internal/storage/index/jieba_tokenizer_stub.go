@@ -1,4 +1,5 @@
 // Package index 提供全文搜索功能
+//go:build !cgo
 // +build !cgo
 
 package index

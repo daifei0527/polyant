@@ -53,7 +53,7 @@ func TestAdminService_ListUsers_WithFilter(t *testing.T) {
 	}
 
 	// 测试搜索过滤
-	users, total, err = service.ListUsers(ctx, 0, 10, 0, "User1")
+	_, total, err = service.ListUsers(ctx, 0, 10, 0, "User1")
 	if err != nil {
 		t.Fatalf("ListUsers with search failed: %v", err)
 	}

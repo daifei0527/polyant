@@ -44,20 +44,20 @@ func TestRatingCalculator_SubmitRating(t *testing.T) {
 
 	// Create test entry
 	entry := &model.KnowledgeEntry{
-		ID:        "test-entry-1",
-		Title:     "Test Entry",
-		Content:   "Content",
-		Category:  "test",
-		Status:    model.EntryStatusPublished,
+		ID:       "test-entry-1",
+		Title:    "Test Entry",
+		Content:  "Content",
+		Category: "test",
+		Status:   model.EntryStatusPublished,
 	}
 	_, _ = store.Entry.Create(context.Background(), entry)
 
 	// Create test user
 	user := &model.User{
-		PublicKey:     "dGVzdC1wdWJsaWMta2V5",
-		AgentName:     "test-user",
-		UserLevel:     model.UserLevelLv1,
-		Status:        model.UserStatusActive,
+		PublicKey: "dGVzdC1wdWJsaWMta2V5",
+		AgentName: "test-user",
+		UserLevel: model.UserLevelLv1,
+		Status:    model.UserStatusActive,
 	}
 
 	// Test successful rating
@@ -79,9 +79,9 @@ func TestRatingCalculator_SubmitRating_ScoreOutOfRange(t *testing.T) {
 	calc := NewRatingCalculator(store)
 
 	user := &model.User{
-		PublicKey:     "test-key",
-		UserLevel:     model.UserLevelLv1,
-		Status:        model.UserStatusActive,
+		PublicKey: "test-key",
+		UserLevel: model.UserLevelLv1,
+		Status:    model.UserStatusActive,
 	}
 
 	// Test score too low
@@ -103,9 +103,9 @@ func TestRatingCalculator_SubmitRating_PermissionDenied(t *testing.T) {
 
 	// Lv0 user cannot rate
 	user := &model.User{
-		PublicKey:     "test-key",
-		UserLevel:     model.UserLevelLv0,
-		Status:        model.UserStatusActive,
+		PublicKey: "test-key",
+		UserLevel: model.UserLevelLv0,
+		Status:    model.UserStatusActive,
 	}
 
 	_, err := calc.SubmitRating(context.Background(), "entry-1", user, 4.0, "")
@@ -120,18 +120,18 @@ func TestRatingCalculator_SubmitRating_DuplicateRating(t *testing.T) {
 
 	// Create test entry
 	entry := &model.KnowledgeEntry{
-		ID:        "test-entry-1",
-		Title:     "Test",
-		Content:   "Content",
-		Category:  "test",
-		Status:    model.EntryStatusPublished,
+		ID:       "test-entry-1",
+		Title:    "Test",
+		Content:  "Content",
+		Category: "test",
+		Status:   model.EntryStatusPublished,
 	}
 	_, _ = store.Entry.Create(context.Background(), entry)
 
 	user := &model.User{
-		PublicKey:     "dGVzdC1wdWJsaWMta2V5",
-		UserLevel:     model.UserLevelLv1,
-		Status:        model.UserStatusActive,
+		PublicKey: "dGVzdC1wdWJsaWMta2V5",
+		UserLevel: model.UserLevelLv1,
+		Status:    model.UserStatusActive,
 	}
 
 	// First rating
@@ -153,11 +153,11 @@ func TestRatingCalculator_RecalculateEntryScore(t *testing.T) {
 
 	// Create test entry
 	entry := &model.KnowledgeEntry{
-		ID:        "test-entry-1",
-		Title:     "Test",
-		Content:   "Content",
-		Category:  "test",
-		Status:    model.EntryStatusPublished,
+		ID:       "test-entry-1",
+		Title:    "Test",
+		Content:  "Content",
+		Category: "test",
+		Status:   model.EntryStatusPublished,
 	}
 	_, _ = store.Entry.Create(context.Background(), entry)
 
@@ -216,11 +216,11 @@ func TestRatingCalculator_GetEntryRatings(t *testing.T) {
 
 	// Create test entry
 	entry := &model.KnowledgeEntry{
-		ID:        "test-entry-1",
-		Title:     "Test",
-		Content:   "Content",
-		Category:  "test",
-		Status:    model.EntryStatusPublished,
+		ID:       "test-entry-1",
+		Title:    "Test",
+		Content:  "Content",
+		Category: "test",
+		Status:   model.EntryStatusPublished,
 	}
 	_, _ = store.Entry.Create(context.Background(), entry)
 
@@ -253,26 +253,26 @@ func TestRatingCalculator_WeightedScore(t *testing.T) {
 
 	// Create test entry
 	entry := &model.KnowledgeEntry{
-		ID:        "test-entry-1",
-		Title:     "Test",
-		Content:   "Content",
-		Category:  "test",
-		Status:    model.EntryStatusPublished,
+		ID:       "test-entry-1",
+		Title:    "Test",
+		Content:  "Content",
+		Category: "test",
+		Status:   model.EntryStatusPublished,
 	}
 	_, _ = store.Entry.Create(context.Background(), entry)
 
 	// Lv1 user rates 5.0 (weight 1.0)
 	user1 := &model.User{
-		PublicKey:     "key1",
-		UserLevel:     model.UserLevelLv1,
-		Status:        model.UserStatusActive,
+		PublicKey: "key1",
+		UserLevel: model.UserLevelLv1,
+		Status:    model.UserStatusActive,
 	}
 
 	// Lv5 user rates 1.0 (weight 3.0)
 	user5 := &model.User{
-		PublicKey:     "key5",
-		UserLevel:     model.UserLevelLv5,
-		Status:        model.UserStatusActive,
+		PublicKey: "key5",
+		UserLevel: model.UserLevelLv5,
+		Status:    model.UserStatusActive,
 	}
 
 	_, _ = calc.SubmitRating(context.Background(), "test-entry-1", user1, 5.0, "")

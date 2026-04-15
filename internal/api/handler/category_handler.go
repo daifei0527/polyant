@@ -211,14 +211,14 @@ func (h *CategoryHandler) CreateCategoryHandler(w http.ResponseWriter, r *http.R
 
 	// 创建分类
 	category := &model.Category{
-		ID:          generateUUID(),
-		Path:        req.Path,
-		Name:        req.Name,
-		ParentId:    req.ParentID,
-		Level:       level,
-		SortOrder:   0,
-		IsBuiltin:   false,
-		CreatedAt:   time.Now().Unix(),
+		ID:        generateUUID(),
+		Path:      req.Path,
+		Name:      req.Name,
+		ParentId:  req.ParentID,
+		Level:     level,
+		SortOrder: 0,
+		IsBuiltin: false,
+		CreatedAt: time.Now().Unix(),
 	}
 
 	created, err := h.categoryStore.Create(r.Context(), category)

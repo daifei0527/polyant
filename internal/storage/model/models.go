@@ -44,22 +44,22 @@ const (
 
 // KnowledgeEntry 表示一条知识条目
 type KnowledgeEntry struct {
-	ID          string                 `json:"id"`
-	Title       string                 `json:"title"`
-	Content     string                 `json:"content"`     // Markdown格式内容
-	JSONData    []map[string]interface{} `json:"jsonData"`  // 结构化JSON数据
-	Category    string                 `json:"category"`    // 所属分类路径
-	Tags        []string               `json:"tags"`        // 标签列表
-	Version     int64                  `json:"version"`     // 版本号
-	CreatedAt   int64                  `json:"createdAt"`   // 创建时间(Unix时间戳)
-	UpdatedAt   int64                  `json:"updatedAt"`   // 更新时间
-	CreatedBy   string                 `json:"createdBy"`   // 创建者公钥
-	Score       float64                `json:"score"`       // 加权平均评分
-	ScoreCount  int32                  `json:"scoreCount"`  // 评分数量
-	ContentHash string                 `json:"contentHash"` // 内容哈希
-	Status      string                 `json:"status"`      // 条目状态
-	License     string                 `json:"license"`     // 许可证
-	SourceRef   string                 `json:"sourceRef"`   // 来源引用
+	ID          string                   `json:"id"`
+	Title       string                   `json:"title"`
+	Content     string                   `json:"content"`     // Markdown格式内容
+	JSONData    []map[string]interface{} `json:"jsonData"`    // 结构化JSON数据
+	Category    string                   `json:"category"`    // 所属分类路径
+	Tags        []string                 `json:"tags"`        // 标签列表
+	Version     int64                    `json:"version"`     // 版本号
+	CreatedAt   int64                    `json:"createdAt"`   // 创建时间(Unix时间戳)
+	UpdatedAt   int64                    `json:"updatedAt"`   // 更新时间
+	CreatedBy   string                   `json:"createdBy"`   // 创建者公钥
+	Score       float64                  `json:"score"`       // 加权平均评分
+	ScoreCount  int32                    `json:"scoreCount"`  // 评分数量
+	ContentHash string                   `json:"contentHash"` // 内容哈希
+	Status      string                   `json:"status"`      // 条目状态
+	License     string                   `json:"license"`     // 许可证
+	SourceRef   string                   `json:"sourceRef"`   // 来源引用
 	// 多语言支持
 	Lang        string            `json:"lang,omitempty"`        // 条目主语言
 	TitleI18n   map[string]string `json:"titleI18n,omitempty"`   // 多语言标题 {"zh-CN": "标题", "en-US": "Title"}
@@ -70,19 +70,19 @@ type KnowledgeEntry struct {
 func NewKnowledgeEntry(title, content, category, createdBy string) *KnowledgeEntry {
 	now := time.Now().Unix()
 	entry := &KnowledgeEntry{
-		ID:        generateID(),
-		Title:     title,
-		Content:   content,
-		Category:  category,
-		Tags:      []string{},
-		Version:   1,
-		CreatedAt: now,
-		UpdatedAt: now,
-		CreatedBy: createdBy,
-		Score:     0,
+		ID:         generateID(),
+		Title:      title,
+		Content:    content,
+		Category:   category,
+		Tags:       []string{},
+		Version:    1,
+		CreatedAt:  now,
+		UpdatedAt:  now,
+		CreatedBy:  createdBy,
+		Score:      0,
 		ScoreCount: 0,
-		Status:    EntryStatusDraft,
-		License:   "CC-BY-SA-4.0",
+		Status:     EntryStatusDraft,
+		License:    "CC-BY-SA-4.0",
 	}
 	entry.ContentHash = entry.ComputeContentHash()
 	return entry
@@ -129,18 +129,18 @@ func (e *KnowledgeEntry) GetContentByLang(lang string) string {
 
 // User 表示系统中的一个用户
 type User struct {
-	PublicKey      string `json:"publicKey"`      // 用户公钥(唯一标识)
-	AgentName      string `json:"agentName"`      // 代理名称
-	UserLevel      int32  `json:"userLevel"`      // 用户等级
-	Email          string `json:"email"`          // 电子邮箱
-	EmailVerified  bool   `json:"emailVerified"`  // 邮箱是否已验证
-	Phone          string `json:"phone"`          // 手机号码
-	RegisteredAt   int64  `json:"registeredAt"`   // 注册时间
-	LastActive     int64  `json:"lastActive"`     // 最后活跃时间
-	ContributionCnt int32 `json:"contributionCnt"` // 贡献数量
-	RatingCnt      int32  `json:"ratingCnt"`      // 评分数量
-	NodeId         string `json:"nodeId"`         // 所属节点ID
-	Status         string `json:"status"`         // 用户状态
+	PublicKey       string `json:"publicKey"`       // 用户公钥(唯一标识)
+	AgentName       string `json:"agentName"`       // 代理名称
+	UserLevel       int32  `json:"userLevel"`       // 用户等级
+	Email           string `json:"email"`           // 电子邮箱
+	EmailVerified   bool   `json:"emailVerified"`   // 邮箱是否已验证
+	Phone           string `json:"phone"`           // 手机号码
+	RegisteredAt    int64  `json:"registeredAt"`    // 注册时间
+	LastActive      int64  `json:"lastActive"`      // 最后活跃时间
+	ContributionCnt int32  `json:"contributionCnt"` // 贡献数量
+	RatingCnt       int32  `json:"ratingCnt"`       // 评分数量
+	NodeId          string `json:"nodeId"`          // 所属节点ID
+	Status          string `json:"status"`          // 用户状态
 	// 管理员相关字段
 	BanType           BanType `json:"banType,omitempty"`           // 封禁类型
 	BanReason         string  `json:"banReason,omitempty"`         // 封禁原因
@@ -197,14 +197,14 @@ type UserStats struct {
 
 // Rating 表示对知识条目的评分
 type Rating struct {
-	ID           string  `json:"id"`           // 评分唯一ID
-	EntryId      string  `json:"entryId"`      // 被评分条目ID
-	RaterPubkey  string  `json:"raterPubkey"`  // 评分者公钥
-	Score        float64 `json:"score"`        // 原始评分
-	Weight       float64 `json:"weight"`       // 评分权重(基于用户等级)
+	ID            string  `json:"id"`            // 评分唯一ID
+	EntryId       string  `json:"entryId"`       // 被评分条目ID
+	RaterPubkey   string  `json:"raterPubkey"`   // 评分者公钥
+	Score         float64 `json:"score"`         // 原始评分
+	Weight        float64 `json:"weight"`        // 评分权重(基于用户等级)
 	WeightedScore float64 `json:"weightedScore"` // 加权评分
-	RatedAt      int64   `json:"ratedAt"`      // 评分时间
-	Comment      string  `json:"comment"`      // 评分评论
+	RatedAt       int64   `json:"ratedAt"`       // 评分时间
+	Comment       string  `json:"comment"`       // 评分评论
 }
 
 // ToJSON 将评分序列化为JSON字节数组
@@ -221,15 +221,15 @@ func (r *Rating) FromJSON(data []byte) error {
 
 // Category 表示知识分类
 type Category struct {
-	ID          string `json:"id"`          // 分类唯一ID
-	Path        string `json:"path"`        // 分类路径(如 "tech/programming")
-	Name        string `json:"name"`        // 分类名称
-	ParentId    string `json:"parentId"`    // 父分类ID
-	Level       int32  `json:"level"`       // 层级深度
-	SortOrder   int32  `json:"sortOrder"`   // 排序顺序
-	IsBuiltin   bool   `json:"isBuiltin"`   // 是否为内置分类
+	ID           string `json:"id"`           // 分类唯一ID
+	Path         string `json:"path"`         // 分类路径(如 "tech/programming")
+	Name         string `json:"name"`         // 分类名称
+	ParentId     string `json:"parentId"`     // 父分类ID
+	Level        int32  `json:"level"`        // 层级深度
+	SortOrder    int32  `json:"sortOrder"`    // 排序顺序
+	IsBuiltin    bool   `json:"isBuiltin"`    // 是否为内置分类
 	MaintainedBy string `json:"maintainedBy"` // 维护者公钥
-	CreatedAt   int64  `json:"createdAt"`   // 创建时间
+	CreatedAt    int64  `json:"createdAt"`    // 创建时间
 	// 多语言支持
 	NameI18n map[string]string `json:"nameI18n,omitempty"` // 多语言名称
 	DescI18n map[string]string `json:"descI18n,omitempty"` // 多语言描述
@@ -302,10 +302,10 @@ func generateID() string {
 
 // IsCJK 判断一个字符是否为中日韩文字
 func IsCJK(r rune) bool {
-	return (r >= 0x4E00 && r <= 0x9FFF) ||   // CJK统一汉字
-		(r >= 0x3400 && r <= 0x4DBF) ||   // CJK扩展A
-		(r >= 0x3000 && r <= 0x303F) ||   // CJK标点符号
-		(r >= 0xFF00 && r <= 0xFFEF)      // 全角字符
+	return (r >= 0x4E00 && r <= 0x9FFF) || // CJK统一汉字
+		(r >= 0x3400 && r <= 0x4DBF) || // CJK扩展A
+		(r >= 0x3000 && r <= 0x303F) || // CJK标点符号
+		(r >= 0xFF00 && r <= 0xFFEF) // 全角字符
 }
 
 // ContainsCJK 判断字符串是否包含中日韩文字

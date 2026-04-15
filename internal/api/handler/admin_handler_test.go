@@ -417,7 +417,7 @@ func TestAdminHandler_ListUsersHandler_WithFilters(t *testing.T) {
 		user := &model.User{
 			PublicKey: pubKeyB64,
 			AgentName: "user-" + string(rune('a'+i)),
-			UserLevel: levels[i % 3], // Lv0, Lv1, Lv2
+			UserLevel: levels[i%3], // Lv0, Lv1, Lv2
 			Status:    model.UserStatusActive,
 		}
 		store.User.Create(context.Background(), user)

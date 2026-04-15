@@ -19,14 +19,14 @@ func TestClient_GetStatus(t *testing.T) {
 			Code:    0,
 			Message: "success",
 			Data: map[string]interface{}{
-				"version":       "v1.0.0",
+				"version":        "v1.0.0",
 				"uptime_seconds": float64(3600),
-				"node_id":       "node-123",
-				"node_type":     "seed",
-				"nat_type":      "public",
-				"peer_count":    float64(5),
-				"entry_count":   float64(100),
-				"user_count":    float64(10),
+				"node_id":        "node-123",
+				"node_type":      "seed",
+				"nat_type":       "public",
+				"peer_count":     float64(5),
+				"entry_count":    float64(100),
+				"user_count":     float64(10),
 			},
 		}
 		w.Header().Set("Content-Type", "application/json")
@@ -220,13 +220,13 @@ func TestClient_GetUser(t *testing.T) {
 			Code:    0,
 			Message: "success",
 			Data: map[string]interface{}{
-				"public_key":    "test-pubkey",
-				"agent_name":    "Test Agent",
-				"email":         "test@example.com",
-				"user_level":    float64(2),
-				"contrib_count": float64(10),
-				"rating_count":  float64(5),
-				"created_at":    float64(1700000000000),
+				"public_key":     "test-pubkey",
+				"agent_name":     "Test Agent",
+				"email":          "test@example.com",
+				"user_level":     float64(2),
+				"contrib_count":  float64(10),
+				"rating_count":   float64(5),
+				"created_at":     float64(1700000000000),
 				"last_active_at": float64(1700000000000),
 			},
 		}
@@ -358,15 +358,15 @@ func TestClient_CreateEntry(t *testing.T) {
 			Code:    0,
 			Message: "success",
 			Data: map[string]interface{}{
-				"id":         "new-entry-id",
-				"title":      "New Entry",
-				"content":    "Content here",
-				"category":   "tech",
-				"score":      float64(0),
+				"id":          "new-entry-id",
+				"title":       "New Entry",
+				"content":     "Content here",
+				"category":    "tech",
+				"score":       float64(0),
 				"score_count": float64(0),
-				"created_at": float64(1700000000000),
-				"updated_at": float64(1700000000000),
-				"created_by": "user-1",
+				"created_at":  float64(1700000000000),
+				"updated_at":  float64(1700000000000),
+				"created_by":  "user-1",
 			},
 		}
 		w.Header().Set("Content-Type", "application/json")
@@ -1096,15 +1096,15 @@ func TestMaskEmail(t *testing.T) {
 		email    string
 		expected string
 	}{
-		{"a@b.c", "a***@b.c"},       // at=1 <= 2, return email[:at] + "***" + email[at:]
-		{"ab@c.d", "ab***@c.d"},     // at=2 <= 2, return email[:at] + "***" + email[at:]
-		{"abc@d.e", "ab***@d.e"},    // at=3 > 2, return email[:2] + "***" + email[at:]
+		{"a@b.c", "a***@b.c"},    // at=1 <= 2, return email[:at] + "***" + email[at:]
+		{"ab@c.d", "ab***@c.d"},  // at=2 <= 2, return email[:at] + "***" + email[at:]
+		{"abc@d.e", "ab***@d.e"}, // at=3 > 2, return email[:2] + "***" + email[at:]
 		{"test@example.com", "te***@example.com"},
 		{"user.name@domain.org", "us***@domain.org"},
-		{"x@y", "***"},      // len=3 < 5
-		{"xyz", "***"},      // no @
-		{"", "***"},         // empty
-		{"short", "***"},    // no @
+		{"x@y", "***"},   // len=3 < 5
+		{"xyz", "***"},   // no @
+		{"", "***"},      // empty
+		{"short", "***"}, // no @
 	}
 
 	for _, tt := range tests {
@@ -1787,14 +1787,14 @@ func TestCategoryInfo(t *testing.T) {
 // TestUserInfo 测试用户信息结构
 func TestUserInfo(t *testing.T) {
 	user := UserInfo{
-		PublicKey:     "test-pubkey",
-		AgentName:     "Test Agent",
-		Email:         "test@example.com",
-		UserLevel:     2,
-		ContribCount:  10,
-		RatingCount:   5,
-		CreatedAt:     1700000000000,
-		LastActiveAt:  1700000000000,
+		PublicKey:    "test-pubkey",
+		AgentName:    "Test Agent",
+		Email:        "test@example.com",
+		UserLevel:    2,
+		ContribCount: 10,
+		RatingCount:  5,
+		CreatedAt:    1700000000000,
+		LastActiveAt: 1700000000000,
 	}
 
 	if user.PublicKey != "test-pubkey" {
@@ -1830,14 +1830,14 @@ func TestEntryInfo(t *testing.T) {
 // TestServerStatus 测试服务器状态结构
 func TestServerStatus(t *testing.T) {
 	status := ServerStatus{
-		Version:     "v1.0.0",
-		Uptime:      3600,
-		NodeID:      "node-123",
-		NodeType:    "seed",
-		NATType:     "public",
-		PeerCount:   5,
-		EntryCount:  100,
-		UserCount:   10,
+		Version:    "v1.0.0",
+		Uptime:     3600,
+		NodeID:     "node-123",
+		NodeType:   "seed",
+		NATType:    "public",
+		PeerCount:  5,
+		EntryCount: 100,
+		UserCount:  10,
 	}
 
 	if status.Version != "v1.0.0" {
@@ -1983,14 +1983,14 @@ func TestClient_GetStatus_Complete(t *testing.T) {
 			Code:    0,
 			Message: "success",
 			Data: map[string]interface{}{
-				"version":       "v1.0.0",
+				"version":        "v1.0.0",
 				"uptime_seconds": float64(3600),
-				"node_id":       "node-123",
-				"node_type":     "seed",
-				"nat_type":      "public",
-				"peer_count":    float64(5),
-				"entry_count":   float64(100),
-				"user_count":    float64(10),
+				"node_id":        "node-123",
+				"node_type":      "seed",
+				"nat_type":       "public",
+				"peer_count":     float64(5),
+				"entry_count":    float64(100),
+				"user_count":     float64(10),
 			},
 		}
 		w.Header().Set("Content-Type", "application/json")

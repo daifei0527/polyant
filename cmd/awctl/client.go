@@ -247,27 +247,27 @@ type APIError struct {
 
 // EntryInfo 条目信息
 type EntryInfo struct {
-	ID          string   `json:"id"`
-	Title       string   `json:"title"`
-	Category    string   `json:"category"`
-	Tags        []string `json:"tags,omitempty"`
-	Score       float64  `json:"score"`
-	ScoreCount  int      `json:"score_count"`
-	CreatedAt   int64    `json:"created_at"`
-	UpdatedAt   int64    `json:"updated_at"`
-	CreatedBy   string   `json:"created_by"`
+	ID         string   `json:"id"`
+	Title      string   `json:"title"`
+	Category   string   `json:"category"`
+	Tags       []string `json:"tags,omitempty"`
+	Score      float64  `json:"score"`
+	ScoreCount int      `json:"score_count"`
+	CreatedAt  int64    `json:"created_at"`
+	UpdatedAt  int64    `json:"updated_at"`
+	CreatedBy  string   `json:"created_by"`
 }
 
 // UserInfo 用户信息
 type UserInfo struct {
-	PublicKey     string `json:"public_key"`
-	AgentName     string `json:"agent_name"`
-	Email         string `json:"email,omitempty"`
-	UserLevel     int32  `json:"user_level"`
-	ContribCount  int    `json:"contrib_count"`
-	RatingCount   int    `json:"rating_count"`
-	CreatedAt     int64  `json:"created_at"`
-	LastActiveAt  int64  `json:"last_active_at"`
+	PublicKey    string `json:"public_key"`
+	AgentName    string `json:"agent_name"`
+	Email        string `json:"email,omitempty"`
+	UserLevel    int32  `json:"user_level"`
+	ContribCount int    `json:"contrib_count"`
+	RatingCount  int    `json:"rating_count"`
+	CreatedAt    int64  `json:"created_at"`
+	LastActiveAt int64  `json:"last_active_at"`
 }
 
 // CategoryInfo 分类信息
@@ -281,9 +281,9 @@ type CategoryInfo struct {
 
 // SyncStatus 同步状态
 type SyncStatus struct {
-	Running       bool     `json:"running"`
-	LastSync      int64    `json:"last_sync"`
-	SyncedEntries int      `json:"synced_entries"`
+	Running        bool       `json:"running"`
+	LastSync       int64      `json:"last_sync"`
+	SyncedEntries  int        `json:"synced_entries"`
 	ConnectedPeers []PeerInfo `json:"connected_peers,omitempty"`
 }
 
@@ -296,14 +296,14 @@ type PeerInfo struct {
 
 // ServerStatus 服务器状态
 type ServerStatus struct {
-	Version      string `json:"version"`
-	Uptime       int64  `json:"uptime_seconds"`
-	NodeID       string `json:"node_id"`
-	NodeType     string `json:"node_type"`
-	NATType      string `json:"nat_type"`
-	PeerCount    int    `json:"peer_count"`
-	EntryCount   int    `json:"entry_count"`
-	UserCount    int    `json:"user_count"`
+	Version    string `json:"version"`
+	Uptime     int64  `json:"uptime_seconds"`
+	NodeID     string `json:"node_id"`
+	NodeType   string `json:"node_type"`
+	NATType    string `json:"nat_type"`
+	PeerCount  int    `json:"peer_count"`
+	EntryCount int    `json:"entry_count"`
+	UserCount  int    `json:"user_count"`
 }
 
 // GetStatus 获取服务器状态
@@ -650,16 +650,16 @@ type RateEntryRequest struct {
 
 // EntryDetail 条目详情（包含内容）
 type EntryDetail struct {
-	ID          string   `json:"id"`
-	Title       string   `json:"title"`
-	Content     string   `json:"content"`
-	Category    string   `json:"category"`
-	Tags        []string `json:"tags,omitempty"`
-	Score       float64  `json:"score"`
-	ScoreCount  int      `json:"score_count"`
-	CreatedAt   int64    `json:"created_at"`
-	UpdatedAt   int64    `json:"updated_at"`
-	CreatedBy   string   `json:"created_by"`
+	ID         string   `json:"id"`
+	Title      string   `json:"title"`
+	Content    string   `json:"content"`
+	Category   string   `json:"category"`
+	Tags       []string `json:"tags,omitempty"`
+	Score      float64  `json:"score"`
+	ScoreCount int      `json:"score_count"`
+	CreatedAt  int64    `json:"created_at"`
+	UpdatedAt  int64    `json:"updated_at"`
+	CreatedBy  string   `json:"created_by"`
 }
 
 // CreateEntry 创建条目（需要 Lv1+ 认证）
@@ -1043,14 +1043,14 @@ func (c *Client) TriggerSync(ctx context.Context) error {
 
 // UserListItem 用户列表项
 type UserListItem struct {
-	PublicKey      string `json:"public_key"`
-	AgentName      string `json:"agent_name"`
-	UserLevel      int32  `json:"user_level"`
-	Status         string `json:"status"`
-	ContributionCnt int   `json:"contribution_cnt"`
-	RatingCnt      int    `json:"rating_cnt"`
-	CreatedAt      int64  `json:"created_at"`
-	LastActive     int64  `json:"last_active_at"`
+	PublicKey       string `json:"public_key"`
+	AgentName       string `json:"agent_name"`
+	UserLevel       int32  `json:"user_level"`
+	Status          string `json:"status"`
+	ContributionCnt int    `json:"contribution_cnt"`
+	RatingCnt       int    `json:"rating_cnt"`
+	CreatedAt       int64  `json:"created_at"`
+	LastActive      int64  `json:"last_active_at"`
 }
 
 // ListUsers 列出用户（需要管理员权限）
