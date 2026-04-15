@@ -19,23 +19,41 @@ CMD_DIR := ./cmd
 
 # 目标二进制
 POLYANT_BIN := $(BUILD_DIR)/polyant
+SEED_BIN := $(BUILD_DIR)/polyant-seed
+USER_BIN := $(BUILD_DIR)/polyant-user
 AWCTL_BIN := $(BUILD_DIR)/awctl
 
 # 交叉编译目标
 PLATFORMS := linux/amd64 linux/arm64 darwin/amd64 darwin/arm64 windows/amd64
 
-.PHONY: all build clean test run init build-linux build-darwin build-windows cross-compile fmt vet lint help
+.PHONY: all build build-seed build-user clean test run init build-linux build-darwin build-windows cross-compile fmt vet lint help docker-seed docker-user
 
 # 默认目标：编译所有二进制
 all: build
 
-## build: 编译 polyant 和 awctl 二进制
+## build: 编译 polyant, seed, user 和 awctl 二进制
 build:
 	@echo ">>> 编译 Polyant..."
 	@mkdir -p $(BUILD_DIR)
 	$(GOBUILD) $(LDFLAGS) -o $(POLYANT_BIN) $(CMD_DIR)/polyant/
+	$(GOBUILD) $(LDFLAGS) -o $(SEED_BIN) $(CMD_DIR)/seed/
+	$(GOBUILD) $(LDFLAGS) -o $(USER_BIN) $(CMD_DIR)/user/
 	$(GOBUILD) $(LDFLAGS) -o $(AWCTL_BIN) $(CMD_DIR)/awctl/
-	@echo ">>> 编译完成: $(POLYANT_BIN), $(AWCTL_BIN)"
+	@echo ">>> 编译完成: $(POLYANT_BIN), $(SEED_BIN), $(USER_BIN), $(AWCTL_BIN)"
+
+## build-seed: 仅编译种子节点二进制
+build-seed:
+	@echo ">>> 编译种子节点..."
+	@mkdir -p $(BUILD_DIR)
+	$(GOBUILD) $(LDFLAGS) -o $(SEED_BIN) $(CMD_DIR)/seed/
+	@echo ">>> 编译完成: $(SEED_BIN)"
+
+## build-user: 仅编译用户节点二进制
+build-user:
+	@echo ">>> 编译用户节点..."
+	@mkdir -p $(BUILD_DIR)
+	$(GOBUILD) $(LDFLAGS) -o $(USER_BIN) $(CMD_DIR)/user/
+	@echo ">>> 编译完成: $(USER_BIN)"
 
 ## clean: 清除编译产物
 clean:
@@ -100,6 +118,20 @@ cross-compile:
 		CGO_ENABLED=0 GOOS=$${GOOS} GOARCH=$${GOARCH} $(GOBUILD) $(LDFLAGS) -o $$out $(CMD_DIR)/awctl/; \
 	done
 	@echo ">>> 交叉编译完成"
+
+## docker-seed: 构建种子节点 Docker 镜像
+docker-seed:
+	@echo ">>> 构建种子节点 Docker 镜像..."
+	docker build -f Dockerfile.seed -t polyant-seed:$(VERSION) .
+	docker tag polyant-seed:$(VERSION) polyant-seed:latest
+	@echo ">>> Docker 镜像构建完成: polyant-seed:$(VERSION)"
+
+## docker-user: 构建用户节点 Docker 镜像
+docker-user:
+	@echo ">>> 构建用户节点 Docker 镜像..."
+	docker build -f Dockerfile.user -t polyant-user:$(VERSION) .
+	docker tag polyant-user:$(VERSION) polyant-user:latest
+	@echo ">>> Docker 镜像构建完成: polyant-user:$(VERSION)"
 
 ## fmt: 格式化代码
 fmt:
