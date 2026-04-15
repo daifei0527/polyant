@@ -70,12 +70,13 @@ func TestElectionService_CreateElection(t *testing.T) {
 	)
 
 	ctx := context.Background()
-	election, err := service.CreateElection(ctx, "Test Election", "Description", "creator1", 5, 0)
+	election, err := service.CreateElection(ctx, "Test Election", "Description", "creator1", 5, 0, true)
 
 	require.NoError(t, err)
 	assert.NotEmpty(t, election.ID)
 	assert.Equal(t, "Test Election", election.Title)
 	assert.Equal(t, model.ElectionStatusActive, election.Status)
+	assert.True(t, election.AutoElect)
 }
 
 func TestElectionService_NominateCandidate(t *testing.T) {
@@ -87,9 +88,9 @@ func TestElectionService_NominateCandidate(t *testing.T) {
 	)
 
 	ctx := context.Background()
-	election, _ := service.CreateElection(ctx, "Test", "Desc", "creator1", 3, 0)
+	election, _ := service.CreateElection(ctx, "Test", "Desc", "creator1", 3, 0, false)
 
-	err := service.NominateCandidate(ctx, election.ID, "candidate1", "Candidate One", "nominator1")
+	err := service.NominateCandidate(ctx, election.ID, "candidate1", "Candidate One", "nominator1", false)
 	require.NoError(t, err)
 
 	candidates, _ := service.ListCandidates(ctx, election.ID)
@@ -106,17 +107,18 @@ func TestElectionService_Vote(t *testing.T) {
 	)
 
 	ctx := context.Background()
-	election, _ := service.CreateElection(ctx, "Test", "Desc", "creator1", 2, 0)
-	service.NominateCandidate(ctx, election.ID, "candidate1", "Candidate One", "nominator1")
+	election, _ := service.CreateElection(ctx, "Test", "Desc", "creator1", 2, 0, false)
+	service.NominateCandidate(ctx, election.ID, "candidate1", "Candidate One", "nominator1", true) // 自荐自动确认
 
-	err := service.Vote(ctx, election.ID, "voter1", "candidate1")
+	result, err := service.Vote(ctx, election.ID, "voter1", "candidate1")
 	require.NoError(t, err)
+	assert.True(t, result.Success)
 
 	hasVoted, _ := service.HasVoted(ctx, "voter1", election.ID)
 	assert.True(t, hasVoted)
 
 	// 重复投票应该失败
-	err = service.Vote(ctx, election.ID, "voter1", "candidate1")
+	_, err = service.Vote(ctx, election.ID, "voter1", "candidate1")
 	assert.Error(t, err)
 }
 
@@ -129,9 +131,9 @@ func TestElectionService_CloseElection(t *testing.T) {
 	)
 
 	ctx := context.Background()
-	election, _ := service.CreateElection(ctx, "Test", "Desc", "creator1", 2, 0)
-	service.NominateCandidate(ctx, election.ID, "candidate1", "Candidate One", "nominator1")
-	service.NominateCandidate(ctx, election.ID, "candidate2", "Candidate Two", "nominator1")
+	election, _ := service.CreateElection(ctx, "Test", "Desc", "creator1", 2, 0, false)
+	service.NominateCandidate(ctx, election.ID, "candidate1", "Candidate One", "nominator1", true)
+	service.NominateCandidate(ctx, election.ID, "candidate2", "Candidate Two", "nominator1", true)
 
 	// 投票
 	service.Vote(ctx, election.ID, "voter1", "candidate1")
@@ -155,13 +157,13 @@ func TestElectionService_NominateCandidate_ClosedElection(t *testing.T) {
 	)
 
 	ctx := context.Background()
-	election, _ := service.CreateElection(ctx, "Test", "Desc", "creator1", 3, 0)
+	election, _ := service.CreateElection(ctx, "Test", "Desc", "creator1", 3, 0, false)
 
 	// 关闭选举
 	service.CloseElection(ctx, election.ID)
 
 	// 尝试提名应该失败
-	err := service.NominateCandidate(ctx, election.ID, "candidate1", "Candidate One", "nominator1")
+	err := service.NominateCandidate(ctx, election.ID, "candidate1", "Candidate One", "nominator1", true)
 	assert.Error(t, err)
 	assert.Equal(t, ErrElectionClosed, err)
 }
@@ -175,14 +177,14 @@ func TestElectionService_Vote_ClosedElection(t *testing.T) {
 	)
 
 	ctx := context.Background()
-	election, _ := service.CreateElection(ctx, "Test", "Desc", "creator1", 3, 0)
-	service.NominateCandidate(ctx, election.ID, "candidate1", "Candidate One", "nominator1")
+	election, _ := service.CreateElection(ctx, "Test", "Desc", "creator1", 3, 0, false)
+	service.NominateCandidate(ctx, election.ID, "candidate1", "Candidate One", "nominator1", true)
 
 	// 关闭选举
 	service.CloseElection(ctx, election.ID)
 
 	// 尝试投票应该失败
-	err := service.Vote(ctx, election.ID, "voter1", "candidate1")
+	_, err := service.Vote(ctx, election.ID, "voter1", "candidate1")
 	assert.Error(t, err)
 	assert.Equal(t, ErrElectionClosed, err)
 }
@@ -196,14 +198,14 @@ func TestElectionService_NominateCandidate_Duplicate(t *testing.T) {
 	)
 
 	ctx := context.Background()
-	election, _ := service.CreateElection(ctx, "Test", "Desc", "creator1", 3, 0)
+	election, _ := service.CreateElection(ctx, "Test", "Desc", "creator1", 3, 0, false)
 
 	// 第一次提名
-	err := service.NominateCandidate(ctx, election.ID, "candidate1", "Candidate One", "nominator1")
+	err := service.NominateCandidate(ctx, election.ID, "candidate1", "Candidate One", "nominator1", true)
 	require.NoError(t, err)
 
 	// 重复提名应该失败
-	err = service.NominateCandidate(ctx, election.ID, "candidate1", "Candidate One", "nominator2")
+	err = service.NominateCandidate(ctx, election.ID, "candidate1", "Candidate One", "nominator2", true)
 	assert.Error(t, err)
 	assert.Equal(t, ErrAlreadyNominated, err)
 }
@@ -217,10 +219,10 @@ func TestElectionService_Vote_NonExistentCandidate(t *testing.T) {
 	)
 
 	ctx := context.Background()
-	election, _ := service.CreateElection(ctx, "Test", "Desc", "creator1", 3, 0)
+	election, _ := service.CreateElection(ctx, "Test", "Desc", "creator1", 3, 0, false)
 
 	// 投票给不存在的候选人应该失败
-	err := service.Vote(ctx, election.ID, "voter1", "nonexistent")
+	_, err := service.Vote(ctx, election.ID, "voter1", "nonexistent")
 	assert.Error(t, err)
 	assert.Equal(t, ErrCandidateNotFound, err)
 }
@@ -251,8 +253,8 @@ func TestElectionService_ListElections(t *testing.T) {
 	ctx := context.Background()
 
 	// 创建多个选举
-	service.CreateElection(ctx, "Election 1", "Desc 1", "creator1", 3, 0)
-	service.CreateElection(ctx, "Election 2", "Desc 2", "creator2", 5, 0)
+	service.CreateElection(ctx, "Election 1", "Desc 1", "creator1", 3, 0, false)
+	service.CreateElection(ctx, "Election 2", "Desc 2", "creator2", 5, 0, true)
 
 	// 列出所有活跃选举
 	elections, err := service.ListElections(ctx, model.ElectionStatusActive)
@@ -269,7 +271,7 @@ func TestElectionService_CloseElection_AlreadyClosed(t *testing.T) {
 	)
 
 	ctx := context.Background()
-	election, _ := service.CreateElection(ctx, "Test", "Desc", "creator1", 3, 0)
+	election, _ := service.CreateElection(ctx, "Test", "Desc", "creator1", 3, 0, false)
 
 	// 第一次关闭
 	_, err := service.CloseElection(ctx, election.ID)
