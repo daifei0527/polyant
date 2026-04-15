@@ -190,6 +190,28 @@ awctl config set data.dir /data/polyant
 | `/api/v1/sync/status` | GET | 同步状态 |
 | `/api/v1/auth/register` | POST | 用户注册 |
 | `/api/v1/auth/login` | POST | 用户登录 |
+| `/api/v1/admin/users` | GET | 用户列表（Lv4+） |
+| `/api/v1/admin/users/{id}/ban` | POST | 封禁用户（Lv4+） |
+| `/api/v1/admin/users/{id}/unban` | POST | 解封用户（Lv4+） |
+| `/api/v1/admin/users/{id}/level` | PUT | 调整等级（Lv5） |
+| `/api/v1/admin/stats/users` | GET | 用户统计概览（Lv4+） |
+| `/api/v1/admin/stats/contributions` | GET | 贡献明细（Lv4+） |
+| `/api/v1/admin/stats/activity` | GET | 活跃度趋势（Lv4+） |
+| `/api/v1/admin/stats/registrations` | GET | 注册趋势（Lv4+） |
+| `/api/v1/elections` | GET | 列出选举 |
+| `/api/v1/elections/{id}` | GET | 获取选举详情 |
+| `/api/v1/elections` | POST | 创建选举（Lv5） |
+| `/api/v1/elections/{id}/candidates` | POST | 提名候选人 |
+| `/api/v1/elections/{id}/candidates/{uid}/confirm` | POST | 确认接受提名 |
+| `/api/v1/elections/{id}/vote` | POST | 投票（Lv3+） |
+| `/api/v1/elections/{id}/close` | POST | 关闭选举（Lv5） |
+| `/api/v1/entries` | GET | 列出条目 |
+| `/api/v1/entries` | POST | 创建条目 |
+| `/api/v1/entries/{id}` | GET | 获取条目详情 |
+| `/api/v1/search` | GET | 搜索条目 |
+| `/api/v1/sync/status` | GET | 同步状态 |
+| `/api/v1/auth/register` | POST | 用户注册 |
+| `/api/v1/auth/login` | POST | 用户登录 |
 
 ## 用户层级体系
 

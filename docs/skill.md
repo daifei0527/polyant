@@ -617,6 +617,419 @@ POST /api/v1/categories
 
 ---
 
+### 管理 API
+
+#### 封禁用户
+
+```
+POST /api/v1/admin/users/{public_key}/ban
+权限: Lv4+ (Admin)
+```
+
+**请求体：**
+
+```json
+{
+  "reason": "违规原因",
+  "ban_type": "full"
+}
+```
+
+**ban_type 取值：**
+- `full`: 完全禁止访问（默认）
+- `readonly`: 只读模式（可读取，不可写入）
+
+**响应：**
+
+```json
+{
+  "code": 0,
+  "message": "success",
+  "data": {
+    "success": true,
+    "ban_type": "full",
+    "public_key": "user_public_key"
+  }
+}
+```
+
+#### 解封用户
+
+```
+POST /api/v1/admin/users/{public_key}/unban
+权限: Lv4+ (Admin)
+```
+
+**响应：**
+
+```json
+{
+  "code": 0,
+  "message": "success",
+  "data": {
+    "success": true,
+    "public_key": "user_public_key"
+  }
+}
+```
+
+#### 调整用户等级
+
+```
+PUT /api/v1/admin/users/{public_key}/level
+权限: Lv5 (SuperAdmin)
+```
+
+**请求体：**
+
+```json
+{
+  "level": 4,
+  "reason": "特殊贡献"
+}
+```
+
+**响应：**
+
+```json
+{
+  "code": 0,
+  "message": "success",
+  "data": {
+    "success": true,
+    "old_level": 3,
+    "new_level": 4
+  }
+}
+```
+
+#### 用户列表
+
+```
+GET /api/v1/admin/users?page=1&limit=20&level=1&search=keyword
+权限: Lv4+ (Admin)
+```
+
+**响应：**
+
+```json
+{
+  "code": 0,
+  "message": "success",
+  "data": {
+    "users": [
+      {
+        "public_key": "user_key",
+        "agent_name": "Agent1",
+        "user_level": 1,
+        "status": "active",
+        "contrib_count": 5,
+        "created_at": 1712800000000
+      }
+    ],
+    "total": 100,
+    "page": 1,
+    "limit": 20
+  }
+}
+```
+
+---
+
+### 统计 API
+
+#### 用户统计概览
+
+```
+GET /api/v1/admin/stats/users
+权限: Lv4+ (Admin)
+```
+
+**响应：**
+
+```json
+{
+  "code": 0,
+  "message": "success",
+  "data": {
+    "total_users": 1000,
+    "active_users": 350,
+    "lv0_count": 600,
+    "lv1_count": 200,
+    "lv2_count": 100,
+    "lv3_count": 50,
+    "lv4_count": 40,
+    "lv5_count": 10,
+    "banned_count": 5
+  }
+}
+```
+
+#### 贡献明细
+
+```
+GET /api/v1/admin/stats/contributions?page=1&limit=20&sort=entry_count
+权限: Lv4+ (Admin)
+```
+
+**sort 取值：** `entry_count`, `rating_given_count`
+
+**响应：**
+
+```json
+{
+  "code": 0,
+  "message": "success",
+  "data": {
+    "contributions": [
+      {
+        "user_id": "public_key",
+        "user_name": "TopContributor",
+        "entry_count": 50,
+        "edit_count": 20,
+        "rating_given_count": 100,
+        "rating_recv_count": 80
+      }
+    ],
+    "total": 100,
+    "page": 1,
+    "limit": 20
+  }
+}
+```
+
+#### 活跃度趋势
+
+```
+GET /api/v1/admin/stats/activity?days=30
+权限: Lv4+ (Admin)
+```
+
+**响应：**
+
+```json
+{
+  "code": 0,
+  "message": "success",
+  "data": {
+    "trend": [
+      {
+        "date": "2026-04-01",
+        "dau": 120,
+        "new_users": 15
+      }
+    ]
+  }
+}
+```
+
+#### 注册趋势
+
+```
+GET /api/v1/admin/stats/registrations?days=30
+权限: Lv4+ (Admin)
+```
+
+**响应：**
+
+```json
+{
+  "code": 0,
+  "message": "success",
+  "data": {
+    "trend": [
+      {
+        "date": "2026-04-01",
+        "count": 15,
+        "total": 850
+      }
+    ]
+  }
+}
+```
+
+---
+
+### 选举 API
+
+#### 创建选举
+
+```
+POST /api/v1/elections
+权限: Lv5 (SuperAdmin)
+```
+
+**请求体：**
+
+```json
+{
+  "title": "第1届管理员选举",
+  "description": "选举说明...",
+  "vote_threshold": 10,
+  "duration_days": 7,
+  "auto_elect": true
+}
+```
+
+**auto_elect:** 是否自动当选（票数达到阈值时自动标记为当选）
+
+**响应：**
+
+```json
+{
+  "code": 0,
+  "message": "success",
+  "data": {
+    "election_id": "ele-xxx",
+    "auto_elect": true
+  }
+}
+```
+
+#### 获取选举列表
+
+```
+GET /api/v1/elections?status=active
+权限: 所有用户
+```
+
+**响应：**
+
+```json
+{
+  "code": 0,
+  "message": "success",
+  "data": {
+    "elections": [
+      {
+        "id": "ele-xxx",
+        "title": "选举标题",
+        "status": "active",
+        "vote_threshold": 10,
+        "created_at": 1712800000000
+      }
+    ]
+  }
+}
+```
+
+#### 提名候选人
+
+```
+POST /api/v1/elections/{id}/candidates
+权限: Lv3+ (Lv4 可自荐，Lv3+ 可提名他人)
+```
+
+**请求体（自荐）：**
+
+```json
+{
+  "user_name": "候选人名称",
+  "self_nominated": true
+}
+```
+
+**请求体（他荐）：**
+
+```json
+{
+  "user_id": "被提名人公钥",
+  "user_name": "候选人名称",
+  "self_nominated": false
+}
+```
+
+**响应：**
+
+```json
+{
+  "code": 0,
+  "message": "success",
+  "data": {
+    "success": true,
+    "self_nominated": true,
+    "confirmed": true
+  }
+}
+```
+
+#### 确认接受提名
+
+```
+POST /api/v1/elections/{id}/candidates/{user_id}/confirm
+权限: 被提名人自己
+```
+
+**响应：**
+
+```json
+{
+  "code": 0,
+  "message": "success",
+  "data": {
+    "confirmed": true
+  }
+}
+```
+
+#### 投票
+
+```
+POST /api/v1/elections/{id}/vote
+权限: Lv3+
+```
+
+**请求体：**
+
+```json
+{
+  "candidate_id": "候选人用户ID"
+}
+```
+
+**响应：**
+
+```json
+{
+  "code": 0,
+  "message": "success",
+  "data": {
+    "success": true,
+    "vote_count": 10,
+    "auto_elected": false
+  }
+}
+```
+
+**auto_elected:** 如果启用了自动当选且票数达到阈值，此字段为 true
+
+#### 关闭选举
+
+```
+POST /api/v1/elections/{id}/close
+权限: Lv5 (SuperAdmin)
+```
+
+**响应：**
+
+```json
+{
+  "code": 0,
+  "message": "success",
+  "data": {
+    "elected": [
+      {
+        "user_id": "elected_user",
+        "user_name": "当选者",
+        "vote_count": 15
+      }
+    ]
+  }
+}
+```
+
+---
+
 ### 同步 API
 
 #### 获取同步状态
