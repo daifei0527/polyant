@@ -79,6 +79,14 @@ func main() {
 		log.Fatal("--tls-key is required for seed node")
 	}
 
+	// 验证 TLS 证书文件存在
+	if _, err := os.Stat(*tlsCert); os.IsNotExist(err) {
+		log.Fatalf("TLS certificate file not found: %s", *tlsCert)
+	}
+	if _, err := os.Stat(*tlsKey); os.IsNotExist(err) {
+		log.Fatalf("TLS key file not found: %s", *tlsKey)
+	}
+
 	// 加载配置
 	cfg, err := loadConfig()
 	if err != nil {
@@ -96,6 +104,11 @@ func main() {
 	// 验证种子节点配置
 	if err := cfg.Seed.Validate(); err != nil {
 		log.Fatalf("Invalid seed config: %v", err)
+	}
+
+	// 验证通用配置
+	if err := config.Validate(cfg); err != nil {
+		log.Fatalf("Invalid config: %v", err)
 	}
 
 	// 创建并运行应用
