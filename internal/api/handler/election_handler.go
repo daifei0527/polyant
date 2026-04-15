@@ -32,12 +32,14 @@ type CreateElectionRequest struct {
 	Description   string `json:"description"`
 	VoteThreshold int32  `json:"vote_threshold"`
 	DurationDays  int    `json:"duration_days"`
+	AutoElect     bool   `json:"auto_elect"` // 是否自动当选
 }
 
 // NominateRequest 提名请求
 type NominateRequest struct {
-	UserID   string `json:"user_id"`
-	UserName string `json:"user_name"`
+	UserID        string `json:"user_id"`
+	UserName      string `json:"user_name"`
+	SelfNominated bool   `json:"self_nominated"` // true=自荐, false=他荐
 }
 
 // VoteRequest 投票请求
@@ -68,7 +70,7 @@ func (h *ElectionHandler) CreateElectionHandler(w http.ResponseWriter, r *http.R
 	publicKey, _ := r.Context().Value("public_key").(string)
 
 	ctx := r.Context()
-	election, err := h.electionSvc.CreateElection(ctx, req.Title, req.Description, publicKey, req.VoteThreshold, req.DurationDays)
+	election, err := h.electionSvc.CreateElection(ctx, req.Title, req.Description, publicKey, req.VoteThreshold, req.DurationDays, req.AutoElect)
 	if err != nil {
 		writeJSON(w, http.StatusInternalServerError, &APIResponse{
 			Code:    500,
@@ -80,7 +82,10 @@ func (h *ElectionHandler) CreateElectionHandler(w http.ResponseWriter, r *http.R
 	writeJSON(w, http.StatusCreated, &APIResponse{
 		Code:    0,
 		Message: "success",
-		Data:    map[string]string{"election_id": election.ID},
+		Data: map[string]interface{}{
+			"election_id": election.ID,
+			"auto_elect":  election.AutoElect,
+		},
 	})
 }
 
@@ -187,8 +192,13 @@ func (h *ElectionHandler) NominateCandidateHandler(w http.ResponseWriter, r *htt
 
 	publicKey, _ := r.Context().Value("public_key").(string)
 
+	// 如果是自荐，UserID 应该是自己的公钥
+	if req.SelfNominated {
+		req.UserID = publicKey
+	}
+
 	ctx := r.Context()
-	if err := h.electionSvc.NominateCandidate(ctx, electionID, req.UserID, req.UserName, publicKey); err != nil {
+	if err := h.electionSvc.NominateCandidate(ctx, electionID, req.UserID, req.UserName, publicKey, req.SelfNominated); err != nil {
 		writeJSON(w, http.StatusBadRequest, &APIResponse{
 			Code:    400,
 			Message: err.Error(),
@@ -199,7 +209,11 @@ func (h *ElectionHandler) NominateCandidateHandler(w http.ResponseWriter, r *htt
 	writeJSON(w, http.StatusOK, &APIResponse{
 		Code:    0,
 		Message: "success",
-		Data:    map[string]bool{"success": true},
+		Data: map[string]interface{}{
+			"success":        true,
+			"self_nominated": req.SelfNominated,
+			"confirmed":      req.SelfNominated, // 自荐自动确认
+		},
 	})
 }
 
@@ -235,7 +249,8 @@ func (h *ElectionHandler) VoteHandler(w http.ResponseWriter, r *http.Request) {
 	publicKey, _ := r.Context().Value("public_key").(string)
 
 	ctx := r.Context()
-	if err := h.electionSvc.Vote(ctx, electionID, publicKey, req.CandidateID); err != nil {
+	result, err := h.electionSvc.Vote(ctx, electionID, publicKey, req.CandidateID)
+	if err != nil {
 		writeJSON(w, http.StatusBadRequest, &APIResponse{
 			Code:    400,
 			Message: err.Error(),
@@ -246,7 +261,7 @@ func (h *ElectionHandler) VoteHandler(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, &APIResponse{
 		Code:    0,
 		Message: "success",
-		Data:    map[string]bool{"success": true},
+		Data:    result,
 	})
 }
 
@@ -284,6 +299,56 @@ func (h *ElectionHandler) CloseElectionHandler(w http.ResponseWriter, r *http.Re
 		Code:    0,
 		Message: "success",
 		Data:    map[string]interface{}{"elected": elected},
+	})
+}
+
+// ConfirmNominationHandler 确认接受提名
+// POST /api/v1/elections/{id}/candidates/{user_id}/confirm
+func (h *ElectionHandler) ConfirmNominationHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		writeJSON(w, http.StatusMethodNotAllowed, &APIResponse{
+			Code:    405,
+			Message: "method not allowed",
+		})
+		return
+	}
+
+	// 解析路径: /api/v1/elections/{election_id}/candidates/{user_id}/confirm
+	path := r.URL.Path
+	parts := strings.Split(path, "/")
+	if len(parts) < 8 {
+		writeJSON(w, http.StatusBadRequest, &APIResponse{
+			Code:    400,
+			Message: "invalid path",
+		})
+		return
+	}
+	electionID := parts[4]
+	userID := parts[6]
+
+	// 验证权限：只有被提名人自己可以确认
+	publicKey, _ := r.Context().Value("public_key").(string)
+	if publicKey != userID {
+		writeJSON(w, http.StatusForbidden, &APIResponse{
+			Code:    403,
+			Message: "只有被提名人自己可以确认",
+		})
+		return
+	}
+
+	ctx := r.Context()
+	if err := h.electionSvc.ConfirmNomination(ctx, electionID, userID); err != nil {
+		writeJSON(w, http.StatusBadRequest, &APIResponse{
+			Code:    400,
+			Message: err.Error(),
+		})
+		return
+	}
+
+	writeJSON(w, http.StatusOK, &APIResponse{
+		Code:    0,
+		Message: "success",
+		Data:    map[string]bool{"confirmed": true},
 	})
 }
 
