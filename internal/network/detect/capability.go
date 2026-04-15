@@ -33,20 +33,24 @@ type NetworkCapability struct {
 
 // Detector 网络能力检测器
 type Detector struct {
-	stunServers []string
+	httpClient  *http.Client
 	httpClients []string
 	timeout     time.Duration
 }
 
 // NewDetector 创建检测器
 func NewDetector() *Detector {
+	timeout := 10 * time.Second
 	return &Detector{
+		httpClient: &http.Client{
+			Timeout: timeout,
+		},
 		httpClients: []string{
 			"https://api.ipify.org",
 			"https://ifconfig.me/ip",
 			"https://icanhazip.com",
 		},
-		timeout: 10 * time.Second,
+		timeout: timeout,
 	}
 }
 
@@ -81,12 +85,8 @@ func (d *Detector) Detect() *NetworkCapability {
 
 // detectPublicIP 检测公网 IP
 func (d *Detector) detectPublicIP() string {
-	client := &http.Client{
-		Timeout: d.timeout,
-	}
-
 	for _, url := range d.httpClients {
-		resp, err := client.Get(url)
+		resp, err := d.httpClient.Get(url)
 		if err != nil {
 			continue
 		}
@@ -112,6 +112,13 @@ func detectPublicIP() string {
 }
 
 // testPortReachability 测试端口可达性
+//
+// 注意：此方法存在局限性 - 它从本机尝试连接到公网 IP:port。
+// 这并不能真正测试外部可达性，因为：
+//  1. 许多 NAT/防火墙允许内部回环连接
+//  2. 真正的外部可达性需要从外部网络测试
+//  3. 结果可能产生假阳性（本机能连但外部不能）
+// 生产环境应考虑使用外部可达性检测服务。
 func (d *Detector) testPortReachability(publicIP string) bool {
 	// 1. 监听临时端口
 	ln, err := net.Listen("tcp", ":0")
@@ -150,10 +157,10 @@ func (d *Detector) testPortReachability(publicIP string) bool {
 // detectNATType 检测 NAT 类型
 // 简化版本：实际需要 STUN 服务器配合
 func (d *Detector) detectNATType() NATType {
-	// 简化处理：
-	// - 如果能获取公网 IP 且能连接，假设为 NATTypeNone
-	// - 否则需要 STUN 服务器检测
-	return NATTypeNone
+	// 简化处理：当前未实现真正的 NAT 类型检测
+	// 返回 NATTypeUnknown 而非 NATTypeNone，因为我们无法确定
+	// 实际的 NAT 类型。真正的检测需要 STUN 服务器配合。
+	return NATTypeUnknown
 }
 
 // DetectNetworkCapability 便捷函数
