@@ -69,20 +69,47 @@ func TestAdminService_BanUser(t *testing.T) {
 	ctx := context.Background()
 	user, _ := store.User.Create(ctx, &model.User{PublicKey: "pk1", AgentName: "User1", UserLevel: model.UserLevelLv1})
 
-	err := service.BanUser(ctx, user.PublicKey, "admin1", "违规操作")
+	err := service.BanUser(ctx, user.PublicKey, "admin1", "违规操作", model.BanTypeFull)
 	if err != nil {
 		t.Fatalf("BanUser failed: %v", err)
 	}
 
 	updated, _ := store.User.Get(ctx, HashPublicKey(user.PublicKey))
-	if updated.Status != "banned" {
-		t.Errorf("Expected status 'banned', got %s", updated.Status)
+	if updated.Status != model.UserStatusBanned {
+		t.Errorf("Expected status %q, got %s", model.UserStatusBanned, updated.Status)
 	}
 	if updated.BanReason != "违规操作" {
 		t.Errorf("Expected ban reason '违规操作', got %s", updated.BanReason)
 	}
 	if updated.BannedBy != "admin1" {
 		t.Errorf("Expected banned by 'admin1', got %s", updated.BannedBy)
+	}
+	if updated.BanType != model.BanTypeFull {
+		t.Errorf("Expected BanType %q, got %s", model.BanTypeFull, updated.BanType)
+	}
+}
+
+func TestAdminService_BanUser_Readonly(t *testing.T) {
+	store := newTestStore(t)
+	service := NewAdminService(store)
+
+	ctx := context.Background()
+	user, _ := store.User.Create(ctx, &model.User{PublicKey: "pk1", AgentName: "User1", UserLevel: model.UserLevelLv1})
+
+	err := service.BanUser(ctx, user.PublicKey, "admin1", "轻度违规", model.BanTypeReadonly)
+	if err != nil {
+		t.Fatalf("BanUser failed: %v", err)
+	}
+
+	updated, _ := store.User.Get(ctx, HashPublicKey(user.PublicKey))
+	if updated.Status != model.UserStatusBanned {
+		t.Errorf("Expected status %q, got %s", model.UserStatusBanned, updated.Status)
+	}
+	if updated.BanType != model.BanTypeReadonly {
+		t.Errorf("Expected BanType %q, got %s", model.BanTypeReadonly, updated.BanType)
+	}
+	if !updated.IsReadOnly() {
+		t.Error("User should be in readonly mode")
 	}
 }
 
@@ -93,7 +120,7 @@ func TestAdminService_BanUser_CannotBanAdmin(t *testing.T) {
 	ctx := context.Background()
 	user, _ := store.User.Create(ctx, &model.User{PublicKey: "pk1", AgentName: "Admin", UserLevel: model.UserLevelLv4})
 
-	err := service.BanUser(ctx, user.PublicKey, "admin1", "尝试封禁")
+	err := service.BanUser(ctx, user.PublicKey, "admin1", "尝试封禁", model.BanTypeFull)
 	if err != ErrCannotBanAdmin {
 		t.Errorf("Expected ErrCannotBanAdmin, got %v", err)
 	}
@@ -105,7 +132,7 @@ func TestAdminService_BanUser_NotFound(t *testing.T) {
 
 	ctx := context.Background()
 
-	err := service.BanUser(ctx, "nonexistent", "admin1", "reason")
+	err := service.BanUser(ctx, "nonexistent", "admin1", "reason", model.BanTypeFull)
 	if err != ErrUserNotFound {
 		t.Errorf("Expected ErrUserNotFound, got %v", err)
 	}
