@@ -3,6 +3,8 @@ package model
 import (
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestElectionStatusConstants(t *testing.T) {
@@ -32,8 +34,9 @@ func TestNewElection(t *testing.T) {
 	createdBy := "creator-1"
 	voteThreshold := int32(5)
 	duration := 24 * time.Hour
+	autoElect := true
 
-	election := NewElection(title, description, createdBy, voteThreshold, duration)
+	election := NewElection(title, description, createdBy, voteThreshold, duration, autoElect)
 
 	if election.ID == "" {
 		t.Error("ID should not be empty")
@@ -55,6 +58,9 @@ func TestNewElection(t *testing.T) {
 	}
 	if election.VoteThreshold != voteThreshold {
 		t.Errorf("Expected voteThreshold %d, got %d", voteThreshold, election.VoteThreshold)
+	}
+	if election.AutoElect != autoElect {
+		t.Errorf("Expected autoElect %t, got %t", autoElect, election.AutoElect)
 	}
 	if election.CreatedAt == 0 {
 		t.Error("CreatedAt should be set")
@@ -151,8 +157,9 @@ func TestNewCandidate(t *testing.T) {
 	userID := "user-1"
 	userName := "Test User"
 	nominatedBy := "nominator-1"
+	selfNominated := false
 
-	candidate := NewCandidate(electionID, userID, userName, nominatedBy)
+	candidate := NewCandidate(electionID, userID, userName, nominatedBy, selfNominated)
 
 	if candidate.ElectionID != electionID {
 		t.Errorf("Expected electionID %q, got %q", electionID, candidate.ElectionID)
@@ -165,6 +172,9 @@ func TestNewCandidate(t *testing.T) {
 	}
 	if candidate.NominatedBy != nominatedBy {
 		t.Errorf("Expected nominatedBy %q, got %q", nominatedBy, candidate.NominatedBy)
+	}
+	if candidate.SelfNominated != selfNominated {
+		t.Errorf("Expected selfNominated %t, got %t", selfNominated, candidate.SelfNominated)
 	}
 	if candidate.VoteCount != 0 {
 		t.Errorf("Initial VoteCount should be 0, got %d", candidate.VoteCount)
@@ -283,4 +293,86 @@ func TestVote_ToJSON_FromJSON(t *testing.T) {
 	if newVote.VotedAt != vote.VotedAt {
 		t.Errorf("VotedAt mismatch: expected %d, got %d", vote.VotedAt, newVote.VotedAt)
 	}
+}
+
+func TestElectionAutoElect(t *testing.T) {
+	election := &Election{
+		ID:            "ele-1",
+		Title:         "Test Election",
+		VoteThreshold: 10,
+		AutoElect:     true,
+		Status:        ElectionStatusActive,
+	}
+
+	assert.True(t, election.AutoElect)
+	assert.True(t, election.ShouldAutoElect())
+}
+
+func TestElectionShouldAutoElect_FalseWhenClosed(t *testing.T) {
+	election := &Election{
+		ID:            "ele-1",
+		Title:         "Test Election",
+		VoteThreshold: 10,
+		AutoElect:     true,
+		Status:        ElectionStatusClosed,
+	}
+
+	assert.False(t, election.ShouldAutoElect())
+}
+
+func TestCandidateConfirmation(t *testing.T) {
+	candidate := &Candidate{
+		ElectionID:    "ele-1",
+		UserID:        "user-1",
+		SelfNominated: true,
+		Confirmed:     true,
+	}
+
+	assert.True(t, candidate.SelfNominated)
+	assert.True(t, candidate.Confirmed)
+	assert.True(t, candidate.IsReady())
+}
+
+func TestCandidatePeerNomination(t *testing.T) {
+	candidate := &Candidate{
+		ElectionID:    "ele-1",
+		UserID:        "user-1",
+		SelfNominated: false,
+		NominatedBy:   "nominator-1",
+		Confirmed:     false,
+	}
+
+	assert.False(t, candidate.SelfNominated)
+	assert.False(t, candidate.IsReady()) // 未确认，不能投票
+}
+
+func TestCandidateConfirm(t *testing.T) {
+	candidate := &Candidate{
+		ElectionID:    "ele-1",
+		UserID:        "user-1",
+		SelfNominated: false,
+		Confirmed:     false,
+	}
+
+	candidate.Confirm()
+
+	assert.True(t, candidate.Confirmed)
+	assert.NotZero(t, candidate.ConfirmedAt)
+	assert.True(t, candidate.IsReady())
+}
+
+func TestNewCandidate_SelfNomination(t *testing.T) {
+	candidate := NewCandidate("ele-1", "user-1", "User 1", "user-1", true)
+
+	assert.True(t, candidate.SelfNominated)
+	assert.True(t, candidate.Confirmed) // 自荐自动确认
+	assert.NotZero(t, candidate.ConfirmedAt)
+}
+
+func TestNewCandidate_PeerNomination(t *testing.T) {
+	candidate := NewCandidate("ele-1", "user-1", "User 1", "nominator", false)
+
+	assert.False(t, candidate.SelfNominated)
+	assert.False(t, candidate.Confirmed) // 他荐需要手动确认
+	assert.Zero(t, candidate.ConfirmedAt)
 }
