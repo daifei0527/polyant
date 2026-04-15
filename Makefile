@@ -26,7 +26,7 @@ AWCTL_BIN := $(BUILD_DIR)/awctl
 # 交叉编译目标
 PLATFORMS := linux/amd64 linux/arm64 darwin/amd64 darwin/arm64 windows/amd64
 
-.PHONY: all build build-seed build-user clean test run init build-linux build-darwin build-windows cross-compile fmt vet lint help docker-seed docker-user
+.PHONY: all build build-seed build-user clean test run init build-linux build-darwin build-windows cross-compile fmt vet lint help docker-seed docker-user build-admin build-full dev-admin
 
 # 默认目标：编译所有二进制
 all: build
@@ -132,6 +132,27 @@ docker-user:
 	docker build -f Dockerfile.user -t polyant-user:$(VERSION) .
 	docker tag polyant-user:$(VERSION) polyant-user:latest
 	@echo ">>> Docker 镜像构建完成: polyant-user:$(VERSION)"
+
+## build-admin: 构建管理页面前端
+build-admin:
+	@echo ">>> 构建管理页面..."
+	cd web/admin && npm install && npm run build
+	@echo ">>> 管理页面构建完成"
+
+## build-full: 完整构建 (包含嵌入的管理页面)
+build-full: build-admin
+	@echo ">>> 构建完整版本 (含管理页面)..."
+	@mkdir -p $(BUILD_DIR)
+	$(GOBUILD) -tags embed_admin $(LDFLAGS) -o $(POLYANT_BIN) $(CMD_DIR)/polyant/
+	$(GOBUILD) $(LDFLAGS) -o $(SEED_BIN) $(CMD_DIR)/seed/
+	$(GOBUILD) $(LDFLAGS) -o $(USER_BIN) $(CMD_DIR)/user/
+	$(GOBUILD) $(LDFLAGS) -o $(AWCTL_BIN) $(CMD_DIR)/awctl/
+	@echo ">>> 完整版本构建完成"
+
+## dev-admin: 开发模式运行管理页面
+dev-admin:
+	@echo ">>> 启动管理页面开发服务器..."
+	cd web/admin && npm run dev
 
 ## fmt: 格式化代码
 fmt:
