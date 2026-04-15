@@ -314,10 +314,46 @@ func (se *SyncEngine) processSyncResponse(ctx context.Context, resp *protocol.Sy
 			log.Printf("[Sync] Failed to create rating: %v", err)
 			continue
 		}
-		// TODO: 更新条目的平均分
+			// 更新条目的平均分
+			se.updateEntryScore(ctx, rating.EntryId)
 	}
 
 	return nil
+}
+
+// updateEntryScore 更新条目的平均评分
+func (se *SyncEngine) updateEntryScore(ctx context.Context, entryID string) {
+	// 获取条目的所有评分
+	ratings, err := se.store.Rating.ListByEntry(ctx, entryID)
+	if err != nil {
+		log.Printf("[Sync] Failed to list ratings for entry %s: %v", entryID, err)
+		return
+	}
+
+	if len(ratings) == 0 {
+		return
+	}
+
+	// 计算平均分
+	var totalScore float64
+	for _, r := range ratings {
+		totalScore += r.Score
+	}
+	avgScore := totalScore / float64(len(ratings))
+
+	// 获取并更新条目
+	entry, err := se.store.Entry.Get(ctx, entryID)
+	if err != nil {
+		log.Printf("[Sync] Failed to get entry %s: %v", entryID, err)
+		return
+	}
+
+	entry.Score = avgScore
+	entry.ScoreCount = int32(len(ratings))
+
+	if _, err := se.store.Entry.Update(ctx, entry); err != nil {
+		log.Printf("[Sync] Failed to update entry score %s: %v", entryID, err)
+	}
 }
 
 func (se *SyncEngine) GetState() SyncState {

@@ -5,9 +5,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"reflect"
+	"strings"
 	"text/tabwriter"
 	"time"
 
+	"github.com/daifei0527/polyant/pkg/config"
 	"github.com/spf13/cobra"
 )
 
@@ -275,26 +278,31 @@ var configShowCmd = &cobra.Command{
 	Use:   "show",
 	Short: "显示当前配置",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-		defer cancel()
-
-		status, err := client.GetStatus(ctx)
+		cfg, err := loadConfig("")
 		if err != nil {
-			fmt.Println("当前配置 (本地):")
-			fmt.Println("  数据目录: ~/.polyant")
-			fmt.Println("  API端口: 8080")
-			fmt.Println("  P2P端口: 9000")
-			return nil
+			return fmt.Errorf("加载配置失败: %w", err)
 		}
 
 		fmt.Println("当前配置:")
-		fmt.Printf("  节点ID: %s\n", status.NodeID)
-		fmt.Printf("  节点类型: %s\n", status.NodeType)
-		fmt.Printf("  NAT类型: %s\n", status.NATType)
-		fmt.Printf("  版本: %s\n", status.Version)
+		w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
+		printConfigField(w, "node.type", cfg.Node.Type)
+		printConfigField(w, "node.name", cfg.Node.Name)
+		printConfigField(w, "node.data_dir", cfg.Node.DataDir)
+		printConfigField(w, "node.log_level", cfg.Node.LogLevel)
+		printConfigField(w, "network.api_port", fmt.Sprintf("%d", cfg.Network.APIPort))
+		printConfigField(w, "network.listen_port", fmt.Sprintf("%d", cfg.Network.ListenPort))
+		printConfigField(w, "network.dht_enabled", fmt.Sprintf("%v", cfg.Network.DHTEnabled))
+		printConfigField(w, "network.mdns_enabled", fmt.Sprintf("%v", cfg.Network.MDNSEnabled))
+		printConfigField(w, "sync.auto_sync", fmt.Sprintf("%v", cfg.Sync.AutoSync))
+		printConfigField(w, "sync.interval_seconds", fmt.Sprintf("%d", cfg.Sync.IntervalSeconds))
+		w.Flush()
 
 		return nil
 	},
+}
+
+func printConfigField(w *tabwriter.Writer, key, value string) {
+	fmt.Fprintf(w, "  %s\t%s\n", key, value)
 }
 
 // configSetCmd 设置配置
@@ -306,7 +314,7 @@ var configSetCmd = &cobra.Command{
 		key := args[0]
 		value := args[1]
 		fmt.Printf("设置 %s = %s\n", key, value)
-		fmt.Println("注意: 某些配置需要重启服务才能生效")
+		fmt.Println("注意: 配置修改功能尚未实现，请直接编辑配置文件")
 		return nil
 	},
 }
@@ -315,13 +323,99 @@ var configSetCmd = &cobra.Command{
 var configGetCmd = &cobra.Command{
 	Use:   "get <key>",
 	Short: "获取配置项",
-	Args:  cobra.ExactArgs(1),
+	Long: `获取指定配置项的值。
+
+支持的配置键:
+  node.type          - 节点类型 (local/seed)
+  node.name          - 节点名称
+  node.data_dir      - 数据目录
+  node.log_level     - 日志级别
+  network.api_port   - API端口
+  network.listen_port - P2P监听端口
+  network.dht_enabled - 是否启用DHT
+  network.mdns_enabled - 是否启用mDNS
+  sync.auto_sync     - 是否自动同步
+  sync.interval_seconds - 同步间隔`,
+	Args: cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		key := args[0]
-		// TODO: 实现配置获取
-		fmt.Printf("%s = (未设置)\n", key)
+
+		cfg, err := loadConfig("")
+		if err != nil {
+			return fmt.Errorf("加载配置失败: %w", err)
+		}
+
+		value, err := getConfigValue(cfg, key)
+		if err != nil {
+			return err
+		}
+
+		fmt.Printf("%s = %v\n", key, value)
 		return nil
 	},
+}
+
+// getConfigValue 从配置对象获取指定键的值
+func getConfigValue(cfg *config.Config, key string) (interface{}, error) {
+	parts := strings.Split(key, ".")
+	if len(parts) < 2 {
+		return nil, fmt.Errorf("无效的配置键格式，应为 'section.field'")
+	}
+
+	section := parts[0]
+	field := parts[1]
+
+	var sectionValue reflect.Value
+	switch section {
+	case "node":
+		sectionValue = reflect.ValueOf(cfg.Node)
+	case "network":
+		sectionValue = reflect.ValueOf(cfg.Network)
+	case "sync":
+		sectionValue = reflect.ValueOf(cfg.Sync)
+	case "sharing":
+		sectionValue = reflect.ValueOf(cfg.Sharing)
+	case "account":
+		sectionValue = reflect.ValueOf(cfg.Account)
+	case "seed":
+		sectionValue = reflect.ValueOf(cfg.Seed)
+	case "user_node", "user":
+		sectionValue = reflect.ValueOf(cfg.User)
+	case "mirror":
+		sectionValue = reflect.ValueOf(cfg.Mirror)
+	case "smtp":
+		sectionValue = reflect.ValueOf(cfg.SMTP)
+	case "api":
+		sectionValue = reflect.ValueOf(cfg.API)
+	case "storage":
+		sectionValue = reflect.ValueOf(cfg.Storage)
+	case "i18n":
+		sectionValue = reflect.ValueOf(cfg.I18n)
+	default:
+		return nil, fmt.Errorf("未知的配置节: %s", section)
+	}
+
+	// 获取字段值
+	fieldValue := sectionValue.FieldByNameFunc(func(name string) bool {
+		return strings.EqualFold(name, field) || strings.EqualFold(toSnakeCase(name), field)
+	})
+
+	if !fieldValue.IsValid() {
+		return nil, fmt.Errorf("未知的配置字段: %s.%s", section, field)
+	}
+
+	return fieldValue.Interface(), nil
+}
+
+func toSnakeCase(s string) string {
+	var result []rune
+	for i, r := range s {
+		if i > 0 && r >= 'A' && r <= 'Z' {
+			result = append(result, '_')
+		}
+		result = append(result, r)
+	}
+	return strings.ToLower(string(result))
 }
 
 func init() {

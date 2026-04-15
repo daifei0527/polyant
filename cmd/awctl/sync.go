@@ -83,9 +83,12 @@ var syncStartCmd = &cobra.Command{
 var syncStopCmd = &cobra.Command{
 	Use:   "stop",
 	Short: "停止同步服务",
+	Long: `停止正在进行的同步服务。
+
+注意: 此功能需要服务端支持，目前服务端尚未实现。`,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		// TODO: 实现停止同步 API
-		fmt.Println("同步服务已停止")
+		fmt.Println("停止同步功能尚未在服务端实现")
+		fmt.Println("当前版本可通过重启服务来停止同步")
 		return nil
 	},
 }
@@ -122,13 +125,19 @@ var syncPeersCmd = &cobra.Command{
 var syncConnectCmd = &cobra.Command{
 	Use:   "connect <addr>",
 	Short: "连接到指定节点",
-	Args:  cobra.ExactArgs(1),
+	Long: `手动连接到指定的 P2P 节点。
+
+地址格式: /ip4/<ip>/tcp/<port>/p2p/<peer-id>
+示例: /ip4/192.168.1.100/tcp/9000/p2p/12D3KooW...
+
+注意: 此功能需要服务端支持。`,
+	Args: cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		addr := args[0]
 
-		// TODO: 实现连接 API
-		fmt.Printf("正在连接到节点: %s\n", addr)
-		fmt.Println("连接成功")
+		fmt.Printf("连接地址: %s\n", addr)
+		fmt.Println("注意: 手动连接功能尚未在服务端实现")
+		fmt.Println("当前版本请通过配置文件设置种子节点")
 		return nil
 	},
 }
@@ -143,18 +152,24 @@ var syncMirrorCmd = &cobra.Command{
 var syncMirrorStartCmd = &cobra.Command{
 	Use:   "start <peer-id>",
 	Short: "启动镜像同步",
-	Args:  cobra.ExactArgs(1),
+	Long: `从指定节点启动镜像同步。
+
+镜像同步会复制指定分类的所有条目到本地。
+
+注意: 此功能需要服务端支持。`,
+	Args: cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		peerID := args[0]
 		categories, _ := cmd.Flags().GetStringSlice("categories")
 
-		// TODO: 实现镜像同步 API
-		fmt.Printf("启动镜像同步: %s\n", peerID)
+		fmt.Printf("镜像同步目标: %s\n", peerID)
 		if len(categories) > 0 {
 			fmt.Printf("  分类: %v\n", categories)
 		} else {
 			fmt.Println("  分类: 全部")
 		}
+		fmt.Println()
+		fmt.Println("注意: 镜像同步功能尚未在服务端实现")
 
 		return nil
 	},
@@ -164,12 +179,15 @@ var syncMirrorStartCmd = &cobra.Command{
 var syncMirrorStopCmd = &cobra.Command{
 	Use:   "stop <peer-id>",
 	Short: "停止镜像同步",
-	Args:  cobra.ExactArgs(1),
+	Long: `停止与指定节点的镜像同步。
+
+注意: 此功能需要服务端支持。`,
+	Args: cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		peerID := args[0]
 
-		// TODO: 实现停止镜像 API
-		fmt.Printf("已停止镜像同步: %s\n", peerID)
+		fmt.Printf("停止镜像同步: %s\n", peerID)
+		fmt.Println("注意: 此功能尚未在服务端实现")
 		return nil
 	},
 }

@@ -25,17 +25,41 @@ var userListCmd = &cobra.Command{
 		level, _ := cmd.Flags().GetInt32("level")
 		limit, _ := cmd.Flags().GetInt("limit")
 
-		// TODO: 实现用户列表 API
-		_ = level
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
 
-		fmt.Printf("列出用户 (limit=%d):\n\n", limit)
+		users, total, err := client.ListUsers(ctx, 1, limit, level, "")
+		if err != nil {
+			return fmt.Errorf("获取用户列表失败: %w", err)
+		}
+
+		fmt.Printf("列出用户 (共 %d 个):\n\n", total)
 
 		w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
 		fmt.Fprintln(w, "公钥\tAgent名称\t等级\t贡献数\t评分数\t注册时间")
 		fmt.Fprintln(w, "----\t----------\t----\t------\t------\t--------")
+
+		for _, u := range users {
+			pubKey := u.PublicKey
+			if len(pubKey) > 20 {
+				pubKey = pubKey[:20] + "..."
+			}
+			fmt.Fprintf(w, "%s\t%s\tLv%d\t%d\t%d\t%s\n",
+				pubKey,
+				u.AgentName,
+				u.UserLevel,
+				u.ContributionCnt,
+				u.RatingCnt,
+				time.UnixMilli(u.CreatedAt).Format("2006-01-02"),
+			)
+		}
 		w.Flush()
 
-		fmt.Println("\n提示: 使用 'awctl user get <public-key>' 查看用户详情")
+		fmt.Println()
+		if total > limit {
+			fmt.Printf("显示前 %d 个用户，共 %d 个\n", len(users), total)
+		}
+		fmt.Println("提示: 使用 'awctl user get <public-key>' 查看用户详情")
 
 		return nil
 	},
@@ -79,14 +103,50 @@ var userGetCmd = &cobra.Command{
 var userLevelCmd = &cobra.Command{
 	Use:   "level <public-key> <level>",
 	Short: "设置用户等级",
+	Long: `设置用户的等级。
+
+需要 Lv5 (超级管理员) 权限才能执行此操作。
+
+等级说明:
+  0 - 基础用户（默认）
+  1 - 认证用户（验证邮箱后）
+  2 - 活跃用户
+  3 - 高级用户
+  4 - 管理员
+  5 - 超级管理员`,
 	Args:  cobra.ExactArgs(2),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		pubKey := args[0]
-		level := args[1]
+		levelStr := args[1]
+		reason, _ := cmd.Flags().GetString("reason")
 
-		// TODO: 实现等级设置 API
-		fmt.Printf("已将用户 %s... 的等级设置为 %s\n", pubKey[:20], level)
-		fmt.Println("注意: 需要管理员权限才能设置用户等级")
+		// 解析等级
+		var level int32
+		switch levelStr {
+		case "0", "lv0", "Lv0":
+			level = 0
+		case "1", "lv1", "Lv1":
+			level = 1
+		case "2", "lv2", "Lv2":
+			level = 2
+		case "3", "lv3", "Lv3":
+			level = 3
+		case "4", "lv4", "Lv4":
+			level = 4
+		case "5", "lv5", "Lv5":
+			level = 5
+		default:
+			return fmt.Errorf("无效的等级: %s (有效值: 0-5)", levelStr)
+		}
+
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
+
+		if err := client.SetUserLevel(ctx, pubKey, level, reason); err != nil {
+			return fmt.Errorf("设置用户等级失败: %w", err)
+		}
+
+		fmt.Printf("已将用户 %s... 的等级设置为 Lv%d\n", pubKey[:min(20, len(pubKey))], level)
 		return nil
 	},
 }
@@ -323,6 +383,7 @@ func init() {
 
 	userCmd.AddCommand(userGetCmd)
 	userCmd.AddCommand(userLevelCmd)
+	userLevelCmd.Flags().String("reason", "", "设置原因")
 	userCmd.AddCommand(userStatsCmd)
 
 	// register 子命令
