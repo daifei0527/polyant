@@ -3,7 +3,6 @@ package admin
 
 import (
 	"context"
-	"encoding/json"
 	"net/http"
 	"strings"
 
@@ -62,18 +61,3 @@ func LocalOnlyMiddleware(next http.Handler) http.Handler {
 	})
 }
 
-// writeAdminJSONWithEncoder writes JSON response using the package-level writeAdminJSON
-// This is an alias for consistency with middleware package patterns
-func writeAdminJSONWithEncoder(w http.ResponseWriter, status int, data interface{}) {
-	writeAdminJSON(w, status, data)
-}
-
-// writeAdminErrorWithEncoder writes error response
-func writeAdminErrorWithEncoder(w http.ResponseWriter, err *awerrors.AWError) {
-	w.Header().Set("Content-Type", "application/json; charset=utf-8")
-	w.WriteHeader(err.HTTPStatus)
-	json.NewEncoder(w).Encode(map[string]interface{}{
-		"code":    err.Code,
-		"message": err.Message,
-	})
-}
