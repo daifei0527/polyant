@@ -124,6 +124,13 @@ type I18nConfig struct {
 	LogBilingual   bool     `json:"log_bilingual"`   // 日志双语模式
 }
 
+// AdminConfig 管理页面配置
+type AdminConfig struct {
+	Enabled bool   `json:"enabled"` // 是否启用管理页面
+	Listen  string `json:"listen"`  // 监听地址，默认 127.0.0.1:18531
+}
+
+
 // Config 顶层配置结构体
 // 包含所有子模块的配置
 type Config struct {
@@ -139,6 +146,7 @@ type Config struct {
 	API     APIConfig      `json:"api"`     // API 配置
 	Storage StorageConfig  `json:"storage"` // 存储配置
 	I18n    I18nConfig     `json:"i18n"`    // 国际化
+	Admin   AdminConfig  `json:"admin"`   // 管理页面配置
 }
 
 // ==================== 配置管理函数 ====================
@@ -214,6 +222,10 @@ func DefaultConfig() *Config {
 			DefaultLang:    "zh-CN",
 			AvailableLangs: []string{"zh-CN", "en-US"},
 			LogBilingual:   false,
+		},
+		Admin: AdminConfig{
+			Enabled: true,
+			Listen:  "127.0.0.1:18531",
 		},
 	}
 }
