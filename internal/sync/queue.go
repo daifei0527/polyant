@@ -45,6 +45,10 @@ func NewSyncQueue() *SyncQueue {
 
 // Add 添加同步任务
 func (q *SyncQueue) Add(task *SyncTask) {
+	if task == nil || task.EntryID == "" {
+		return
+	}
+
 	q.mu.Lock()
 	defer q.mu.Unlock()
 
@@ -59,56 +63,111 @@ func (q *SyncQueue) Add(task *SyncTask) {
 
 // Process 处理待同步任务
 func (q *SyncQueue) Process(syncFn func(*SyncTask) error) {
+	// Check offline mode and collect tasks under lock
 	q.mu.Lock()
-	defer q.mu.Unlock()
+	if q.offline {
+		q.mu.Unlock()
+		return
+	}
 
 	now := time.Now()
 
-	// 处理待同步任务
-	var newPending []*SyncTask
-	for _, task := range q.pending {
+	// Collect pending tasks to process
+	tasksToProcess := make([]*SyncTask, len(q.pending))
+	copy(tasksToProcess, q.pending)
+	q.pending = q.pending[:0]
+
+	// Collect retry tasks ready for processing
+	var retryToProcess []*SyncTask
+	var retryToKeep []*SyncTask
+	for _, task := range q.retry {
+		if now.After(task.NextRetry) {
+			retryToProcess = append(retryToProcess, task)
+		} else {
+			retryToKeep = append(retryToKeep, task)
+		}
+	}
+	q.retry = retryToKeep
+	q.mu.Unlock()
+
+	// Process tasks without holding the lock
+	type taskResult struct {
+		entryID string
+		success bool
+		retries int
+		dropped bool
+	}
+
+	var results []taskResult
+
+	// Process pending tasks
+	for _, task := range tasksToProcess {
 		if err := syncFn(task); err != nil {
 			task.RetryCount++
 			if task.RetryCount < task.MaxRetry {
 				task.NextRetry = now.Add(time.Duration(task.RetryCount*task.RetryCount) * time.Second)
-				q.retry = append(q.retry, task)
-			}
-			// 更新状态
-			if status, ok := q.statuses[task.EntryID]; ok {
-				status.RetryCount = task.RetryCount
-			}
-		} else {
-			// 同步成功，更新状态
-			if status, ok := q.statuses[task.EntryID]; ok {
-				status.SyncedToSeed = true
-				status.LastSyncAt = now
-			}
-		}
-	}
-	q.pending = newPending
-
-	// 处理重试任务
-	var stillRetry []*SyncTask
-	for _, task := range q.retry {
-		if now.After(task.NextRetry) {
-			if err := syncFn(task); err != nil {
-				task.RetryCount++
-				if task.RetryCount < task.MaxRetry {
-					task.NextRetry = now.Add(time.Duration(task.RetryCount*task.RetryCount) * time.Second)
-					stillRetry = append(stillRetry, task)
-				}
+				results = append(results, taskResult{entryID: task.EntryID, success: false, retries: task.RetryCount})
 			} else {
-				// 同步成功，更新状态
-				if status, ok := q.statuses[task.EntryID]; ok {
-					status.SyncedToSeed = true
-					status.LastSyncAt = now
-				}
+				// Task dropped due to max retries exceeded
+				results = append(results, taskResult{entryID: task.EntryID, success: false, dropped: true})
 			}
 		} else {
-			stillRetry = append(stillRetry, task)
+			results = append(results, taskResult{entryID: task.EntryID, success: true})
 		}
 	}
-	q.retry = stillRetry
+
+	// Process retry tasks
+	for _, task := range retryToProcess {
+		if err := syncFn(task); err != nil {
+			task.RetryCount++
+			if task.RetryCount < task.MaxRetry {
+				task.NextRetry = now.Add(time.Duration(task.RetryCount*task.RetryCount) * time.Second)
+				results = append(results, taskResult{entryID: task.EntryID, success: false, retries: task.RetryCount})
+			} else {
+				// Task dropped due to max retries exceeded
+				results = append(results, taskResult{entryID: task.EntryID, success: false, dropped: true})
+			}
+		} else {
+			results = append(results, taskResult{entryID: task.EntryID, success: true})
+		}
+	}
+
+	// Reacquire lock to update state
+	q.mu.Lock()
+	defer q.mu.Unlock()
+
+	for _, result := range results {
+		if result.dropped {
+			// Clean up status for dropped tasks
+			delete(q.statuses, result.entryID)
+			continue
+		}
+
+		status, ok := q.statuses[result.entryID]
+		if !ok {
+			continue
+		}
+
+		if result.success {
+			status.SyncedToSeed = true
+			status.LastSyncAt = now
+		} else {
+			status.RetryCount = result.retries
+			// Find the task and add to retry queue
+			for _, task := range tasksToProcess {
+				if task.EntryID == result.entryID {
+					q.retry = append(q.retry, task)
+					break
+				}
+			}
+			for _, task := range retryToProcess {
+				if task.EntryID == result.entryID {
+					q.retry = append(q.retry, task)
+					break
+				}
+			}
+		}
+	}
 }
 
 // PendingCount 返回待处理任务数
