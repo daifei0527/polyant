@@ -281,3 +281,85 @@ func TestAuthMiddleware_SuspendedUser(t *testing.T) {
 		t.Errorf("Expected status %d for suspended user, got %d", http.StatusForbidden, rec.Code)
 	}
 }
+
+func TestAuthMiddleware_RequireLevel(t *testing.T) {
+	store := storage.NewMemoryUserStore()
+	authMW := NewAuthMiddleware(store)
+
+	// Test handler that should only be accessible by Lv2+
+	testHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		json.NewEncoder(w).Encode(map[string]string{"status": "ok"})
+	})
+
+	// Create context with user level
+	ctx := context.WithValue(context.Background(), UserLevelKey, int32(1))
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/test", nil)
+	req = req.WithContext(ctx)
+	rec := httptest.NewRecorder()
+
+	// Require Lv2, but user is Lv1
+	handler := authMW.RequireLevel(2, testHandler)
+	handler.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusForbidden {
+		t.Errorf("Expected status %d for insufficient level, got %d", http.StatusForbidden, rec.Code)
+	}
+
+	// Test with sufficient level
+	ctx2 := context.WithValue(context.Background(), UserLevelKey, int32(3))
+	req2 := httptest.NewRequest(http.MethodGet, "/api/v1/test", nil)
+	req2 = req2.WithContext(ctx2)
+	rec2 := httptest.NewRecorder()
+
+	handler.ServeHTTP(rec2, req2)
+
+	if rec2.Code != http.StatusOK {
+		t.Errorf("Expected status %d for sufficient level, got %d", http.StatusOK, rec2.Code)
+	}
+}
+
+func TestAuthMiddleware_RequireLevel_NoLevel(t *testing.T) {
+	store := storage.NewMemoryUserStore()
+	authMW := NewAuthMiddleware(store)
+
+	testHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		t.Error("Handler should not be called")
+	})
+
+	// Context without user level
+	ctx := context.Background()
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/test", nil)
+	req = req.WithContext(ctx)
+	rec := httptest.NewRecorder()
+
+	handler := authMW.RequireLevel(1, testHandler)
+	handler.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusForbidden {
+		t.Errorf("Expected status %d for missing level, got %d", http.StatusForbidden, rec.Code)
+	}
+}
+
+func TestIsWriteOperation(t *testing.T) {
+	tests := []struct {
+		method   string
+		path     string
+		expected bool
+	}{
+		{http.MethodGet, "/api/v1/test", false},
+		{http.MethodHead, "/api/v1/test", false},
+		{http.MethodOptions, "/api/v1/test", false},
+		{http.MethodPost, "/api/v1/test", true},
+		{http.MethodPut, "/api/v1/test", true},
+		{http.MethodDelete, "/api/v1/test", true},
+		{http.MethodPatch, "/api/v1/test", true},
+	}
+
+	for _, tt := range tests {
+		result := isWriteOperation(tt.method, tt.path)
+		if result != tt.expected {
+			t.Errorf("isWriteOperation(%q, %q) = %v, expected %v", tt.method, tt.path, result, tt.expected)
+		}
+	}
+}

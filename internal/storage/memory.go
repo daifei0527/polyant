@@ -228,12 +228,33 @@ func (s *MemoryUserStore) Get(ctx context.Context, pubkeyHash string) (*model.Us
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
-	user, exists := s.users[pubkeyHash]
-	if !exists {
-		return nil, fmt.Errorf("user not found")
+	// 检查是否为 base64 编码的公钥（原始格式）
+	// 原始公钥通常以 base64 编码，包含 + / = 等字符
+	// 公钥哈希是 hex 编码，只包含 0-9 a-f
+	isRawPublicKey := false
+	for _, c := range pubkeyHash {
+		if (c < '0' || c > '9') && (c < 'a' || c > 'f') && c != '-' {
+			isRawPublicKey = true
+			break
+		}
 	}
-	cp := *user
-	return &cp, nil
+
+	for storedHash, user := range s.users {
+		if isRawPublicKey {
+			// 直接比较公钥
+			if user.PublicKey == pubkeyHash {
+				cp := *user
+				return &cp, nil
+			}
+		} else {
+			// 比较公钥哈希
+			if storedHash == pubkeyHash {
+				cp := *user
+				return &cp, nil
+			}
+		}
+	}
+	return nil, fmt.Errorf("user not found")
 }
 
 // GetByEmail 根据邮箱获取用户

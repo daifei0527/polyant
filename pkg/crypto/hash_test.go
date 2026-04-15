@@ -304,3 +304,74 @@ func TestVerifySHA256CaseInsensitive(t *testing.T) {
 		t.Error("大写哈希验证不应成功")
 	}
 }
+
+// TestVerifySHA256WrongLength 测试错误长度的哈希
+func TestVerifySHA256WrongLength(t *testing.T) {
+	data := []byte("test")
+
+	// 太短的哈希
+	if crypto.VerifySHA256(data, "abc") {
+		t.Error("短哈希验证不应成功")
+	}
+
+	// 太长的哈希
+	longHash := "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855extra"
+	if crypto.VerifySHA256(data, longHash) {
+		t.Error("长哈希验证不应成功")
+	}
+}
+
+// TestComputeFileSHA256ReadError 测试文件读取错误
+func TestComputeFileSHA256ReadError(t *testing.T) {
+	// 创建一个目录而不是文件
+	tmpDir, err := os.MkdirTemp("", "crypto-test-")
+	if err != nil {
+		t.Fatalf("创建临时目录失败: %v", err)
+	}
+	defer os.RemoveAll(tmpDir)
+
+	// 尝试读取目录
+	_, err = crypto.ComputeFileSHA256(tmpDir)
+	if err == nil {
+		t.Error("读取目录应返回错误")
+	}
+}
+
+// TestGenerateUUIDConsistency 测试多次生成的一致性
+func TestGenerateUUIDConsistency(t *testing.T) {
+	uuid1 := crypto.GenerateUUID()
+	uuid2 := crypto.GenerateUUID()
+
+	// 两个 UUID 应该不同
+	if uuid1 == uuid2 {
+		t.Error("连续生成的 UUID 应该不同")
+	}
+
+	// 但格式应该一致
+	if len(uuid1) != len(uuid2) {
+		t.Error("UUID 长度应该一致")
+	}
+
+	// 版本号应该相同
+	if uuid1[14] != uuid2[14] {
+		t.Error("UUID 版本号应该一致")
+	}
+}
+
+// TestComputeSHA256NilInput 测试 nil 输入
+func TestComputeSHA256NilInput(t *testing.T) {
+	hash := crypto.ComputeSHA256(nil)
+	if hash != "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855" {
+		t.Errorf("nil 输入应等于空输入的哈希, got %s", hash)
+	}
+}
+
+// TestVerifySHA256EmptyHash 测试空哈希验证
+func TestVerifySHA256EmptyHash(t *testing.T) {
+	data := []byte("test")
+
+	// 空哈希字符串
+	if crypto.VerifySHA256(data, "") {
+		t.Error("空哈希验证不应成功")
+	}
+}

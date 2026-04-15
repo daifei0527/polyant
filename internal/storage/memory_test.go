@@ -557,3 +557,278 @@ func TestNewMemoryStore(t *testing.T) {
 		t.Error("Backlink index is nil")
 	}
 }
+
+// TestMemoryUserStore_List 测试用户列表功能
+func TestMemoryUserStore_List(t *testing.T) {
+	store := NewMemoryUserStore()
+	ctx := context.Background()
+
+	// 创建测试用户
+	for i := 0; i < 5; i++ {
+		user := &model.User{
+			PublicKey:    string(rune('a' + i)),
+			AgentName:    "User",
+			UserLevel:    int32(i % 3),
+			RegisteredAt: int64(1000 + i*100),
+			Status:       model.UserStatusActive,
+		}
+		store.Create(ctx, user)
+	}
+
+	// 测试分页
+	filter := UserFilter{Limit: 3}
+	users, total, err := store.List(ctx, filter)
+	if err != nil {
+		t.Fatalf("List failed: %v", err)
+	}
+	if total != 5 {
+		t.Errorf("Expected total 5, got %d", total)
+	}
+	if len(users) != 3 {
+		t.Errorf("Expected 3 users, got %d", len(users))
+	}
+
+	// 测试第二页
+	filter = UserFilter{Offset: 3, Limit: 10}
+	users, _, _ = store.List(ctx, filter)
+	if len(users) != 2 {
+		t.Errorf("Expected 2 users on second page, got %d", len(users))
+	}
+
+	// 测试用户等级过滤（Level=0 表示不过滤，所以测试 Level=1）
+	filter = UserFilter{Level: 1, Limit: 10}
+	users, total, _ = store.List(ctx, filter)
+	if total != 2 {
+		t.Errorf("Expected 2 Lv1 users, got %d", total)
+	}
+
+	// 测试状态过滤
+	filter = UserFilter{Status: model.UserStatusActive, Limit: 10}
+	users, total, _ = store.List(ctx, filter)
+	if total != 5 {
+		t.Errorf("Expected 5 active users, got %d", total)
+	}
+}
+
+// TestMemorySearchEngine_UpdateIndex 测试更新索引
+func TestMemorySearchEngine_UpdateIndex(t *testing.T) {
+	engine := NewMemorySearchEngine()
+
+	// 先索引
+	entry := &model.KnowledgeEntry{
+		ID:      "entry-1",
+		Title:   "Original Title",
+		Content: "Original Content",
+		Status:  model.EntryStatusPublished,
+	}
+	engine.IndexEntry(entry)
+
+	// 更新索引
+	updatedEntry := &model.KnowledgeEntry{
+		ID:      "entry-1",
+		Title:   "Updated Title",
+		Content: "Updated Content",
+		Status:  model.EntryStatusPublished,
+	}
+	err := engine.UpdateIndex(updatedEntry)
+	if err != nil {
+		t.Errorf("UpdateIndex failed: %v", err)
+	}
+
+	// 验证更新
+	result, _ := engine.Search(context.Background(), index.SearchQuery{Keyword: "Updated", Limit: 10})
+	if result.TotalCount != 1 {
+		t.Errorf("Expected 1 result after update, got %d", result.TotalCount)
+	}
+}
+
+// TestMemorySearchEngine_DeleteIndex 测试删除索引
+func TestMemorySearchEngine_DeleteIndex(t *testing.T) {
+	engine := NewMemorySearchEngine()
+
+	// 索引条目
+	entry := &model.KnowledgeEntry{
+		ID:      "entry-1",
+		Title:   "Test Entry",
+		Content: "Content",
+		Status:  model.EntryStatusPublished,
+	}
+	engine.IndexEntry(entry)
+
+	// 删除索引
+	err := engine.DeleteIndex("entry-1")
+	if err != nil {
+		t.Errorf("DeleteIndex failed: %v", err)
+	}
+
+	// 验证删除
+	result, _ := engine.Search(context.Background(), index.SearchQuery{Keyword: "Test", Limit: 10})
+	if result.TotalCount != 0 {
+		t.Errorf("Expected 0 results after delete, got %d", result.TotalCount)
+	}
+}
+
+// TestMemorySearchEngine_Close 测试关闭搜索引擎
+func TestMemorySearchEngine_Close(t *testing.T) {
+	engine := NewMemorySearchEngine()
+
+	// Close 应该不返回错误
+	err := engine.Close()
+	if err != nil {
+		t.Errorf("Close failed: %v", err)
+	}
+}
+
+// TestMemoryEntryStore_Delete_HardDelete 测试硬删除
+func TestMemoryEntryStore_Delete_HardDelete(t *testing.T) {
+	store := NewMemoryEntryStore()
+	ctx := context.Background()
+
+	entry := &model.KnowledgeEntry{
+		ID:      "entry-1",
+		Title:   "Test",
+		Content: "Content",
+		Status:  model.EntryStatusPublished,
+	}
+	store.Create(ctx, entry)
+
+	// 硬删除
+	err := store.Delete(ctx, "entry-1")
+	if err != nil {
+		t.Errorf("Delete failed: %v", err)
+	}
+
+	// 验证状态变为 archived
+	got, _ := store.Get(ctx, "entry-1")
+	if got.Status != model.EntryStatusArchived {
+		t.Errorf("Expected status archived, got %s", got.Status)
+	}
+}
+
+// TestMemoryEntryStore_UpdateNonExisting 测试更新不存在的条目
+func TestMemoryEntryStore_UpdateNonExisting(t *testing.T) {
+	store := NewMemoryEntryStore()
+	ctx := context.Background()
+
+	entry := &model.KnowledgeEntry{
+		ID:      "non-existing",
+		Title:   "Test",
+		Content: "Content",
+		Status:  model.EntryStatusPublished,
+	}
+
+	_, err := store.Update(ctx, entry)
+	if err == nil {
+		t.Error("Expected error when updating non-existing entry")
+	}
+}
+
+// TestMemoryEntryStore_DeleteNonExisting 测试删除不存在的条目
+func TestMemoryEntryStore_DeleteNonExisting(t *testing.T) {
+	store := NewMemoryEntryStore()
+	ctx := context.Background()
+
+	err := store.Delete(ctx, "non-existing")
+	if err == nil {
+		t.Error("Expected error when deleting non-existing entry")
+	}
+}
+
+// TestMemoryUserStore_UpdateNonExisting 测试更新不存在的用户
+func TestMemoryUserStore_UpdateNonExisting(t *testing.T) {
+	store := NewMemoryUserStore()
+	ctx := context.Background()
+
+	user := &model.User{
+		PublicKey: "non-existing",
+		AgentName: "Test",
+	}
+
+	_, err := store.Update(ctx, user)
+	if err == nil {
+		t.Error("Expected error when updating non-existing user")
+	}
+}
+
+// TestMemoryRatingStore_GetNonExisting 测试获取不存在的评分
+func TestMemoryRatingStore_GetNonExisting(t *testing.T) {
+	store := NewMemoryRatingStore()
+	ctx := context.Background()
+
+	_, err := store.Get(ctx, "non-existing")
+	if err == nil {
+		t.Error("Expected error when getting non-existing rating")
+	}
+}
+
+// TestMemoryCategoryStore_GetNonExisting 测试获取不存在的分类
+func TestMemoryCategoryStore_GetNonExisting(t *testing.T) {
+	store := NewMemoryCategoryStore()
+	ctx := context.Background()
+
+	_, err := store.Get(ctx, "non-existing")
+	if err == nil {
+		t.Error("Expected error when getting non-existing category")
+	}
+}
+
+// TestMemorySearchEngine_SearchWithScoreRange 测试分数范围搜索
+func TestMemorySearchEngine_SearchWithScoreRange(t *testing.T) {
+	engine := NewMemorySearchEngine()
+
+	// 索引不同分数的条目
+	entries := []*model.KnowledgeEntry{
+		{ID: "1", Title: "Entry 1", Status: model.EntryStatusPublished, Score: 3.0},
+		{ID: "2", Title: "Entry 2", Status: model.EntryStatusPublished, Score: 4.5},
+		{ID: "3", Title: "Entry 3", Status: model.EntryStatusPublished, Score: 5.0},
+	}
+	for _, e := range entries {
+		engine.IndexEntry(e)
+	}
+
+	// 测试分数范围
+	result, _ := engine.Search(context.Background(), index.SearchQuery{MinScore: 4.0, Limit: 10})
+	if result.TotalCount != 2 {
+		t.Errorf("Expected 2 results with min score 4.0, got %d", result.TotalCount)
+	}
+}
+
+// TestMemoryBacklinkIndex_UpdateWithEmptyLinks 测试空链接更新
+func TestMemoryBacklinkIndex_UpdateWithEmptyLinks(t *testing.T) {
+	idx := NewMemoryBacklinkIndex()
+
+	// 更新空链接
+	err := idx.UpdateIndex("entry-1", []string{})
+	if err != nil {
+		t.Errorf("UpdateIndex with empty links failed: %v", err)
+	}
+
+	// 验证没有 outlinks
+	outlinks, _ := idx.GetOutlinks("entry-1")
+	if len(outlinks) != 0 {
+		t.Errorf("Expected 0 outlinks, got %d", len(outlinks))
+	}
+}
+
+// TestMemoryBacklinkIndex_GetNonExisting 测试获取不存在的链接
+func TestMemoryBacklinkIndex_GetNonExisting(t *testing.T) {
+	idx := NewMemoryBacklinkIndex()
+
+	// 获取不存在的 outlinks
+	outlinks, err := idx.GetOutlinks("non-existing")
+	if err != nil {
+		t.Errorf("GetOutlinks failed: %v", err)
+	}
+	if len(outlinks) != 0 {
+		t.Errorf("Expected 0 outlinks for non-existing entry, got %d", len(outlinks))
+	}
+
+	// 获取不存在的 backlinks
+	backlinks, err := idx.GetBacklinks("non-existing")
+	if err != nil {
+		t.Errorf("GetBacklinks failed: %v", err)
+	}
+	if len(backlinks) != 0 {
+		t.Errorf("Expected 0 backlinks for non-existing entry, got %d", len(backlinks))
+	}
+}
