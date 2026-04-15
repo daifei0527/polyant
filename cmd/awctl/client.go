@@ -1038,3 +1038,90 @@ func (c *Client) TriggerSync(ctx context.Context) error {
 	var resp APIResponse
 	return c.doRequestWithAuth(ctx, http.MethodPost, "/api/v1/node/sync", nil, &resp, true)
 }
+
+// ========== 管理员操作 API ==========
+
+// UserListItem 用户列表项
+type UserListItem struct {
+	PublicKey      string `json:"public_key"`
+	AgentName      string `json:"agent_name"`
+	UserLevel      int32  `json:"user_level"`
+	Status         string `json:"status"`
+	ContributionCnt int   `json:"contribution_cnt"`
+	RatingCnt      int    `json:"rating_cnt"`
+	CreatedAt      int64  `json:"created_at"`
+	LastActive     int64  `json:"last_active_at"`
+}
+
+// ListUsers 列出用户（需要管理员权限）
+func (c *Client) ListUsers(ctx context.Context, page, limit int, level int32, search string) ([]UserListItem, int, error) {
+	path := fmt.Sprintf("/api/v1/admin/users?page=%d&limit=%d", page, limit)
+	if level >= 0 {
+		path += fmt.Sprintf("&level=%d", level)
+	}
+	if search != "" {
+		path += "&search=" + search
+	}
+
+	var resp APIResponse
+	if err := c.doRequestWithAuth(ctx, http.MethodGet, path, nil, &resp, true); err != nil {
+		return nil, 0, err
+	}
+
+	data, ok := resp.Data.(map[string]interface{})
+	if !ok {
+		return nil, 0, fmt.Errorf("invalid response data")
+	}
+
+	var total int
+	if v, ok := data["total"].(float64); ok {
+		total = int(v)
+	}
+
+	var users []UserListItem
+	if items, ok := data["users"].([]interface{}); ok {
+		for _, item := range items {
+			if m, ok := item.(map[string]interface{}); ok {
+				user := UserListItem{}
+				if v, ok := m["public_key"].(string); ok {
+					user.PublicKey = v
+				}
+				if v, ok := m["agent_name"].(string); ok {
+					user.AgentName = v
+				}
+				if v, ok := m["user_level"].(float64); ok {
+					user.UserLevel = int32(v)
+				}
+				if v, ok := m["status"].(string); ok {
+					user.Status = v
+				}
+				if v, ok := m["contribution_cnt"].(float64); ok {
+					user.ContributionCnt = int(v)
+				}
+				if v, ok := m["rating_cnt"].(float64); ok {
+					user.RatingCnt = int(v)
+				}
+				if v, ok := m["created_at"].(float64); ok {
+					user.CreatedAt = int64(v)
+				}
+				if v, ok := m["last_active_at"].(float64); ok {
+					user.LastActive = int64(v)
+				}
+				users = append(users, user)
+			}
+		}
+	}
+
+	return users, total, nil
+}
+
+// SetUserLevel 设置用户等级（需要超级管理员权限）
+func (c *Client) SetUserLevel(ctx context.Context, publicKey string, level int32, reason string) error {
+	req := map[string]interface{}{
+		"level":  level,
+		"reason": reason,
+	}
+	path := fmt.Sprintf("/api/v1/admin/users/%s/level", publicKey)
+	var resp APIResponse
+	return c.doRequestWithAuth(ctx, http.MethodPut, path, req, &resp, true)
+}
