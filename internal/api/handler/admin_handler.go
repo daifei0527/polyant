@@ -7,6 +7,7 @@ import (
 
 	"github.com/daifei0527/polyant/internal/core/user"
 	"github.com/daifei0527/polyant/internal/storage"
+	"github.com/daifei0527/polyant/internal/storage/model"
 	awerrors "github.com/daifei0527/polyant/pkg/errors"
 )
 
@@ -24,7 +25,8 @@ func NewAdminHandler(store *storage.Store) *AdminHandler {
 
 // BanUserRequest 封禁用户请求
 type BanUserRequest struct {
-	Reason string `json:"reason"`
+	Reason  string         `json:"reason"`
+	BanType model.BanType `json:"ban_type"` // full 或 readonly
 }
 
 // SetLevelRequest 设置等级请求
@@ -55,12 +57,23 @@ func (h *AdminHandler) BanUserHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// 默认完全封禁
+	if req.BanType == "" {
+		req.BanType = model.BanTypeFull
+	}
+
+	// 验证 banType
+	if req.BanType != model.BanTypeFull && req.BanType != model.BanTypeReadonly {
+		writeError(w, awerrors.New(400, awerrors.CategoryAPI, "invalid ban_type", http.StatusBadRequest))
+		return
+	}
+
 	// 从上下文获取管理员公钥
 	adminPublicKey, _ := r.Context().Value("public_key").(string)
 
 	// 执行封禁
 	ctx := r.Context()
-	if err := h.adminSvc.BanUser(ctx, publicKey, adminPublicKey, req.Reason); err != nil {
+	if err := h.adminSvc.BanUser(ctx, publicKey, adminPublicKey, req.Reason, req.BanType); err != nil {
 		writeError(w, awerrors.Wrap(800, awerrors.CategoryUser, err.Error(), http.StatusBadRequest, err))
 		return
 	}
@@ -68,7 +81,11 @@ func (h *AdminHandler) BanUserHandler(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, &APIResponse{
 		Code:    0,
 		Message: "success",
-		Data:    map[string]bool{"success": true},
+		Data: map[string]interface{}{
+			"success":    true,
+			"ban_type":   req.BanType,
+			"public_key": publicKey,
+		},
 	})
 }
 
