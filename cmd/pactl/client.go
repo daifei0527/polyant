@@ -1125,3 +1125,107 @@ func (c *Client) SetUserLevel(ctx context.Context, publicKey string, level int32
 	var resp APIResponse
 	return c.doRequestWithAuth(ctx, http.MethodPut, path, req, &resp, true)
 }
+
+// BanUser 封禁用户（需要管理员权限）
+func (c *Client) BanUser(ctx context.Context, publicKey, reason, banType string) error {
+	req := map[string]interface{}{
+		"reason":   reason,
+		"ban_type": banType,
+	}
+	path := fmt.Sprintf("/api/v1/admin/users/%s/ban", publicKey)
+	var resp APIResponse
+	return c.doRequestWithAuth(ctx, http.MethodPost, path, req, &resp, true)
+}
+
+// UnbanUser 解封用户（需要管理员权限）
+func (c *Client) UnbanUser(ctx context.Context, publicKey string) error {
+	path := fmt.Sprintf("/api/v1/admin/users/%s/unban", publicKey)
+	var resp APIResponse
+	return c.doRequestWithAuth(ctx, http.MethodPost, path, nil, &resp, true)
+}
+
+// UserStats 用户统计信息
+type UserStats struct {
+	Total            int                  `json:"total"`
+	LevelDistribution []LevelDistribution `json:"level_distribution"`
+}
+
+// LevelDistribution 等级分布
+type LevelDistribution struct {
+	Level int32 `json:"level"`
+	Count int   `json:"count"`
+}
+
+// ActivityTrend 活跃趋势
+type ActivityTrend struct {
+	Date        string `json:"date"`
+	ActiveUsers int    `json:"active_users"`
+}
+
+// GetUserStats 获取用户统计（需要管理员权限）
+func (c *Client) GetUserStats(ctx context.Context) (*UserStats, error) {
+	var resp APIResponse
+	if err := c.doRequestWithAuth(ctx, http.MethodGet, "/api/v1/admin/stats/users", nil, &resp, true); err != nil {
+		return nil, err
+	}
+
+	data, ok := resp.Data.(map[string]interface{})
+	if !ok {
+		return nil, fmt.Errorf("invalid response data")
+	}
+
+	stats := &UserStats{}
+	if v, ok := data["total"].(float64); ok {
+		stats.Total = int(v)
+	}
+
+	if items, ok := data["level_distribution"].([]interface{}); ok {
+		for _, item := range items {
+			if m, ok := item.(map[string]interface{}); ok {
+				ld := LevelDistribution{}
+				if v, ok := m["level"].(float64); ok {
+					ld.Level = int32(v)
+				}
+				if v, ok := m["count"].(float64); ok {
+					ld.Count = int(v)
+				}
+				stats.LevelDistribution = append(stats.LevelDistribution, ld)
+			}
+		}
+	}
+
+	return stats, nil
+}
+
+// GetActivityTrend 获取活跃趋势（需要管理员权限）
+func (c *Client) GetActivityTrend(ctx context.Context, days int) ([]ActivityTrend, error) {
+	path := fmt.Sprintf("/api/v1/admin/stats/activity?days=%d", days)
+
+	var resp APIResponse
+	if err := c.doRequestWithAuth(ctx, http.MethodGet, path, nil, &resp, true); err != nil {
+		return nil, err
+	}
+
+	data, ok := resp.Data.(map[string]interface{})
+	if !ok {
+		return nil, fmt.Errorf("invalid response data")
+	}
+
+	var trend []ActivityTrend
+	if items, ok := data["trend"].([]interface{}); ok {
+		for _, item := range items {
+			if m, ok := item.(map[string]interface{}); ok {
+				t := ActivityTrend{}
+				if v, ok := m["date"].(string); ok {
+					t.Date = v
+				}
+				if v, ok := m["active_users"].(float64); ok {
+					t.ActiveUsers = int(v)
+				}
+				trend = append(trend, t)
+			}
+		}
+	}
+
+	return trend, nil
+}
