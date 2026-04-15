@@ -28,7 +28,24 @@ type NodeType int
 const (
 	NodeTypeLocal NodeType = iota
 	NodeTypeSeed
+	NodeTypeUser // 用户节点类型
 )
+
+// CapabilityType 能力类型
+type CapabilityType int
+
+const (
+	CapabilityRelay CapabilityType = iota + 1 // 中继服务
+	CapabilityMirror                           // 数据镜像
+	CapabilityDHT                              // DHT 路由
+)
+
+// Capability 节点能力声明
+type Capability struct {
+	Type      CapabilityType `json:"type"`
+	Limit     int            `json:"limit"`     // 中继连接数上限 / 镜像大小上限
+	Available bool           `json:"available"` // 当前是否可用
+}
 
 type QueryType int
 
@@ -45,13 +62,14 @@ type MessageHeader struct {
 }
 
 type Handshake struct {
-	NodeID     string   `json:"node_id"`
-	PeerID     string   `json:"peer_id"`
-	NodeType   NodeType `json:"node_type"`
-	Version    string   `json:"version"`
-	Categories []string `json:"categories"`
-	EntryCount int64    `json:"entry_count"`
-	Signature  []byte   `json:"signature,omitempty"`
+	NodeID       string       `json:"node_id"`
+	PeerID       string       `json:"peer_id"`
+	NodeType     NodeType     `json:"node_type"`
+	Version      string       `json:"version"`
+	Categories   []string     `json:"categories"`
+	EntryCount   int64        `json:"entry_count"`
+	Capabilities []Capability `json:"capabilities"` // 节点能力声明
+	Signature    []byte       `json:"signature,omitempty"`
 }
 
 type HandshakeAck struct {
