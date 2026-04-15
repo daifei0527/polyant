@@ -36,12 +36,13 @@ type Election struct {
 	StartTime     int64          `json:"startTime"`     // 开始时间(Unix毫秒)
 	EndTime       int64          `json:"endTime"`       // 结束时间(Unix毫秒)
 	VoteThreshold int32          `json:"voteThreshold"` // 当选所需票数
+	AutoElect     bool           `json:"autoElect"`     // 是否自动当选
 	CreatedAt     int64          `json:"createdAt"`
 	CreatedBy     string         `json:"createdBy"` // 创建者用户ID
 }
 
 // NewElection 创建新选举
-func NewElection(title, description, createdBy string, voteThreshold int32, duration time.Duration) *Election {
+func NewElection(title, description, createdBy string, voteThreshold int32, duration time.Duration, autoElect bool) *Election {
 	now := time.Now().UnixMilli()
 	return &Election{
 		ID:            generateID(),
@@ -51,6 +52,7 @@ func NewElection(title, description, createdBy string, voteThreshold int32, dura
 		StartTime:     now,
 		EndTime:       now + duration.Milliseconds(),
 		VoteThreshold: voteThreshold,
+		AutoElect:     autoElect,
 		CreatedAt:     now,
 		CreatedBy:     createdBy,
 	}
@@ -76,30 +78,46 @@ func (e *Election) IsExpired() bool {
 	return time.Now().UnixMilli() > e.EndTime
 }
 
+// ShouldAutoElect 判断是否应该自动当选
+func (e *Election) ShouldAutoElect() bool {
+	return e.AutoElect && e.Status == ElectionStatusActive
+}
+
 // ==================== 候选人 ====================
 
 // Candidate 表示选举候选人
 type Candidate struct {
-	ElectionID  string          `json:"electionId"`
-	UserID      string          `json:"userId"`
-	UserName    string          `json:"userName"`
-	NominatedBy string          `json:"nominatedBy"` // 提名人ID
-	VoteCount   int32           `json:"voteCount"`
-	Status      CandidateStatus `json:"status"`
-	NominatedAt int64           `json:"nominatedAt"`
+	ElectionID    string          `json:"electionId"`
+	UserID        string          `json:"userId"`
+	UserName      string          `json:"userName"`
+	NominatedBy   string          `json:"nominatedBy"`   // 提名人ID
+	SelfNominated bool            `json:"selfNominated"` // 是否自荐
+	Confirmed     bool            `json:"confirmed"`     // 是否确认接受提名
+	ConfirmedAt   int64           `json:"confirmedAt,omitempty"`
+	VoteCount     int32           `json:"voteCount"`
+	Status        CandidateStatus `json:"status"`
+	NominatedAt   int64           `json:"nominatedAt"`
 }
 
 // NewCandidate 创建新候选人
-func NewCandidate(electionID, userID, userName, nominatedBy string) *Candidate {
-	return &Candidate{
-		ElectionID:  electionID,
-		UserID:      userID,
-		UserName:    userName,
-		NominatedBy: nominatedBy,
-		VoteCount:   0,
-		Status:      CandidateStatusNominated,
-		NominatedAt: time.Now().UnixMilli(),
+func NewCandidate(electionID, userID, userName, nominatedBy string, selfNominated bool) *Candidate {
+	now := time.Now().UnixMilli()
+	c := &Candidate{
+		ElectionID:    electionID,
+		UserID:        userID,
+		UserName:      userName,
+		NominatedBy:   nominatedBy,
+		SelfNominated: selfNominated,
+		VoteCount:     0,
+		Status:        CandidateStatusNominated,
+		NominatedAt:   now,
 	}
+	// 自荐自动确认
+	if selfNominated {
+		c.Confirmed = true
+		c.ConfirmedAt = now
+	}
+	return c
 }
 
 // ToJSON 将候选人序列化为JSON字节数组
@@ -110,6 +128,17 @@ func (c *Candidate) ToJSON() ([]byte, error) {
 // FromJSON 从JSON字节数组反序列化为候选人
 func (c *Candidate) FromJSON(data []byte) error {
 	return json.Unmarshal(data, c)
+}
+
+// IsReady 判断候选人是否准备好（已确认接受提名）
+func (c *Candidate) IsReady() bool {
+	return c.Confirmed
+}
+
+// Confirm 确认接受提名
+func (c *Candidate) Confirm() {
+	c.Confirmed = true
+	c.ConfirmedAt = time.Now().UnixMilli()
 }
 
 // ==================== 投票记录 ====================
