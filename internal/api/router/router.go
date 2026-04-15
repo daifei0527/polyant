@@ -123,6 +123,12 @@ func NewRouterWithDeps(deps *Dependencies) (http.Handler, error) {
 		exportHandler = handler.NewExportHandler(deps.Store, deps.NodeID)
 	}
 
+	// 创建统计 handler
+	var statsHandler *handler.StatsHandler
+	if deps.Store != nil {
+		statsHandler = handler.NewStatsHandler(deps.Store)
+	}
+
 	// 创建认证中间件
 	authMW := middleware.NewAuthMiddleware(deps.UserStore)
 
@@ -136,7 +142,7 @@ func NewRouterWithDeps(deps *Dependencies) (http.Handler, error) {
 	registerPublicRoutes(mux, entryHandler, userHandler, categoryHandler, nodeHandler, electionHandler)
 
 	// 注册认证路由（需要 Ed25519 签名认证）
-	registerAuthRoutes(mux, authMW, entryHandler, userHandler, categoryHandler, nodeHandler, adminHandler, electionHandler, batchHandler, exportHandler, auditHandler)
+	registerAuthRoutes(mux, authMW, entryHandler, userHandler, categoryHandler, nodeHandler, adminHandler, electionHandler, batchHandler, exportHandler, auditHandler, statsHandler)
 
 	// 应用中间件链
 	var httpHandler http.Handler = mux
@@ -250,7 +256,7 @@ func registerPublicRoutes(mux *http.ServeMux, eh *handler.EntryHandler, uh *hand
 }
 
 // registerAuthRoutes 注册需要认证的路由
-func registerAuthRoutes(mux *http.ServeMux, authMW *middleware.AuthMiddleware, eh *handler.EntryHandler, uh *handler.UserHandler, ch *handler.CategoryHandler, nh *handler.NodeHandler, ah *handler.AdminHandler, elh *handler.ElectionHandler, bh *handler.BatchHandler, exh *handler.ExportHandler, auh *handler.AuditHandler) {
+func registerAuthRoutes(mux *http.ServeMux, authMW *middleware.AuthMiddleware, eh *handler.EntryHandler, uh *handler.UserHandler, ch *handler.CategoryHandler, nh *handler.NodeHandler, ah *handler.AdminHandler, elh *handler.ElectionHandler, bh *handler.BatchHandler, exh *handler.ExportHandler, auh *handler.AuditHandler, sh *handler.StatsHandler) {
 	// 创建条目（POST /api/v1/entry）
 	mux.Handle("/api/v1/entry/create", authMW.Middleware(http.HandlerFunc(eh.CreateEntryHandler)))
 
@@ -310,6 +316,18 @@ func registerAuthRoutes(mux *http.ServeMux, authMW *middleware.AuthMiddleware, e
 
 		// 用户统计 GET /api/v1/admin/stats/users - Lv4+ (Admin)
 		mux.Handle("/api/v1/admin/stats/users", authMW.Middleware(authMW.RequireLevel(model.UserLevelLv4, http.HandlerFunc(ah.GetUserStatsHandler))))
+	}
+
+	// ==================== 统计路由 ====================
+	if sh != nil {
+		// 贡献明细 GET /api/v1/admin/stats/contributions - Lv4+
+		mux.Handle("/api/v1/admin/stats/contributions", authMW.Middleware(authMW.RequireLevel(model.UserLevelLv4, http.HandlerFunc(sh.GetContributionStatsHandler))))
+
+		// 活跃度趋势 GET /api/v1/admin/stats/activity - Lv4+
+		mux.Handle("/api/v1/admin/stats/activity", authMW.Middleware(authMW.RequireLevel(model.UserLevelLv4, http.HandlerFunc(sh.GetActivityTrendHandler))))
+
+		// 注册趋势 GET /api/v1/admin/stats/registrations - Lv4+
+		mux.Handle("/api/v1/admin/stats/registrations", authMW.Middleware(authMW.RequireLevel(model.UserLevelLv4, http.HandlerFunc(sh.GetRegistrationTrendHandler))))
 	}
 
 	// ==================== 审计日志路由 ====================
