@@ -177,6 +177,39 @@ awctl config show
 awctl config set data.dir /data/polyant
 ```
 
+## Web 管理后台
+
+Polyant 提供 Web 管理后台用于可视化管理。
+
+### 访问方式
+
+管理后台仅限本地访问，默认地址：http://127.0.0.1:18531/admin/
+
+### 认证方式
+
+使用 Ed25519 公钥认证，登录后获取 Session Token (有效期 24 小时)。
+
+### 功能模块
+
+- **数据统计**: 用户统计、贡献统计、活跃趋势
+- **用户管理**: 用户列表、封禁/解封、等级设置 (Lv5)
+- **内容审核**: 条目列表、删除条目
+
+### CLI 工具
+
+`pactl` 是 Polyant 的命令行管理工具：
+
+```bash
+# 用户管理
+pactl admin users list
+pactl admin users ban <public-key> --reason "违规"
+pactl admin users level <public-key> 2 --reason "贡献达标"
+
+# 统计信息
+pactl admin stats users
+pactl admin stats activity --days 30
+```
+
 ## HTTP API
 
 | 端点 | 方法 | 说明 |
