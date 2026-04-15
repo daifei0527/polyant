@@ -21,7 +21,7 @@ CMD_DIR := ./cmd
 POLYANT_BIN := $(BUILD_DIR)/polyant
 SEED_BIN := $(BUILD_DIR)/polyant-seed
 USER_BIN := $(BUILD_DIR)/polyant-user
-AWCTL_BIN := $(BUILD_DIR)/awctl
+PACTL_BIN := $(BUILD_DIR)/pactl
 
 # 交叉编译目标
 PLATFORMS := linux/amd64 linux/arm64 darwin/amd64 darwin/arm64 windows/amd64
@@ -31,15 +31,15 @@ PLATFORMS := linux/amd64 linux/arm64 darwin/amd64 darwin/arm64 windows/amd64
 # 默认目标：编译所有二进制
 all: build
 
-## build: 编译 polyant, seed, user 和 awctl 二进制
+## build: 编译 polyant, seed, user 和 pactl 二进制
 build:
 	@echo ">>> 编译 Polyant..."
 	@mkdir -p $(BUILD_DIR)
 	$(GOBUILD) $(LDFLAGS) -o $(POLYANT_BIN) $(CMD_DIR)/polyant/
 	$(GOBUILD) $(LDFLAGS) -o $(SEED_BIN) $(CMD_DIR)/seed/
 	$(GOBUILD) $(LDFLAGS) -o $(USER_BIN) $(CMD_DIR)/user/
-	$(GOBUILD) $(LDFLAGS) -o $(AWCTL_BIN) $(CMD_DIR)/awctl/
-	@echo ">>> 编译完成: $(POLYANT_BIN), $(SEED_BIN), $(USER_BIN), $(AWCTL_BIN)"
+	$(GOBUILD) $(LDFLAGS) -o $(PACTL_BIN) $(CMD_DIR)/pactl/
+	@echo ">>> 编译完成: $(POLYANT_BIN), $(SEED_BIN), $(USER_BIN), $(PACTL_BIN)"
 
 ## build-seed: 仅编译种子节点二进制
 build-seed:
@@ -76,14 +76,14 @@ run: build
 ## init: 初始化项目（创建配置和数据目录）
 init:
 	@echo ">>> 初始化项目..."
-	./$(AWCTL_BIN) init || $(GOBUILD) -o $(AWCTL_BIN) $(CMD_DIR)/awctl/ && ./$(AWCTL_BIN) init
+	./$(PACTL_BIN) init || $(GOBUILD) -o $(PACTL_BIN) $(CMD_DIR)/pactl/ && ./$(PACTL_BIN) init
 
 ## build-linux: 交叉编译 Linux 版本
 build-linux:
 	@echo ">>> 编译 Linux 版本..."
 	@mkdir -p $(BUILD_DIR)
 	GOOS=linux GOARCH=amd64 $(GOBUILD) $(LDFLAGS) -o $(BUILD_DIR)/polyant-linux-amd64 $(CMD_DIR)/polyant/
-	GOOS=linux GOARCH=amd64 $(GOBUILD) $(LDFLAGS) -o $(BUILD_DIR)/awctl-linux-amd64 $(CMD_DIR)/awctl/
+	GOOS=linux GOARCH=amd64 $(GOBUILD) $(LDFLAGS) -o $(BUILD_DIR)/pactl-linux-amd64 $(CMD_DIR)/pactl/
 	@echo ">>> Linux 编译完成"
 
 ## build-darwin: 交叉编译 macOS 版本
@@ -91,7 +91,7 @@ build-darwin:
 	@echo ">>> 编译 macOS 版本..."
 	@mkdir -p $(BUILD_DIR)
 	GOOS=darwin GOARCH=amd64 $(GOBUILD) $(LDFLAGS) -o $(BUILD_DIR)/polyant-darwin-amd64 $(CMD_DIR)/polyant/
-	GOOS=darwin GOARCH=amd64 $(GOBUILD) $(LDFLAGS) -o $(BUILD_DIR)/awctl-darwin-amd64 $(CMD_DIR)/awctl/
+	GOOS=darwin GOARCH=amd64 $(GOBUILD) $(LDFLAGS) -o $(BUILD_DIR)/pactl-darwin-amd64 $(CMD_DIR)/pactl/
 	GOOS=darwin GOARCH=arm64 $(GOBUILD) $(LDFLAGS) -o $(BUILD_DIR)/polyant-darwin-arm64 $(CMD_DIR)/polyant/
 	@echo ">>> macOS 编译完成"
 
@@ -100,7 +100,7 @@ build-windows:
 	@echo ">>> 编译 Windows 版本..."
 	@mkdir -p $(BUILD_DIR)
 	GOOS=windows GOARCH=amd64 $(GOBUILD) $(LDFLAGS) -o $(BUILD_DIR)/polyant-windows-amd64.exe $(CMD_DIR)/polyant/
-	GOOS=windows GOARCH=amd64 $(GOBUILD) $(LDFLAGS) -o $(BUILD_DIR)/awctl-windows-amd64.exe $(CMD_DIR)/awctl/
+	GOOS=windows GOARCH=amd64 $(GOBUILD) $(LDFLAGS) -o $(BUILD_DIR)/pactl-windows-amd64.exe $(CMD_DIR)/pactl/
 	@echo ">>> Windows 编译完成"
 
 ## cross-compile: 交叉编译所有平台
@@ -113,9 +113,9 @@ cross-compile:
 		[ "$${GOOS}" = "windows" ] && out=$${out}.exe; \
 		echo "  编译 $$out..."; \
 		CGO_ENABLED=0 GOOS=$${GOOS} GOARCH=$${GOARCH} $(GOBUILD) $(LDFLAGS) -o $$out $(CMD_DIR)/polyant/; \
-		out=$(BUILD_DIR)/awctl-$${GOOS}-$${GOARCH}; \
+		out=$(BUILD_DIR)/pactl-$${GOOS}-$${GOARCH}; \
 		[ "$${GOOS}" = "windows" ] && out=$${out}.exe; \
-		CGO_ENABLED=0 GOOS=$${GOOS} GOARCH=$${GOARCH} $(GOBUILD) $(LDFLAGS) -o $$out $(CMD_DIR)/awctl/; \
+		CGO_ENABLED=0 GOOS=$${GOOS} GOARCH=$${GOARCH} $(GOBUILD) $(LDFLAGS) -o $$out $(CMD_DIR)/pactl/; \
 	done
 	@echo ">>> 交叉编译完成"
 
@@ -146,7 +146,7 @@ build-full: build-admin
 	$(GOBUILD) -tags embed_admin $(LDFLAGS) -o $(POLYANT_BIN) $(CMD_DIR)/polyant/
 	$(GOBUILD) $(LDFLAGS) -o $(SEED_BIN) $(CMD_DIR)/seed/
 	$(GOBUILD) $(LDFLAGS) -o $(USER_BIN) $(CMD_DIR)/user/
-	$(GOBUILD) $(LDFLAGS) -o $(AWCTL_BIN) $(CMD_DIR)/awctl/
+	$(GOBUILD) $(LDFLAGS) -o $(PACTL_BIN) $(CMD_DIR)/pactl/
 	@echo ">>> 完整版本构建完成"
 
 ## dev-admin: 开发模式运行管理页面
