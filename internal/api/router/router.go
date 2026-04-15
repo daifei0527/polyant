@@ -6,9 +6,12 @@ import (
 	"context"
 	"net/http"
 	"strings"
+	"time"
 
+	"github.com/daifei0527/polyant/internal/api/admin"
 	"github.com/daifei0527/polyant/internal/api/handler"
 	"github.com/daifei0527/polyant/internal/api/middleware"
+	coreadmin "github.com/daifei0527/polyant/internal/core/admin"
 	"github.com/daifei0527/polyant/internal/core/email"
 	"github.com/daifei0527/polyant/internal/storage"
 	"github.com/daifei0527/polyant/internal/storage/index"
@@ -44,6 +47,7 @@ type Dependencies struct {
 	RemoteQuerier   RemoteQuerier // 远程查询服务
 	EntryPusher     EntryPusher   // 条目推送服务
 	KVStore         kv.Store      // KV 存储（选举等功能需要）
+	SessionManager  *coreadmin.SessionManager
 	NodeID          string
 	NodeType        string
 	Version         string
@@ -138,11 +142,22 @@ func NewRouterWithDeps(deps *Dependencies) (http.Handler, error) {
 	// 创建速率限制中间件
 	rateLimitMW := middleware.NewRateLimitMiddleware(middleware.DefaultRateLimitConfig())
 
+	// 创建 Session Manager
+	var sessionMgr *coreadmin.SessionManager
+	if deps.SessionManager != nil {
+		sessionMgr = deps.SessionManager
+	} else {
+		sessionMgr = coreadmin.NewSessionManager(24 * time.Hour)
+	}
+
 	// 注册公开路由（无需认证）
 	registerPublicRoutes(mux, entryHandler, userHandler, categoryHandler, nodeHandler, electionHandler)
 
 	// 注册认证路由（需要 Ed25519 签名认证）
 	registerAuthRoutes(mux, authMW, entryHandler, userHandler, categoryHandler, nodeHandler, adminHandler, electionHandler, batchHandler, exportHandler, auditHandler, statsHandler)
+
+	// 注册 Admin 路由（Session Token 认证）
+	registerAdminRoutes(mux, deps, sessionMgr)
 
 	// 应用中间件链
 	var httpHandler http.Handler = mux
@@ -293,43 +308,6 @@ func registerAuthRoutes(mux *http.ServeMux, authMW *middleware.AuthMiddleware, e
 	// 触发同步（POST /api/v1/node/sync）
 	mux.Handle("/api/v1/node/sync", authMW.Middleware(http.HandlerFunc(nh.TriggerSyncHandler)))
 
-	// ==================== 管理员路由 ====================
-	if ah != nil {
-		// 用户列表 GET /api/v1/admin/users - Lv4+ (Admin)
-		mux.Handle("/api/v1/admin/users", authMW.Middleware(authMW.RequireLevel(model.UserLevelLv4, http.HandlerFunc(ah.ListUsersHandler))))
-
-		// 封禁用户 POST /api/v1/admin/users/{public_key}/ban - Lv4+ (Admin)
-		mux.Handle("/api/v1/admin/users/", authMW.Middleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			// 检查具体的操作路径
-			path := r.URL.Path
-			if strings.HasSuffix(path, "/ban") {
-				authMW.RequireLevel(model.UserLevelLv4, http.HandlerFunc(ah.BanUserHandler))(w, r)
-			} else if strings.HasSuffix(path, "/unban") {
-				authMW.RequireLevel(model.UserLevelLv4, http.HandlerFunc(ah.UnbanUserHandler))(w, r)
-			} else if strings.HasSuffix(path, "/level") {
-				// 设置用户等级 PUT /api/v1/admin/users/{public_key}/level - Lv5 (SuperAdmin)
-				authMW.RequireLevel(model.UserLevelLv5, http.HandlerFunc(ah.SetUserLevelHandler))(w, r)
-			} else {
-				http.NotFound(w, r)
-			}
-		})))
-
-		// 用户统计 GET /api/v1/admin/stats/users - Lv4+ (Admin)
-		mux.Handle("/api/v1/admin/stats/users", authMW.Middleware(authMW.RequireLevel(model.UserLevelLv4, http.HandlerFunc(ah.GetUserStatsHandler))))
-	}
-
-	// ==================== 统计路由 ====================
-	if sh != nil {
-		// 贡献明细 GET /api/v1/admin/stats/contributions - Lv4+
-		mux.Handle("/api/v1/admin/stats/contributions", authMW.Middleware(authMW.RequireLevel(model.UserLevelLv4, http.HandlerFunc(sh.GetContributionStatsHandler))))
-
-		// 活跃度趋势 GET /api/v1/admin/stats/activity - Lv4+
-		mux.Handle("/api/v1/admin/stats/activity", authMW.Middleware(authMW.RequireLevel(model.UserLevelLv4, http.HandlerFunc(sh.GetActivityTrendHandler))))
-
-		// 注册趋势 GET /api/v1/admin/stats/registrations - Lv4+
-		mux.Handle("/api/v1/admin/stats/registrations", authMW.Middleware(authMW.RequireLevel(model.UserLevelLv4, http.HandlerFunc(sh.GetRegistrationTrendHandler))))
-	}
-
 	// ==================== 审计日志路由 ====================
 	if auh != nil {
 		// 查询审计日志 GET /api/v1/admin/audit/logs - Lv5 (SuperAdmin)
@@ -385,4 +363,50 @@ func registerAuthRoutes(mux *http.ServeMux, authMW *middleware.AuthMiddleware, e
 			}
 		})))
 	}
+}
+
+// registerAdminRoutes 注册 Admin API 路由
+// 使用 Session Token 认证，独立于 Ed25519 签名认证
+func registerAdminRoutes(mux *http.ServeMux, deps *Dependencies, sessionMgr *coreadmin.SessionManager) {
+	// 创建 handlers
+	sessionHandler := admin.NewSessionHandler(sessionMgr, deps.UserStore)
+	adminHandler := admin.NewHandler(deps.Store)
+	adminAuthMW := admin.NewAuthMiddleware(sessionMgr)
+
+	// Session API (仅本地访问)
+	mux.Handle("/api/v1/admin/session/create",
+		admin.LocalOnlyMiddleware(http.HandlerFunc(sessionHandler.CreateSessionHandler)))
+
+	// Admin API (需要 Session Token 认证)
+	// 用户管理
+	mux.Handle("/api/v1/admin/users",
+		adminAuthMW.Middleware(http.HandlerFunc(adminHandler.ListUsersHandler)))
+	mux.Handle("/api/v1/admin/users/",
+		adminAuthMW.Middleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			path := r.URL.Path
+			if strings.HasSuffix(path, "/ban") {
+				adminHandler.BanUserHandler(w, r)
+			} else if strings.HasSuffix(path, "/unban") {
+				adminHandler.UnbanUserHandler(w, r)
+			} else if strings.HasSuffix(path, "/level") {
+				adminHandler.SetUserLevelHandler(w, r)
+			} else {
+				http.NotFound(w, r)
+			}
+		})))
+
+	// 统计 API
+	mux.Handle("/api/v1/admin/stats/users",
+		adminAuthMW.Middleware(http.HandlerFunc(adminHandler.GetUserStatsHandler)))
+	mux.Handle("/api/v1/admin/stats/contributions",
+		adminAuthMW.Middleware(http.HandlerFunc(adminHandler.GetContributionStatsHandler)))
+	mux.Handle("/api/v1/admin/stats/activity",
+		adminAuthMW.Middleware(http.HandlerFunc(adminHandler.GetActivityTrendHandler)))
+	mux.Handle("/api/v1/admin/stats/registrations",
+		adminAuthMW.Middleware(http.HandlerFunc(adminHandler.GetRegistrationTrendHandler)))
+
+	// 静态文件服务 (管理页面)
+	staticHandler := admin.NewStaticHandler()
+	mux.Handle("/admin/", staticHandler)
+	mux.Handle("/admin", http.RedirectHandler("/admin/", http.StatusMovedPermanently))
 }
