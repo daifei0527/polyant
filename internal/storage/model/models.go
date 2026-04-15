@@ -142,14 +142,15 @@ type User struct {
 	NodeId         string `json:"nodeId"`         // 所属节点ID
 	Status         string `json:"status"`         // 用户状态
 	// 管理员相关字段
-	BanReason         string `json:"banReason,omitempty"`         // 封禁原因
-	BannedAt          int64  `json:"bannedAt,omitempty"`          // 封禁时间
-	BannedBy          string `json:"bannedBy,omitempty"`          // 封禁操作者公钥
-	UnbannedAt        int64  `json:"unbannedAt,omitempty"`        // 解封时间
-	UnbannedBy        string `json:"unbannedBy,omitempty"`        // 解封操作者公钥
-	LevelChangeReason string `json:"levelChangeReason,omitempty"` // 等级变更原因
-	LevelChangedAt    int64  `json:"levelChangedAt,omitempty"`    // 等级变更时间
-	LevelChangedBy    string `json:"levelChangedBy,omitempty"`    // 等级变更操作者公钥
+	BanType           BanType `json:"banType,omitempty"`           // 封禁类型
+	BanReason         string  `json:"banReason,omitempty"`         // 封禁原因
+	BannedAt          int64   `json:"bannedAt,omitempty"`          // 封禁时间
+	BannedBy          string  `json:"bannedBy,omitempty"`          // 封禁操作者公钥
+	UnbannedAt        int64   `json:"unbannedAt,omitempty"`        // 解封时间
+	UnbannedBy        string  `json:"unbannedBy,omitempty"`        // 解封操作者公钥
+	LevelChangeReason string  `json:"levelChangeReason,omitempty"` // 等级变更原因
+	LevelChangedAt    int64   `json:"levelChangedAt,omitempty"`    // 等级变更时间
+	LevelChangedBy    string  `json:"levelChangedBy,omitempty"`    // 等级变更操作者公钥
 }
 
 // ToJSON 将用户序列化为JSON字节数组
@@ -160,6 +161,21 @@ func (u *User) ToJSON() ([]byte, error) {
 // FromJSON 从JSON字节数组反序列化为用户
 func (u *User) FromJSON(data []byte) error {
 	return json.Unmarshal(data, u)
+}
+
+// IsBanned 检查用户是否被封禁（完全禁止或只读）
+func (u *User) IsBanned() bool {
+	return u.Status == UserStatusBanned
+}
+
+// IsReadOnly 检查用户是否处于只读模式
+func (u *User) IsReadOnly() bool {
+	return u.Status == UserStatusBanned && u.BanType == BanTypeReadonly
+}
+
+// IsFullBanned 检查用户是否完全被封禁
+func (u *User) IsFullBanned() bool {
+	return u.Status == UserStatusBanned && (u.BanType == "" || u.BanType == BanTypeFull)
 }
 
 // UserStats 用户统计信息

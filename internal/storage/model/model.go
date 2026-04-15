@@ -33,5 +33,16 @@ func GetLevelWeight(level int32) float64 {
 // UserStatusActive 用户正常状态
 const UserStatusActive = "active"
 
+// UserStatusBanned 用户封禁状态
+const UserStatusBanned = "banned"
+
 // UserStatusSuspended 用户暂停状态
 const UserStatusSuspended = "suspended"
+
+// BanType 封禁类型
+type BanType string
+
+const (
+	BanTypeFull     BanType = "full"     // 完全禁止访问
+	BanTypeReadonly BanType = "readonly" // 只读模式
+)

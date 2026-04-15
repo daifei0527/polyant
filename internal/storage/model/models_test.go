@@ -382,3 +382,76 @@ func TestGenerateID(t *testing.T) {
 		t.Error("Generated IDs should be unique")
 	}
 }
+
+func TestUserBanType(t *testing.T) {
+	user := &User{
+		PublicKey: "test-key",
+		Status:    UserStatusBanned,
+		BanType:   BanTypeReadonly,
+		BanReason: "违规操作",
+	}
+
+	if user.Status != UserStatusBanned {
+		t.Errorf("Expected status %s, got %s", UserStatusBanned, user.Status)
+	}
+	if user.BanType != BanTypeReadonly {
+		t.Errorf("Expected BanType %s, got %s", BanTypeReadonly, user.BanType)
+	}
+	if user.BanReason != "违规操作" {
+		t.Errorf("Expected BanReason '违规操作', got %s", user.BanReason)
+	}
+}
+
+func TestUserBanTypeDefaults(t *testing.T) {
+	user := &User{
+		PublicKey: "test-key",
+		Status:    UserStatusBanned,
+	}
+	// 默认封禁类型应该是 full（空字符串时 IsFullBanned 返回 true）
+	if !user.IsFullBanned() {
+		t.Error("Empty BanType should be treated as full ban")
+	}
+}
+
+func TestUserBanHelperMethods(t *testing.T) {
+	// Test IsFullBanned
+	fullBannedUser := &User{
+		PublicKey: "test-key",
+		Status:    UserStatusBanned,
+		BanType:   BanTypeFull,
+	}
+	if !fullBannedUser.IsFullBanned() {
+		t.Error("User with BanTypeFull should be fully banned")
+	}
+	if fullBannedUser.IsReadOnly() {
+		t.Error("Fully banned user should not be read-only")
+	}
+
+	// Test IsReadOnly
+	readOnlyUser := &User{
+		PublicKey: "test-key",
+		Status:    UserStatusBanned,
+		BanType:   BanTypeReadonly,
+	}
+	if !readOnlyUser.IsReadOnly() {
+		t.Error("User with BanTypeReadonly should be read-only")
+	}
+	if readOnlyUser.IsFullBanned() {
+		t.Error("Read-only user should not be fully banned")
+	}
+
+	// Test active user
+	activeUser := &User{
+		PublicKey: "test-key",
+		Status:    UserStatusActive,
+	}
+	if activeUser.IsBanned() {
+		t.Error("Active user should not be banned")
+	}
+	if activeUser.IsFullBanned() {
+		t.Error("Active user should not be fully banned")
+	}
+	if activeUser.IsReadOnly() {
+		t.Error("Active user should not be read-only")
+	}
+}
