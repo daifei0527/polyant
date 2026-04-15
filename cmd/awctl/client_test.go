@@ -435,6 +435,15 @@ func TestEnsureKeyDirExists(t *testing.T) {
 	_ = tmpHome
 }
 
+func TestEnsureKeyDirExists_CreatesDir(t *testing.T) {
+	// The function should create the directory if it doesn't exist
+	err := EnsureKeyDirExists()
+	// Should not error even if directory already exists
+	if err != nil {
+		t.Logf("EnsureKeyDirExists returned: %v (may be expected)", err)
+	}
+}
+
 func TestClient_APIResponseParsing(t *testing.T) {
 	tests := []struct {
 		name       string

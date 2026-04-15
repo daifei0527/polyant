@@ -17,6 +17,7 @@ import (
 	"github.com/daifei0527/polyant/internal/core/email"
 	"github.com/daifei0527/polyant/internal/storage"
 	"github.com/daifei0527/polyant/internal/storage/model"
+	awerrors "github.com/daifei0527/polyant/pkg/errors"
 )
 
 func newTestStore(t *testing.T) *storage.Store {
@@ -1184,5 +1185,181 @@ func TestComputeContentHash(t *testing.T) {
 	// Hash should be 64 characters (SHA-256 hex)
 	if len(hash1) != 64 {
 		t.Errorf("Expected hash length 64, got %d", len(hash1))
+	}
+}
+
+// ========== Helper Function Tests ==========
+
+func TestWriteSuccess(t *testing.T) {
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodGet, "/test", nil)
+
+	data := map[string]string{"key": "value"}
+	writeSuccess(rec, req, data)
+
+	if rec.Code != http.StatusOK {
+		t.Errorf("Expected status %d, got %d", http.StatusOK, rec.Code)
+	}
+
+	var resp APIResponse
+	if err := json.Unmarshal(rec.Body.Bytes(), &resp); err != nil {
+		t.Fatalf("Failed to parse response: %v", err)
+	}
+
+	if resp.Code != 0 {
+		t.Errorf("Expected code 0, got %d", resp.Code)
+	}
+
+	if resp.Data == nil {
+		t.Error("Expected data in response")
+	}
+}
+
+func TestWriteSuccessWithCode(t *testing.T) {
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodGet, "/test", nil)
+
+	data := map[string]string{"id": "123"}
+	writeSuccessWithCode(rec, req, "entry.created", data)
+
+	if rec.Code != http.StatusOK {
+		t.Errorf("Expected status %d, got %d", http.StatusOK, rec.Code)
+	}
+
+	var resp APIResponse
+	if err := json.Unmarshal(rec.Body.Bytes(), &resp); err != nil {
+		t.Fatalf("Failed to parse response: %v", err)
+	}
+
+	if resp.Code != 0 {
+		t.Errorf("Expected code 0, got %d", resp.Code)
+	}
+}
+
+func TestWriteErrorI18n(t *testing.T) {
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodGet, "/test", nil)
+
+	testErr := &awerrors.AWError{
+		Code:       400,
+		Message:    "Bad Request",
+		HTTPStatus: http.StatusBadRequest,
+		I18nCode:   "error.bad_request",
+	}
+
+	writeErrorI18n(rec, req, testErr)
+
+	if rec.Code != http.StatusBadRequest {
+		t.Errorf("Expected status %d, got %d", http.StatusBadRequest, rec.Code)
+	}
+
+	var resp APIResponse
+	if err := json.Unmarshal(rec.Body.Bytes(), &resp); err != nil {
+		t.Fatalf("Failed to parse response: %v", err)
+	}
+
+	if resp.Code != 400 {
+		t.Errorf("Expected code 400, got %d", resp.Code)
+	}
+}
+
+func TestWriteErrorI18n_NoI18nCode(t *testing.T) {
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodGet, "/test", nil)
+
+	testErr := &awerrors.AWError{
+		Code:       500,
+		Message:    "Internal Server Error",
+		HTTPStatus: http.StatusInternalServerError,
+		// No I18nCode set
+	}
+
+	writeErrorI18n(rec, req, testErr)
+
+	if rec.Code != http.StatusInternalServerError {
+		t.Errorf("Expected status %d, got %d", http.StatusInternalServerError, rec.Code)
+	}
+
+	var resp APIResponse
+	if err := json.Unmarshal(rec.Body.Bytes(), &resp); err != nil {
+		t.Fatalf("Failed to parse response: %v", err)
+	}
+
+	if resp.Message != "Internal Server Error" {
+		t.Errorf("Expected original message, got %s", resp.Message)
+	}
+}
+
+func TestWriteErrorI18n_DefaultStatus(t *testing.T) {
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodGet, "/test", nil)
+
+	testErr := &awerrors.AWError{
+		Code:    1000,
+		Message: "Unknown Error",
+		// No HTTPStatus set, should default to 500
+	}
+
+	writeErrorI18n(rec, req, testErr)
+
+	if rec.Code != http.StatusInternalServerError {
+		t.Errorf("Expected status %d, got %d", http.StatusInternalServerError, rec.Code)
+	}
+}
+
+func TestGenerateUUID(t *testing.T) {
+	uuid1 := generateUUID()
+	uuid2 := generateUUID()
+
+	// Should be different
+	if uuid1 == uuid2 {
+		t.Error("UUIDs should be unique")
+	}
+
+	// Check format: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
+	if len(uuid1) != 36 {
+		t.Errorf("Expected UUID length 36, got %d", len(uuid1))
+	}
+
+	// Check version 4
+	if uuid1[14] != '4' {
+		t.Errorf("Expected UUID v4, got version char: %c", uuid1[14])
+	}
+
+	// Check variant
+	variantChar := uuid1[19]
+	if variantChar != '8' && variantChar != '9' && variantChar != 'a' && variantChar != 'b' {
+		t.Errorf("Invalid variant character: %c", variantChar)
+	}
+}
+
+func TestParseInt(t *testing.T) {
+	tests := []struct {
+		input    string
+		expected int
+		hasError bool
+	}{
+		{"123", 123, false},
+		{"0", 0, false},
+		{"-42", -42, false},
+		{"abc", 0, true},
+		{"", 0, true},
+		{"999999999999999999999", 0, true}, // overflow
+	}
+
+	for _, tt := range tests {
+		result, err := parseInt(tt.input)
+		if tt.hasError {
+			if err == nil {
+				t.Errorf("parseInt(%q) should return error", tt.input)
+			}
+		} else {
+			if err != nil {
+				t.Errorf("parseInt(%q) returned unexpected error: %v", tt.input, err)
+			}
+			if result != tt.expected {
+				t.Errorf("parseInt(%q) = %d, expected %d", tt.input, result, tt.expected)
+			}
+		}
 	}
 }
