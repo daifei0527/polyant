@@ -341,6 +341,9 @@ func registerAuthRoutes(mux *http.ServeMux, authMW *middleware.AuthMiddleware, e
 		// 提名候选人 POST /api/v1/elections/{id}/candidates - 已认证用户
 		mux.Handle("/api/v1/elections/candidates/", authMW.Middleware(http.HandlerFunc(elh.NominateCandidateHandler)))
 
+		// 确认接受提名 POST /api/v1/elections/{id}/candidates/{user_id}/confirm - 被提名人自己
+		mux.Handle("/api/v1/elections/candidates/confirm/", authMW.Middleware(http.HandlerFunc(elh.ConfirmNominationHandler)))
+
 		// 投票 POST /api/v1/elections/{id}/vote - Lv3+
 		mux.Handle("/api/v1/elections/vote/", authMW.Middleware(authMW.RequireLevel(model.UserLevelLv3, http.HandlerFunc(elh.VoteHandler))))
 
