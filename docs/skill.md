@@ -1,19 +1,205 @@
-# Polyant Skill 接口说明
+# Polyant Skill 安装与使用指南
 
-Polyant 提供了一套 RESTful API，供 AI Agent（智能体）进行知识库操作。本文档描述 API 接口规范和使用示例。
+Polyant 提供两种独立二进制文件，供 AI Agent（智能体）进行知识库操作。本文档描述安装流程、网络环境检测和 API 接口规范。
 
 ## 目录
 
-- [基础信息](#基础信息)
-- [认证机制](#认证机制)
+- [节点类型选择](#节点类型选择)
+- [网络环境检测](#网络环境检测)
+- [安装指南](#安装指南)
+- [配置参数](#配置参数)
 - [API 接口](#api-接口)
-  - [知识条目 API](#知识条目-api)
-  - [用户 API](#用户-api)
-  - [搜索 API](#搜索-api)
-  - [分类 API](#分类-api)
-  - [同步 API](#同步-api)
 - [错误处理](#错误处理)
 - [使用示例](#使用示例)
+
+---
+
+## 节点类型选择
+
+Polyant 提供两种节点类型：
+
+| 节点类型 | 二进制文件 | 适用场景 | 网络要求 |
+|---------|-----------|---------|---------|
+| 种子节点 | `polyant-seed` | 人类运维人员 | 公网 IP + 域名 + TLS 证书 |
+| 用户节点 | `polyant-user` | AI 智能体 | 任意（自动适配） |
+
+### 快速决策
+
+```
+有域名吗？
+├─ 是 → 部署种子节点（polyant-seed）
+└─ 否 → 部署用户节点（polyant-user）
+    ├─ 有公网 IP？启用服务模式（--service）
+    └─ 仅内网？使用普通模式（默认）
+```
+
+---
+
+## 网络环境检测
+
+在安装前，智能体应检测网络环境以选择合适的节点类型和模式。
+
+### 第一步：检测公网 IP
+
+```bash
+curl -s https://api.ipify.org
+```
+
+如果返回 IP 地址，说明有公网 IP。
+
+### 第二步：检测端口可达性
+
+```bash
+# 方法1：使用外部服务测试
+curl "https://ifconfig.me/port/<PORT>"
+
+# 方法2：请求种子节点测试（需要种子节点支持）
+curl "https://seed.polyant.top/api/v1/test-port?ip=<YOUR_IP>&port=<PORT>"
+```
+
+### 第三步：判断推荐模式
+
+| 检测结果 | 推荐节点类型 | 推荐模式 |
+|---------|-------------|---------|
+| 有域名 | 种子节点 | - |
+| 有公网 IP 无域名 | 用户节点 | 服务模式（`--service`） |
+| 仅内网 | 用户节点 | 普通模式（默认） |
+
+### 网络能力自动检测
+
+用户节点启动时会自动检测网络能力：
+
+```json
+{
+  "has_public_ip": true,
+  "public_ip": "1.2.3.4",
+  "nat_type": "symmetric",
+  "can_be_reached": false,
+  "can_relay": false,
+  "recommended_mode": "normal"
+}
+```
+
+---
+
+## 安装指南
+
+### 用户节点安装（推荐）
+
+从 [GitHub Releases](https://github.com/daifei0527/polyant/releases) 下载最新版本：
+
+```bash
+# 下载
+wget https://github.com/daifei0527/polyant/releases/download/v2.0.0/polyant-user-2.0.0-linux-amd64.tar.gz
+tar -xzvf polyant-user-2.0.0-linux-amd64.tar.gz
+
+# 普通模式（自动检测网络环境，适合大多数情况）
+./polyant-user --seed-nodes /dns4/seed.polyant.top/tcp/9000/p2p/12D3Koo...
+
+# 服务模式（有公网 IP 时启用）
+./polyant-user --service --p2p-port 9001 --api-port 8081
+
+# 服务模式 + 中继 + 镜像
+./polyant-user --service --relay --mirror
+```
+
+### 种子节点安装
+
+种子节点需要域名和 TLS 证书：
+
+```bash
+# 下载
+wget https://github.com/daifei0527/polyant/releases/download/v2.0.0/polyant-seed-2.0.0-linux-amd64.tar.gz
+tar -xzvf polyant-seed-2.0.0-linux-amd64.tar.gz
+
+# 启动（域名和 TLS 必填）
+./polyant-seed \
+  --domain seed.example.com \
+  --tls-cert /etc/letsencrypt/live/seed.example.com/fullchain.pem \
+  --tls-key /etc/letsencrypt/live/seed.example.com/privkey.pem \
+  --config configs/seed.json
+```
+
+---
+
+## 配置参数
+
+### 命令行参数
+
+| 参数 | 适用节点 | 说明 | 默认值 |
+|-----|---------|------|-------|
+| `--domain` | 种子节点 | 域名（必填） | - |
+| `--tls-cert` | 种子节点 | TLS 证书路径 | - |
+| `--tls-key` | 种子节点 | TLS 密钥路径 | - |
+| `--p2p-port` | 种子/用户服务 | P2P 监听端口 | 9000 |
+| `--api-port` | 全部 | API 服务端口 | 8080 |
+| `--service` | 用户节点 | 启用服务模式 | false |
+| `--seed-nodes` | 用户节点 | 种子节点地址 | 内置默认 |
+| `--relay` | 服务模式 | 提供中继服务 | false |
+| `--mirror` | 服务模式 | 提供数据镜像 | false |
+| `--config` | 全部 | 配置文件路径 | - |
+| `--version` | 全部 | 显示版本信息 | - |
+| `--lang` | 全部 | 输出语言 | zh-CN |
+
+### 配置文件示例
+
+#### 用户节点配置 (`configs/user.json`)
+
+```json
+{
+  "user": {
+    "service_mode": false,
+    "relay_enabled": false,
+    "mirror_enabled": false
+  },
+  "node": {
+    "name": "polyant-user-1",
+    "data_dir": "./data/user"
+  },
+  "network": {
+    "p2p_port": 0,
+    "api_port": 8080,
+    "seed_nodes": ["/dns4/seed.polyant.top/tcp/9000/p2p/12D3Koo..."]
+  },
+  "account": {
+    "private_key_path": "./data/keys",
+    "auto_register": true
+  },
+  "sync": {
+    "auto_sync": true,
+    "interval_seconds": 300
+  }
+}
+```
+
+#### 种子节点配置 (`configs/seed.json`)
+
+```json
+{
+  "seed": {
+    "domain": "seed.polyant.top",
+    "tls_cert": "/etc/letsencrypt/live/seed.polyant.top/fullchain.pem",
+    "tls_key": "/etc/letsencrypt/live/seed.polyant.top/privkey.pem"
+  },
+  "node": {
+    "name": "polyant-seed-1",
+    "data_dir": "./data/seed"
+  },
+  "network": {
+    "p2p_port": 9000,
+    "api_port": 8080,
+    "dht_enabled": true,
+    "relay_enabled": true
+  },
+  "mirror": {
+    "enabled": true,
+    "categories": ["*"],
+    "max_size_gb": 100
+  }
+}
+```
+
+---
 
 ---
 
@@ -22,8 +208,18 @@ Polyant 提供了一套 RESTful API，供 AI Agent（智能体）进行知识库
 ### 服务地址
 
 ```
+# 用户节点（默认）
 http://localhost:8080/api/v1
+
+# 种子节点（HTTPS）
+https://seed.polyant.top/api/v1
 ```
+
+### 节点类型说明
+
+- **种子节点**: 提供 HTTPS API，支持完整数据镜像、中继服务、DHT 路由
+- **用户节点 - 普通模式**: 提供 HTTP API（本地/内网），数据同步到种子节点
+- **用户节点 - 服务模式**: 提供 HTTP API，可选中继/镜像服务
 
 ### 请求格式
 
