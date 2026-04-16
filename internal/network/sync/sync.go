@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/daifei0527/polyant/internal/network/host"
-	"github.com/daifei0527/polyant/internal/network/protocol"
+	protocolpkg "github.com/daifei0527/polyant/internal/network/protocol"
 	"github.com/daifei0527/polyant/internal/storage"
 	"github.com/daifei0527/polyant/internal/storage/index"
 	"github.com/daifei0527/polyant/internal/storage/model"
@@ -86,8 +86,8 @@ func VersionVectorFromProto(m map[string]int64) VersionVector {
 }
 
 type SyncEngine struct {
-	p2pHost    *host.P2PHost
-	protocol   *protocol.Protocol
+	p2pHost    host.P2PHostInterface
+	protocol   protocolpkg.ProtocolInterface
 	store      *storage.Store
 	config     *SyncConfig
 	state      SyncState
@@ -98,7 +98,7 @@ type SyncEngine struct {
 	wg         sync.WaitGroup
 }
 
-func NewSyncEngine(p2pHost *host.P2PHost, proto *protocol.Protocol, store *storage.Store, cfg *SyncConfig) *SyncEngine {
+func NewSyncEngine(p2pHost host.P2PHostInterface, proto protocolpkg.ProtocolInterface, store *storage.Store, cfg *SyncConfig) *SyncEngine {
 	return &SyncEngine{
 		p2pHost:    p2pHost,
 		protocol:   proto,
@@ -110,7 +110,7 @@ func NewSyncEngine(p2pHost *host.P2PHost, proto *protocol.Protocol, store *stora
 }
 
 // SetProtocol 设置协议处理器（用于解决循环依赖）
-func (se *SyncEngine) SetProtocol(proto *protocol.Protocol) {
+func (se *SyncEngine) SetProtocol(proto protocolpkg.ProtocolInterface) {
 	se.mu.Lock()
 	defer se.mu.Unlock()
 	se.protocol = proto
@@ -214,7 +214,7 @@ func (se *SyncEngine) IncrementalSync(ctx context.Context) error {
 // syncWithPeer 与单个对等节点执行增量同步
 func (se *SyncEngine) syncWithPeer(ctx context.Context, peerID peer.ID) error {
 	// 构建同步请求
-	req := &protocol.SyncRequest{
+	req := &protocolpkg.SyncRequest{
 		RequestID:           peerID.String(),
 		LastSyncTimestamp:   se.lastSync,
 		VersionVector:       se.versionVec.ToProto(),
@@ -242,7 +242,7 @@ func (se *SyncEngine) syncWithPeer(ctx context.Context, peerID peer.ID) error {
 }
 
 // processSyncResponse 处理同步响应，将变更合并到本地存储
-func (se *SyncEngine) processSyncResponse(ctx context.Context, resp *protocol.SyncResponse) error {
+func (se *SyncEngine) processSyncResponse(ctx context.Context, resp *protocolpkg.SyncResponse) error {
 	// 处理新条目
 	for _, data := range resp.NewEntries {
 		var entry model.KnowledgeEntry
@@ -386,13 +386,13 @@ func (se *SyncEngine) MergeEntries(ctx context.Context, entries []*model.Knowled
 	return nil
 }
 
-func (se *SyncEngine) HandleSyncRequest(ctx context.Context, req *protocol.SyncRequest) (*protocol.SyncResponse, error) {
+func (se *SyncEngine) HandleSyncRequest(ctx context.Context, req *protocolpkg.SyncRequest) (*protocolpkg.SyncResponse, error) {
 	se.mu.RLock()
 	defer se.mu.RUnlock()
 
 	clientVV := VersionVectorFromProto(req.VersionVector)
 
-	resp := &protocol.SyncResponse{
+	resp := &protocolpkg.SyncResponse{
 		RequestID:           req.RequestID,
 		NewEntries:          [][]byte{},
 		UpdatedEntries:      [][]byte{},
@@ -472,8 +472,8 @@ func (se *SyncEngine) categoryMatches(entryCategory string, filterCategories []s
 	return false
 }
 
-func (se *SyncEngine) HandleMirrorRequest(ctx context.Context, req *protocol.MirrorRequest) (<-chan *protocol.MirrorData, error) {
-	dataCh := make(chan *protocol.MirrorData, 10)
+func (se *SyncEngine) HandleMirrorRequest(ctx context.Context, req *protocolpkg.MirrorRequest) (<-chan *protocolpkg.MirrorData, error) {
+	dataCh := make(chan *protocolpkg.MirrorData, 10)
 
 	go func() {
 		defer close(dataCh)
@@ -529,7 +529,7 @@ func (se *SyncEngine) HandleMirrorRequest(ctx context.Context, req *protocol.Mir
 				entryData = append(entryData, data)
 			}
 
-			dataCh <- &protocol.MirrorData{
+			dataCh <- &protocolpkg.MirrorData{
 				RequestID:    req.RequestID,
 				BatchIndex:   int32(i),
 				TotalBatches: int32(totalBatches),
@@ -590,18 +590,18 @@ func max(a, b int64) int64 {
 }
 
 // HandleHandshake 处理握手请求
-func (se *SyncEngine) HandleHandshake(ctx context.Context, h *protocol.Handshake) (*protocol.HandshakeAck, error) {
-	return &protocol.HandshakeAck{
+func (se *SyncEngine) HandleHandshake(ctx context.Context, h *protocolpkg.Handshake) (*protocolpkg.HandshakeAck, error) {
+	return &protocolpkg.HandshakeAck{
 		NodeID:   se.p2pHost.NodeID(),
 		PeerID:   se.p2pHost.ID().String(),
-		NodeType: protocol.NodeTypeLocal,
+		NodeType: protocolpkg.NodeTypeLocal,
 		Version:  "1.0.0",
 		Accepted: true,
 	}, nil
 }
 
 // HandleQuery 处理查询请求
-func (se *SyncEngine) HandleQuery(ctx context.Context, q *protocol.Query) (*protocol.QueryResult, error) {
+func (se *SyncEngine) HandleQuery(ctx context.Context, q *protocolpkg.Query) (*protocolpkg.QueryResult, error) {
 	filter := index.SearchQuery{
 		Keyword:    q.Keyword,
 		Categories: q.Categories,
@@ -623,7 +623,7 @@ func (se *SyncEngine) HandleQuery(ctx context.Context, q *protocol.Query) (*prot
 		entries = append(entries, data)
 	}
 
-	return &protocol.QueryResult{
+	return &protocolpkg.QueryResult{
 		QueryID:    q.QueryID,
 		Entries:    entries,
 		TotalCount: int32(result.TotalCount),
@@ -632,10 +632,10 @@ func (se *SyncEngine) HandleQuery(ctx context.Context, q *protocol.Query) (*prot
 }
 
 // HandlePushEntry 处理条目推送
-func (se *SyncEngine) HandlePushEntry(ctx context.Context, e *protocol.PushEntry) (*protocol.PushAck, error) {
+func (se *SyncEngine) HandlePushEntry(ctx context.Context, e *protocolpkg.PushEntry) (*protocolpkg.PushAck, error) {
 	var entry model.KnowledgeEntry
 	if err := entry.FromJSON(e.Entry); err != nil {
-		return &protocol.PushAck{
+		return &protocolpkg.PushAck{
 			EntryID:      e.EntryID,
 			Accepted:     false,
 			RejectReason: "invalid entry data",
@@ -648,13 +648,13 @@ func (se *SyncEngine) HandlePushEntry(ctx context.Context, e *protocol.PushEntry
 		// 条目不存在，创建新条目
 		created, err := se.store.Entry.Create(ctx, &entry)
 		if err != nil {
-			return &protocol.PushAck{
+			return &protocolpkg.PushAck{
 				EntryID:      e.EntryID,
 				Accepted:     false,
 				RejectReason: err.Error(),
 			}, nil
 		}
-		return &protocol.PushAck{
+		return &protocolpkg.PushAck{
 			EntryID:    e.EntryID,
 			Accepted:   true,
 			NewVersion: created.Version,
@@ -665,20 +665,20 @@ func (se *SyncEngine) HandlePushEntry(ctx context.Context, e *protocol.PushEntry
 	if entry.Version > existing.Version {
 		updated, err := se.store.Entry.Update(ctx, &entry)
 		if err != nil {
-			return &protocol.PushAck{
+			return &protocolpkg.PushAck{
 				EntryID:      e.EntryID,
 				Accepted:     false,
 				RejectReason: err.Error(),
 			}, nil
 		}
-		return &protocol.PushAck{
+		return &protocolpkg.PushAck{
 			EntryID:    e.EntryID,
 			Accepted:   true,
 			NewVersion: updated.Version,
 		}, nil
 	}
 
-	return &protocol.PushAck{
+	return &protocolpkg.PushAck{
 		EntryID:      e.EntryID,
 		Accepted:     false,
 		RejectReason: "local version is newer or equal",
@@ -686,10 +686,10 @@ func (se *SyncEngine) HandlePushEntry(ctx context.Context, e *protocol.PushEntry
 }
 
 // HandleRatingPush 处理评分推送
-func (se *SyncEngine) HandleRatingPush(ctx context.Context, r *protocol.RatingPush) (*protocol.RatingAck, error) {
+func (se *SyncEngine) HandleRatingPush(ctx context.Context, r *protocolpkg.RatingPush) (*protocolpkg.RatingAck, error) {
 	var rating model.Rating
 	if err := rating.FromJSON(r.Rating); err != nil {
-		return &protocol.RatingAck{
+		return &protocolpkg.RatingAck{
 			Accepted:     false,
 			RejectReason: "invalid rating data",
 		}, nil
@@ -697,27 +697,27 @@ func (se *SyncEngine) HandleRatingPush(ctx context.Context, r *protocol.RatingPu
 
 	created, err := se.store.Rating.Create(ctx, &rating)
 	if err != nil {
-		return &protocol.RatingAck{
+		return &protocolpkg.RatingAck{
 			Accepted:     false,
 			RejectReason: err.Error(),
 		}, nil
 	}
 
-	return &protocol.RatingAck{
+	return &protocolpkg.RatingAck{
 		RatingID: created.ID,
 		Accepted: true,
 	}, nil
 }
 
 // HandleHeartbeat 处理心跳
-func (se *SyncEngine) HandleHeartbeat(ctx context.Context, h *protocol.Heartbeat) error {
+func (se *SyncEngine) HandleHeartbeat(ctx context.Context, h *protocolpkg.Heartbeat) error {
 	// 心跳处理：可以更新节点状态或记录活跃度
 	// 目前简单忽略，后续可以扩展节点状态跟踪
 	return nil
 }
 
 // HandleBitfield 处理位图同步
-func (se *SyncEngine) HandleBitfield(ctx context.Context, b *protocol.Bitfield) error {
+func (se *SyncEngine) HandleBitfield(ctx context.Context, b *protocolpkg.Bitfield) error {
 	// 合并远端版本向量
 	remoteVV := VersionVectorFromProto(b.VersionVector)
 	se.mu.Lock()
