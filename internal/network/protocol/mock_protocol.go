@@ -169,6 +169,27 @@ func (m *MockProtocol) GetHandshakeRequests() []*Handshake {
 	return m.handshakeRequests
 }
 
+// GetQueryRequests 获取查询请求记录
+func (m *MockProtocol) GetQueryRequests() []*Query {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	return m.queryRequests
+}
+
+// GetPushRequests 获取推送请求记录
+func (m *MockProtocol) GetPushRequests() []*PushEntry {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	return m.pushRequests
+}
+
+// GetRatingRequests 获取评分推送请求记录
+func (m *MockProtocol) GetRatingRequests() []*RatingPush {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	return m.ratingRequests
+}
+
 // Reset 重置所有状态
 func (m *MockProtocol) Reset() {
 	m.mu.Lock()
