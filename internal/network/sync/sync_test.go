@@ -9,11 +9,13 @@ import (
 	"testing"
 	"time"
 
+	"github.com/daifei0527/polyant/internal/network/host"
 	"github.com/daifei0527/polyant/internal/network/protocol"
 	"github.com/daifei0527/polyant/internal/network/sync"
 	"github.com/daifei0527/polyant/internal/storage"
 	"github.com/daifei0527/polyant/internal/storage/index"
 	"github.com/daifei0527/polyant/internal/storage/model"
+	"github.com/libp2p/go-libp2p/core/peer"
 )
 
 // ==================== VersionVector 测试 ====================
@@ -3171,4 +3173,218 @@ func TestHandlePushEntry_CreateError(t *testing.T) {
 	}
 	// 第二次可能被拒绝或更新
 	_ = ack2
+}
+
+// ==================== 使用 Mock 的增量同步测试 ====================
+
+// TestIncrementalSync_WithMockPeers 测试有 Mock 节点时的增量同步
+func TestIncrementalSync_WithMockPeers(t *testing.T) {
+	store, err := storage.NewMemoryStore()
+	if err != nil {
+		t.Fatalf("创建存储失败: %v", err)
+	}
+
+	// 创建 Mock 主机
+	mockHost := host.NewMockP2PHost()
+	mockHost.SetConnectedPeers([]peer.ID{peer.ID("peer-1")})
+
+	// 创建 Mock 协议
+	mockProtocol := protocol.NewMockProtocol()
+	mockProtocol.SetSyncResponse(&protocol.SyncResponse{
+		RequestID:           "test-1",
+		NewEntries:          [][]byte{},
+		UpdatedEntries:      [][]byte{},
+		DeletedEntryIDs:     []string{},
+		NewRatings:          [][]byte{},
+		ServerVersionVector: map[string]int64{},
+		ServerTimestamp:     time.Now().UnixMilli(),
+	})
+
+	cfg := &sync.SyncConfig{AutoSync: false}
+	engine := sync.NewSyncEngine(mockHost, mockProtocol, store, cfg)
+
+	err = engine.IncrementalSync(context.Background())
+	if err != nil {
+		t.Errorf("IncrementalSync 失败: %v", err)
+	}
+}
+
+// TestIncrementalSync_NoPeersWithMock 测试无节点时的增量同步（使用 Mock）
+func TestIncrementalSync_NoPeersWithMock(t *testing.T) {
+	store, err := storage.NewMemoryStore()
+	if err != nil {
+		t.Fatalf("创建存储失败: %v", err)
+	}
+
+	mockHost := host.NewMockP2PHost()
+	mockHost.SetConnectedPeers([]peer.ID{}) // 无连接节点
+
+	cfg := &sync.SyncConfig{AutoSync: false}
+	engine := sync.NewSyncEngine(mockHost, nil, store, cfg)
+
+	err = engine.IncrementalSync(context.Background())
+	if err != nil {
+		t.Errorf("无节点时应返回 nil: %v", err)
+	}
+}
+
+// TestIncrementalSync_SyncError 测试同步失败
+func TestIncrementalSync_SyncError(t *testing.T) {
+	store, err := storage.NewMemoryStore()
+	if err != nil {
+		t.Fatalf("创建存储失败: %v", err)
+	}
+
+	mockHost := host.NewMockP2PHost()
+	mockHost.SetConnectedPeers([]peer.ID{peer.ID("peer-1")})
+
+	mockProtocol := protocol.NewMockProtocol()
+	mockProtocol.SetSyncError(fmt.Errorf("network error"))
+
+	cfg := &sync.SyncConfig{AutoSync: false}
+	engine := sync.NewSyncEngine(mockHost, mockProtocol, store, cfg)
+
+	err = engine.IncrementalSync(context.Background())
+	if err == nil {
+		t.Error("同步失败时应返回错误")
+	}
+}
+
+// TestSyncWithPeer_NewEntries 测试同步新条目
+func TestSyncWithPeer_NewEntries(t *testing.T) {
+	store, err := storage.NewMemoryStore()
+	if err != nil {
+		t.Fatalf("创建存储失败: %v", err)
+	}
+
+	// 创建测试条目
+	now := time.Now().UnixMilli()
+	remoteEntry := &model.KnowledgeEntry{
+		ID:        "entry-1",
+		Title:     "Remote Entry",
+		Content:   "content",
+		Category:  "tech",
+		Version:   1,
+		UpdatedAt: now,
+		Status:    model.EntryStatusPublished,
+	}
+	remoteEntry.ContentHash = remoteEntry.ComputeContentHash()
+	entryData, _ := remoteEntry.ToJSON()
+
+	mockHost := host.NewMockP2PHost()
+	mockHost.SetConnectedPeers([]peer.ID{peer.ID("peer-1")})
+
+	mockProtocol := protocol.NewMockProtocol()
+	mockProtocol.SetSyncResponse(&protocol.SyncResponse{
+		RequestID:           "test-1",
+		NewEntries:          [][]byte{entryData},
+		UpdatedEntries:      [][]byte{},
+		DeletedEntryIDs:     []string{},
+		NewRatings:          [][]byte{},
+		ServerVersionVector: map[string]int64{"entry-1": 1},
+		ServerTimestamp:     now,
+	})
+
+	cfg := &sync.SyncConfig{AutoSync: false}
+	engine := sync.NewSyncEngine(mockHost, mockProtocol, store, cfg)
+
+	err = engine.IncrementalSync(context.Background())
+	if err != nil {
+		t.Errorf("同步失败: %v", err)
+	}
+
+	// 验证条目已创建
+	entry, err := store.Entry.Get(context.Background(), "entry-1")
+	if err != nil {
+		t.Errorf("获取条目失败: %v", err)
+	}
+	if entry.Title != "Remote Entry" {
+		t.Errorf("条目标题错误: got %s", entry.Title)
+	}
+}
+
+// TestHandleHandshake_WithMockHost 测试握手处理
+func TestHandleHandshake_WithMockHost(t *testing.T) {
+	mockHost := host.NewMockP2PHost()
+	mockHost.SetID(peer.ID("test-peer-123"))
+	mockHost.SetNodeID("test-node")
+
+	cfg := &sync.SyncConfig{AutoSync: false}
+	engine := sync.NewSyncEngine(mockHost, nil, nil, cfg)
+
+	handshake := &protocol.Handshake{
+		NodeID:   "client-node",
+		NodeType: protocol.NodeTypeLocal,
+		Version:  "1.0.0",
+	}
+
+	ack, err := engine.HandleHandshake(context.Background(), handshake)
+	if err != nil {
+		t.Errorf("HandleHandshake 失败: %v", err)
+	}
+	if !ack.Accepted {
+		t.Error("握手应被接受")
+	}
+	// peer.ID.String() 返回 base58 编码的字符串，使用 NodeID 验证更稳定
+	if ack.NodeID != "test-node" {
+		t.Errorf("NodeID 错误: got %s", ack.NodeID)
+	}
+	if ack.PeerID == "" {
+		t.Error("PeerID 不应为空")
+	}
+}
+
+// TestIncrementalSync_DeletedEntries 测试同步删除条目
+func TestIncrementalSync_DeletedEntries(t *testing.T) {
+	store, err := storage.NewMemoryStore()
+	if err != nil {
+		t.Fatalf("创建存储失败: %v", err)
+	}
+
+	// 先创建一个本地条目
+	localEntry := &model.KnowledgeEntry{
+		ID:        "entry-1",
+		Title:     "Local Entry",
+		Content:   "content",
+		Category:  "tech",
+		Version:   1,
+		UpdatedAt: time.Now().UnixMilli(),
+		Status:    model.EntryStatusPublished,
+	}
+	localEntry.ContentHash = localEntry.ComputeContentHash()
+	store.Entry.Create(context.Background(), localEntry)
+
+	mockHost := host.NewMockP2PHost()
+	mockHost.SetConnectedPeers([]peer.ID{peer.ID("peer-1")})
+
+	mockProtocol := protocol.NewMockProtocol()
+	mockProtocol.SetSyncResponse(&protocol.SyncResponse{
+		RequestID:           "test-1",
+		NewEntries:          [][]byte{},
+		UpdatedEntries:      [][]byte{},
+		DeletedEntryIDs:     []string{"entry-1"},
+		NewRatings:          [][]byte{},
+		ServerVersionVector: map[string]int64{},
+		ServerTimestamp:     time.Now().UnixMilli(),
+	})
+
+	cfg := &sync.SyncConfig{AutoSync: false}
+	engine := sync.NewSyncEngine(mockHost, mockProtocol, store, cfg)
+	engine.HandleBitfield(context.Background(), &protocol.Bitfield{
+		VersionVector: map[string]int64{"entry-1": 1},
+	})
+
+	err = engine.IncrementalSync(context.Background())
+	if err != nil {
+		t.Errorf("同步失败: %v", err)
+	}
+
+	// 验证条目已被软删除（状态变为 archived）
+	entry, err := store.Entry.Get(context.Background(), "entry-1")
+	if err != nil {
+		t.Errorf("获取条目失败: %v", err)
+	}
+	if entry.Status != model.EntryStatusArchived {
+		t.Errorf("条目状态应为 archived: got %s", entry.Status)
+	}
 }
