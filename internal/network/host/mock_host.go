@@ -10,6 +10,8 @@ import (
 )
 
 // MockP2PHost 用于测试的 Mock 实现
+// 注意：此类型设计为单线程测试使用，SetID/SetNodeID 等方法未加锁保护。
+// 如需在并发测试中使用，请使用外部同步或在测试前设置好所有状态。
 type MockP2PHost struct {
 	mu             sync.RWMutex
 	id             peer.ID
@@ -57,6 +59,7 @@ func (m *MockP2PHost) Connect(ctx context.Context, addr peer.AddrInfo) error {
 }
 
 // NewStream 模拟创建流
+// 注意：返回 (nil, nil) 表示成功但无实际流，调用者需要处理这种情况
 func (m *MockP2PHost) NewStream(ctx context.Context, pid peer.ID, pids ...protocol.ID) (network.Stream, error) {
 	if m.streamError != nil {
 		return nil, m.streamError
@@ -67,6 +70,15 @@ func (m *MockP2PHost) NewStream(ctx context.Context, pid peer.ID, pids ...protoc
 // Close 模拟关闭
 func (m *MockP2PHost) Close() error {
 	return nil
+}
+
+// Reset 重置 Mock 状态，清除已连接节点和错误状态
+func (m *MockP2PHost) Reset() {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.connectedPeers = []peer.ID{}
+	m.connectError = nil
+	m.streamError = nil
 }
 
 // --- 测试辅助方法 ---
