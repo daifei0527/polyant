@@ -5,6 +5,51 @@ All notable changes to Polyant will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.0.1] - 2026-04-16
+
+### Changed
+
+#### Architecture Refactoring
+- **Program Separation**: Split into three independent programs:
+  - `seed` - Seed node for bootstrap servers (requires domain + TLS certificate)
+  - `user` - User node for AI agents (auto-detects network environment)
+  - `pactl` - CLI management tool
+- **Removed Deprecated Programs**: Removed `polyant` main program and `awctl` CLI tool
+- **Simplified Distribution**: Each release package contains all three programs
+
+#### Web Admin Dashboard
+- Complete web-based admin dashboard implementation
+- User management: list, ban/unban users
+- Statistics dashboard: user stats, contribution stats, activity trends
+- Content moderation: entry list, delete entries
+- Local-only access at `http://127.0.0.1:8080/admin/`
+
+### Fixed
+- Updated Makefile to build all three programs correctly
+- Fixed admin handler tests
+- Documentation updates to reflect new program structure
+
+### Migration Guide (v1.0.0 → v2.0.1)
+
+**Old command:**
+```bash
+./polyant -config configs/seed.json
+./awctl entry list
+```
+
+**New command:**
+```bash
+./seed -config configs/seed.json   # For seed nodes
+./user -config configs/user.json   # For user nodes
+./pactl entry list                 # CLI tool
+```
+
+**Download changes:**
+- Old: `polyant-1.0.0-linux-amd64.tar.gz` (single program)
+- New: `polyant-2.0.1-linux-amd64.tar.gz` (contains seed, user, pactl)
+
+---
+
 ## [1.0.0] - 2026-04-13
 
 ### Added
