@@ -141,3 +141,72 @@ func TestDHTNodeBootstrapWithSeedNodes(t *testing.T) {
 	// Bootstrap 应该能处理无效的种子节点
 	_ = dhtNode.Bootstrap(ctx)
 }
+
+// ==================== DHT FindPeer 测试 ====================
+
+// TestDHTNodeFindPeer 测试查找节点
+func TestDHTNodeFindPeer(t *testing.T) {
+	h := createTestHost(t)
+	defer h.Close()
+
+	cfg := &config.Config{}
+	dhtNode, err := dht.NewDHTNode(h, cfg)
+	if err != nil {
+		t.Fatalf("NewDHTNode 失败: %v", err)
+	}
+	defer dhtNode.Close()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	// 查找一个不存在的节点，应该超时或返回错误
+	// 这是预期行为，因为我们没有连接到其他节点
+	_, err = dhtNode.FindPeer(ctx, "non-existent-peer")
+	// 错误是预期的，我们不验证具体错误
+	_ = err
+}
+
+// TestDHTNodeFindPeerAfterBootstrap 测试 Bootstrap 后查找
+func TestDHTNodeFindPeerAfterBootstrap(t *testing.T) {
+	h := createTestHost(t)
+	defer h.Close()
+
+	cfg := &config.Config{}
+	dhtNode, err := dht.NewDHTNode(h, cfg)
+	if err != nil {
+		t.Fatalf("NewDHTNode 失败: %v", err)
+	}
+	defer dhtNode.Close()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	// Bootstrap
+	_ = dhtNode.Bootstrap(ctx)
+
+	// 查找节点
+	_, err = dhtNode.FindPeer(ctx, "some-peer-id")
+	// 查找可能失败，因为网络中没有这个节点
+	_ = err
+}
+
+// TestDHTNodeFindPeerContextCancel 测试上下文取消
+func TestDHTNodeFindPeerContextCancel(t *testing.T) {
+	h := createTestHost(t)
+	defer h.Close()
+
+	cfg := &config.Config{}
+	dhtNode, err := dht.NewDHTNode(h, cfg)
+	if err != nil {
+		t.Fatalf("NewDHTNode 失败: %v", err)
+	}
+	defer dhtNode.Close()
+
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel() // 立即取消
+
+	_, err = dhtNode.FindPeer(ctx, "any-peer")
+	if err == nil {
+		t.Error("上下文取消时应返回错误")
+	}
+}
