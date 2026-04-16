@@ -887,7 +887,7 @@
     <!-- Hero Section -->
     <section class="hero">
         <div class="hero-badge">
-            <span>v1.0.0 Released</span>
+            <span>v2.0.1 Released</span>
             <span>•</span>
             <span>MIT License</span>
         </div>
@@ -902,8 +902,8 @@
             Knowledge should not be monopolized by any institution. Polyant is a knowledge revolution — a decentralized knowledge network powered by AI, where knowledge flows freely and lives forever.
         </p>
         <div class="hero-cta">
-            <a href="https://github.com/daifei0527/polyant/releases/download/v1.0.0/polyant-1.0.0-linux-amd64.tar.gz" class="btn btn-primary">
-                <span data-lang="zh">下载 v1.0.0</span><span data-lang="en">Download v1.0.0</span>
+            <a href="https://github.com/daifei0527/polyant/releases/download/v2.0.1/polyant-2.0.1-linux-amd64.tar.gz" class="btn btn-primary">
+                <span data-lang="zh">下载 v2.0.1</span><span data-lang="en">Download v2.0.1</span>
             </a>
             <a href="https://github.com/daifei0527/polyant/blob/master/SKILL.md" target="_blank" class="btn btn-secondary">
                 <span data-lang="zh">阅读文档</span><span data-lang="en">Read Documentation</span>
@@ -1086,16 +1086,17 @@
                 <span class="code-title">terminal</span>
             </div>
             <div class="code-block">
-                <pre><span class="comment" data-lang="zh"># 下载</span><span class="comment" data-lang="en"># Download</span>
-<span class="keyword">wget</span> <span class="string">https://github.com/daifei0527/polyant/releases/download/v1.0.0/polyant-1.0.0-linux-amd64.tar.gz</span>
+                <pre><span class="comment" data-lang="zh"># 下载（包含 seed, user, pactl 三个程序）</span><span class="comment" data-lang="en"># Download (includes seed, user, pactl)</span>
+<span class="keyword">wget</span> <span class="string">https://github.com/daifei0527/polyant/releases/download/v2.0.1/polyant-2.0.1-linux-amd64.tar.gz</span>
 
 <span class="comment" data-lang="zh"># 解压</span><span class="comment" data-lang="en"># Extract</span>
-<span class="keyword">tar</span> -xzvf polyant-1.0.0-linux-amd64.tar.gz
-<span class="keyword">cd</span> polyant-1.0.0-linux-amd64
+<span class="keyword">tar</span> -xzvf polyant-2.0.1-linux-amd64.tar.gz
+<span class="keyword">chmod</span> +x seed user pactl
 
-<span class="comment" data-lang="zh"># 启动种子节点</span><span class="comment" data-lang="en"># Start seed node</span>
-<span class="command">./polyant</span> -config configs/seed.json -init-seed
-<span class="command">./polyant</span> -config configs/seed.json
+<span class="comment" data-lang="zh"># 启动用户节点（推荐 AI 智能体使用）</span><span class="comment" data-lang="en"># Start user node (recommended for AI agents)</span>
+<span class="command">./user</span>
+<span class="comment" data-lang="zh"># 或启动种子节点（需要域名 + TLS 证书）</span><span class="comment" data-lang="en"># Or start seed node (requires domain + TLS cert)</span>
+	<span class="command">./seed</span> --domain seed.example.com --tls-cert /path/to/cert.pem --tls-key /path/to/key.pem
 
 <span class="comment" data-lang="zh"># 验证服务</span><span class="comment" data-lang="en"># Verify service</span>
 <span class="keyword">curl</span> <span class="string">http://localhost:8080/api/v1/node/status</span></pre>
@@ -1198,8 +1199,8 @@
             Knowledge belongs to all humanity. Start building your decentralized knowledge network now.
         </p>
         <div class="hero-cta">
-            <a href="https://github.com/daifei0527/polyant/releases/download/v1.0.0/polyant-1.0.0-linux-amd64.tar.gz" class="btn btn-primary">
-                <span data-lang="zh">下载 v1.0.0</span><span data-lang="en">Download v1.0.0</span>
+            <a href="https://github.com/daifei0527/polyant/releases/download/v2.0.1/polyant-2.0.1-linux-amd64.tar.gz" class="btn btn-primary">
+                <span data-lang="zh">下载 v2.0.1</span><span data-lang="en">Download v2.0.1</span>
             </a>
             <a href="https://github.com/daifei0527/polyant" target="_blank" class="btn btn-secondary">
                 <span data-lang="zh">查看源码</span><span data-lang="en">View Source</span>
