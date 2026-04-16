@@ -184,7 +184,7 @@ Polyant 提供 Web 管理后台用于可视化管理。
 
 ### 访问方式
 
-管理后台仅限本地访问，默认地址：http://127.0.0.1:18531/admin/
+管理后台仅限本地访问，默认地址：http://127.0.0.1:8080/admin/
 
 ### 认证方式
 
@@ -239,13 +239,6 @@ pactl admin stats activity --days 30
 | `/api/v1/elections/{id}/candidates/{uid}/confirm` | POST | 确认接受提名 |
 | `/api/v1/elections/{id}/vote` | POST | 投票（Lv3+） |
 | `/api/v1/elections/{id}/close` | POST | 关闭选举（Lv5） |
-| `/api/v1/entries` | GET | 列出条目 |
-| `/api/v1/entries` | POST | 创建条目 |
-| `/api/v1/entries/{id}` | GET | 获取条目详情 |
-| `/api/v1/search` | GET | 搜索条目 |
-| `/api/v1/sync/status` | GET | 同步状态 |
-| `/api/v1/auth/register` | POST | 用户注册 |
-| `/api/v1/auth/login` | POST | 用户登录 |
 
 ## 用户层级体系
 
@@ -610,8 +603,8 @@ sudo ./pactl service status
 | Language | Go 1.22 |
 | P2P Network | go-libp2p |
 | DHT Discovery | go-libp2p-kad-dht |
-| KV Storage | BadgerDB |
-| Full-Text Search | Custom index + gojieba |
+| KV Storage | Pebble (CockroachDB) |
+| Full-Text Search | Bleve + gojieba |
 | Authentication | Ed25519 |
 | System Service | kardianos/service |
 | Web Framework | gorilla/mux |

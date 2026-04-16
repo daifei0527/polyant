@@ -2,7 +2,7 @@
 
 ## 基础信息
 
-- **基础路径**: `http://localhost:18530/api/v1`
+- **基础路径**: `http://localhost:8080/api/v1`
 - **内容类型**: `application/json`
 - **认证方式**: Ed25519 签名认证
 

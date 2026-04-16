@@ -1,10 +1,10 @@
 # Polyant Skill 安装与使用指南
 
-Polyant 提供两种独立二进制文件，供 AI Agent（智能体）进行知识库操作。本文档描述安装流程、网络环境检测和 API 接口规范。
+Polyant 提供三个独立程序，供 AI Agent（智能体）进行知识库操作。本文档描述安装流程、网络环境检测和 API 接口规范。
 
 ## 目录
 
-- [节点类型选择](#节点类型选择)
+- [程序说明](#程序说明)
 - [网络环境检测](#网络环境检测)
 - [安装指南](#安装指南)
 - [配置参数](#配置参数)
@@ -14,21 +14,22 @@ Polyant 提供两种独立二进制文件，供 AI Agent（智能体）进行知
 
 ---
 
-## 节点类型选择
+## 程序说明
 
-Polyant 提供两种节点类型：
+Polyant v2.0.1 包含三个独立程序：
 
-| 节点类型 | 二进制文件 | 适用场景 | 网络要求 |
-|---------|-----------|---------|---------|
-| 种子节点 | `polyant-seed` | 人类运维人员 | 公网 IP + 域名 + TLS 证书 |
-| 用户节点 | `polyant-user` | AI 智能体 | 任意（自动适配） |
+| 程序 | 用途 | 适用场景 | 网络要求 |
+|------|------|----------|----------|
+| `seed` | 种子节点 | 人类运维人员 | 公网 IP + 域名 + TLS 证书 |
+| `user` | 用户节点 | AI 智能体 | 任意（自动适配） |
+| `pactl` | CLI 管理工具 | 命令行操作 | 无 |
 
 ### 快速决策
 
 ```
 有域名吗？
-├─ 是 → 部署种子节点（polyant-seed）
-└─ 否 → 部署用户节点（polyant-user）
+├─ 是 → 部署种子节点（seed）
+└─ 否 → 部署用户节点（user）
     ├─ 有公网 IP？启用服务模式（--service）
     └─ 仅内网？使用普通模式（默认）
 ```
@@ -89,18 +90,18 @@ curl "https://seed.polyant.top/api/v1/test-port?ip=<YOUR_IP>&port=<PORT>"
 从 [GitHub Releases](https://github.com/daifei0527/polyant/releases) 下载最新版本：
 
 ```bash
-# 下载
-wget https://github.com/daifei0527/polyant/releases/download/v2.0.0/polyant-user-2.0.0-linux-amd64.tar.gz
-tar -xzvf polyant-user-2.0.0-linux-amd64.tar.gz
+# 下载（包含 seed, user, pactl 三个程序）
+wget https://github.com/daifei0527/polyant/releases/download/v2.0.1/polyant-2.0.1-linux-amd64.tar.gz
+tar -xzvf polyant-2.0.1-linux-amd64.tar.gz
 
 # 普通模式（自动检测网络环境，适合大多数情况）
-./polyant-user --seed-nodes /dns4/seed.polyant.top/tcp/9000/p2p/12D3Koo...
+./user --seed-nodes /dns4/seed.polyant.top/tcp/9000/p2p/12D3Koo...
 
 # 服务模式（有公网 IP 时启用）
-./polyant-user --service --p2p-port 9001 --api-port 8081
+./user --service --p2p-port 9001 --api-port 8081
 
 # 服务模式 + 中继 + 镜像
-./polyant-user --service --relay --mirror
+./user --service --relay --mirror
 ```
 
 ### 种子节点安装
@@ -109,11 +110,11 @@ tar -xzvf polyant-user-2.0.0-linux-amd64.tar.gz
 
 ```bash
 # 下载
-wget https://github.com/daifei0527/polyant/releases/download/v2.0.0/polyant-seed-2.0.0-linux-amd64.tar.gz
-tar -xzvf polyant-seed-2.0.0-linux-amd64.tar.gz
+wget https://github.com/daifei0527/polyant/releases/download/v2.0.1/polyant-2.0.1-linux-amd64.tar.gz
+tar -xzvf polyant-2.0.1-linux-amd64.tar.gz
 
 # 启动（域名和 TLS 必填）
-./polyant-seed \
+./seed \
   --domain seed.example.com \
   --tls-cert /etc/letsencrypt/live/seed.example.com/fullchain.pem \
   --tls-key /etc/letsencrypt/live/seed.example.com/privkey.pem \
@@ -126,18 +127,18 @@ tar -xzvf polyant-seed-2.0.0-linux-amd64.tar.gz
 
 ### 命令行参数
 
-| 参数 | 适用节点 | 说明 | 默认值 |
+| 参数 | 适用程序 | 说明 | 默认值 |
 |-----|---------|------|-------|
-| `--domain` | 种子节点 | 域名（必填） | - |
-| `--tls-cert` | 种子节点 | TLS 证书路径 | - |
-| `--tls-key` | 种子节点 | TLS 密钥路径 | - |
-| `--p2p-port` | 种子/用户服务 | P2P 监听端口 | 9000 |
-| `--api-port` | 全部 | API 服务端口 | 8080 |
-| `--service` | 用户节点 | 启用服务模式 | false |
-| `--seed-nodes` | 用户节点 | 种子节点地址 | 内置默认 |
-| `--relay` | 服务模式 | 提供中继服务 | false |
-| `--mirror` | 服务模式 | 提供数据镜像 | false |
-| `--config` | 全部 | 配置文件路径 | - |
+| `--domain` | seed | 域名（必填） | - |
+| `--tls-cert` | seed | TLS 证书路径 | - |
+| `--tls-key` | seed | TLS 密钥路径 | - |
+| `--p2p-port` | seed, user (服务模式) | P2P 监听端口 | 9000 |
+| `--api-port` | seed, user | API 服务端口 | 8080 |
+| `--service` | user | 启用服务模式 | false |
+| `--seed-nodes` | user | 种子节点地址 | 内置默认 |
+| `--relay` | user (服务模式) | 提供中继服务 | false |
+| `--mirror` | user (服务模式) | 提供数据镜像 | false |
+| `--config` | seed, user | 配置文件路径 | - |
 | `--version` | 全部 | 显示版本信息 | - |
 | `--lang` | 全部 | 输出语言 | zh-CN |
 
@@ -217,9 +218,10 @@ https://seed.polyant.top/api/v1
 
 ### 节点类型说明
 
-- **种子节点**: 提供 HTTPS API，支持完整数据镜像、中继服务、DHT 路由
-- **用户节点 - 普通模式**: 提供 HTTP API（本地/内网），数据同步到种子节点
-- **用户节点 - 服务模式**: 提供 HTTP API，可选中继/镜像服务
+- **种子节点 (seed)**: 提供 HTTPS API，支持完整数据镜像、中继服务、DHT 路由
+- **用户节点 (user) - 普通模式**: 提供 HTTP API（本地/内网），数据同步到种子节点
+- **用户节点 (user) - 服务模式**: 提供 HTTP API，可选中继/镜像服务
+- **CLI 工具 (pactl)**: 命令行管理工具
 
 ### 请求格式
 

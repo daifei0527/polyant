@@ -8,11 +8,11 @@ git clone https://github.com/daifei0527/polyant.git
 cd polyant
 make build
 
-# 2. 启动节点（使用默认配置）
-./bin/polyant
+# 2. 启动用户节点（使用默认配置）
+./bin/user
 
 # 3. 验证服务运行
-curl http://localhost:18531/api/v1/node/status
+curl http://localhost:8080/api/v1/node/status
 ```
 
 ## 系统要求
@@ -57,18 +57,17 @@ curl http://localhost:18531/api/v1/node/status
 从 [Releases](https://github.com/daifei0527/polyant/releases) 页面下载对应平台的二进制文件。
 
 ```bash
-# Linux
-wget https://github.com/daifei0527/polyant/releases/download/v1.0.0/polyant-linux-amd64
-chmod +x polyant-linux-amd64
-mv polyant-linux-amd64 /usr/local/bin/polyant
+# Linux（包含 seed, user, pactl 三个程序）
+wget https://github.com/daifei0527/polyant/releases/download/v2.0.1/polyant-2.0.1-linux-amd64.tar.gz
+tar -xzvf polyant-2.0.1-linux-amd64.tar.gz
+chmod +x seed user pactl
 
 # macOS
-wget https://github.com/daifei0527/polyant/releases/download/v1.0.0/polyant-darwin-amd64
-chmod +x polyant-darwin-amd64
-mv polyant-darwin-amd64 /usr/local/bin/polyant
+wget https://github.com/daifei0527/polyant/releases/download/v2.0.1/polyant-2.0.1-darwin-amd64.tar.gz
+tar -xzvf polyant-2.0.1-darwin-amd64.tar.gz
 
 # Windows
-# 下载 polyant-windows-amd64.exe
+# 下载 polyant-2.0.1-windows-amd64.tar.gz
 ```
 
 ### 方式二：从源码构建
@@ -86,7 +85,7 @@ make build
 
 # 编译结果在 bin/ 目录下
 ls bin/
-# polyant  awctl
+# seed  user  pactl
 ```
 
 ### 方式三：交叉编译多平台
@@ -110,15 +109,15 @@ make build-windows   # Windows
 ```json
 {
   "node": {
-    "type": "local",
+    "type": "user",
     "name": "my-node",
     "data_dir": "~/.polyant/data",
     "log_dir": "~/.polyant/logs",
     "log_level": "info"
   },
   "network": {
-    "listen_port": 18530,
-    "api_port": 18531,
+    "p2p_port": 9000,
+    "api_port": 8080,
     "seed_nodes": [],
     "dht_enabled": true,
     "mdns_enabled": true
@@ -163,7 +162,7 @@ make build-windows   # Windows
 
 | 字段 | 类型 | 说明 |
 |------|------|------|
-| listen_port | int | P2P 监听端口 |
+| p2p_port | int | P2P 监听端口 |
 | api_port | int | HTTP API 端口 |
 | seed_nodes | []string | 种子节点地址列表 |
 | dht_enabled | bool | 是否启用 DHT 发现 |
@@ -197,8 +196,8 @@ export POLYANT_NODE_DATA_DIR=/data/polyant
 
 # 网络配置
 export POLYANT_NETWORK_API_PORT=8080
-export POLYANT_NETWORK_LISTEN_PORT=18530
-export POLYANT_NETWORK_SEED_NODES=/ip4/192.168.1.1/tcp/18530/p2p/QmXXX
+export POLYANT_NETWORK_LISTEN_PORT=9000
+export POLYANT_NETWORK_SEED_NODES=/ip4/192.168.1.1/tcp/9000/p2p/QmXXX
 
 # 同步配置
 export POLYANT_SYNC_AUTO_SYNC=true
@@ -218,49 +217,56 @@ export POLYANT_STORAGE_SEARCH_TYPE=bleve
 ### 命令行参数
 
 ```bash
-./bin/polyant [选项]
+# 种子节点
+./bin/seed [选项]
+
+# 用户节点
+./bin/user [选项]
 
 选项:
-  -config <file>      配置文件路径 (JSON 格式)
-  -init-seed          初始化种子数据并退出
-  -memory             使用内存存储（仅用于测试）
-  -service            作为系统服务运行
-  -version            显示版本信息
+  --config <file>      配置文件路径 (JSON 格式)
+  --domain <domain>    域名（种子节点必填）
+  --tls-cert <file>    TLS 证书路径（种子节点必填）
+  --tls-key <file>     TLS 密钥路径（种子节点必填）
+  --p2p-port <port>    P2P 监听端口 (默认: 9000)
+  --api-port <port>    API 服务端口 (默认: 8080)
+  --service            启用服务模式（用户节点）
+  --relay              提供中继服务
+  --mirror             提供数据镜像
+  --version            显示版本信息
 ```
 
 示例：
 
 ```bash
-# 使用默认配置运行
-./bin/polyant
+# 启动用户节点
+./bin/user
 
-# 指定配置文件
-./bin/polyant -config /etc/polyant/config.json
+# 启动种子节点
+./bin/seed \
+  --domain seed.example.com \
+  --tls-cert /etc/letsencrypt/live/seed.example.com/fullchain.pem \
+  --tls-key /etc/letsencrypt/live/seed.example.com/privkey.pem
 
-# 初始化种子数据
-./bin/polyant -init-seed -config seed-config.json
-
-# 使用内存存储（测试用）
-./bin/polyant -memory
-
-# 作为系统服务运行
-./bin/polyant -service
+# 用户节点服务模式
+./bin/user --service --relay --mirror
 ```
 
 ### 直接运行
 
 ```bash
-# 使用默认配置
-./bin/polyant
+# 用户节点（默认配置）
+./bin/user
 
-# 指定配置文件
-./bin/polyant -config ~/.polyant/config.json
+# 种子节点（指定配置文件）
+./bin/seed --config ~/.polyant/seed.json
 
-# 初始化种子数据
-./bin/polyant -init-seed
+# 用户节点（指定配置文件）
+./bin/user --config ~/.polyant/user.json
 
 # 显示帮助
-./bin/polyant -help
+./bin/seed --help
+./bin/user --help
 ```
 
 ### 系统服务 (Linux systemd)
@@ -269,7 +275,7 @@ export POLYANT_STORAGE_SEARCH_TYPE=bleve
 
 ```ini
 [Unit]
-Description=Polyant P2P Knowledge Node
+Description=Polyant User Node
 After=network.target
 
 [Service]
@@ -277,7 +283,28 @@ Type=simple
 User=polyant
 Group=polyant
 WorkingDirectory=/opt/polyant
-ExecStart=/opt/polyant/bin/polyant -config /opt/polyant/config.json
+ExecStart=/opt/polyant/bin/user --config /opt/polyant/config.json
+Restart=on-failure
+RestartSec=5
+LimitNOFILE=65536
+
+[Install]
+WantedBy=multi-user.target
+```
+
+种子节点服务文件 `/etc/systemd/system/polyant-seed.service`：
+
+```ini
+[Unit]
+Description=Polyant Seed Node
+After=network.target
+
+[Service]
+Type=simple
+User=polyant
+Group=polyant
+WorkingDirectory=/opt/polyant
+ExecStart=/opt/polyant/bin/seed --config /opt/polyant/seed.json
 Restart=on-failure
 RestartSec=5
 LimitNOFILE=65536
@@ -311,36 +338,42 @@ sudo journalctl -u polyant -f
 
 ### Docker 部署
 
-创建 `Dockerfile`：
+创建 `Dockerfile.seed`：
 
 ```dockerfile
 FROM golang:1.22-alpine AS builder
 WORKDIR /app
 COPY . .
-RUN go build -o polyant ./cmd/polyant
+RUN go build -o seed ./cmd/seed
 
 FROM alpine:latest
 RUN apk --no-cache add ca-certificates
 WORKDIR /app
-COPY --from=builder /app/polyant .
-COPY configs/default.json config.json
-EXPOSE 18530 18531
-CMD ["./polyant", "-config", "config.json"]
+COPY --from=builder /app/seed .
+COPY configs/seed.json config.json
+EXPOSE 9000 8080
+CMD ["./seed", "--config", "config.json"]
 ```
 
 构建并运行：
 
 ```bash
 # 构建镜像
-docker build -t polyant:latest .
+docker build -t polyant-seed:latest -f Dockerfile.seed .
 
-# 运行容器
+# 运行种子节点容器
 docker run -d \
-  --name polyant \
-  -p 18530:18530 \
-  -p 18531:18531 \
+  --name polyant-seed \
+  -p 9000:9000 \
+  -p 8080:8080 \
   -v polyant-data:/app/data \
-  polyant:latest
+  polyant-seed:latest
+
+# 运行用户节点容器
+docker run -d \
+  --name polyant-user \
+  -p 8080:8080 \
+  polyant-user:latest
 ```
 
 ### Docker Compose
@@ -351,17 +384,23 @@ docker run -d \
 version: '3.8'
 
 services:
-  polyant:
-    image: polyant:latest
+  polyant-seed:
+    image: polyant-seed:latest
     ports:
-      - "18530:18530"
-      - "18531:18531"
+      - "9000:9000"
+      - "8080:8080"
     volumes:
       - ./data:/app/data
-      - ./config.json:/app/config.json:ro
+      - ./seed.json:/app/config.json:ro
     restart: unless-stopped
-    environment:
-      - POLYANT_NODE_NAME=polyant-docker
+
+  polyant-user:
+    image: polyant-user:latest
+    ports:
+      - "8081:8080"
+    volumes:
+      - ./user-data:/app/data
+    restart: unless-stopped
 ```
 
 ## 节点类型
@@ -397,7 +436,7 @@ Polyant 支持三种节点类型，适用于不同场景：
     "name": "seed-node-1"
   },
   "network": {
-    "listen_port": 18530,
+    "listen_port": 9000,
     "dht_enabled": true
   },
   "sharing": {
@@ -416,7 +455,7 @@ Polyant 支持三种节点类型，适用于不同场景：
 种子节点启动时会自动初始化种子数据：
 
 ```bash
-./bin/polyant -config seed-config.json -init-seed
+./bin/seed --config seed-config.json
 ```
 
 ## 种子节点部署指南
@@ -451,8 +490,8 @@ Polyant 支持三种节点类型，适用于不同场景：
     "log_level": "info"
   },
   "network": {
-    "listen_port": 18530,
-    "api_port": 18531,
+    "listen_port": 9000,
+    "api_port": 8080,
     "seed_nodes": [],
     "dht_enabled": true,
     "mdns_enabled": false
@@ -492,16 +531,16 @@ chown -R polyant:polyant /opt/polyant/seed-data
 4. **安装并启动服务**：
 
 ```bash
-# 使用 awctl 安装服务
-./bin/awctl service install \
+# 使用 pactl 安装服务
+./bin/pactl service install \
   --name polyant \
   --config /opt/polyant/config.json
 
 # 启动服务
-./bin/awctl service start --name polyant
+./bin/pactl service start --name polyant
 
 # 查看状态
-./bin/awctl service status --name polyant
+./bin/pactl service status --name polyant
 ```
 
 5. **获取节点地址**：
@@ -511,7 +550,7 @@ chown -R polyant:polyant /opt/polyant/seed-data
 journalctl -u polyant | grep "node_id"
 
 # 完整的多地址格式
-# /ip4/<公网IP>/tcp/18530/p2p/<PeerID>
+# /ip4/<公网IP>/tcp/9000/p2p/<PeerID>
 ```
 
 ### 多种子节点配置
@@ -522,8 +561,8 @@ journalctl -u polyant | grep "node_id"
 {
   "network": {
     "seed_nodes": [
-      "/ip4/seed1.example.com/tcp/18530/p2p/QmSeed1...",
-      "/ip4/seed2.example.com/tcp/18530/p2p/QmSeed2..."
+      "/ip4/seed1.example.com/tcp/9000/p2p/QmSeed1...",
+      "/ip4/seed2.example.com/tcp/9000/p2p/QmSeed2..."
     ]
   }
 }
@@ -573,14 +612,14 @@ top -p $(pgrep polyant)
 - 按需同步数据
 - 适合嵌入式设备或移动端
 
-## CLI 工具 (awctl)
+## CLI 工具 (pactl)
 
-`awctl` 是 Polyant 的命令行管理工具，用于管理知识库条目、用户、同步、镜像等功能。
+`pactl` 是 Polyant 的命令行管理工具，用于管理知识库条目、用户、同步、镜像等功能。
 
 ### 全局选项
 
 ```bash
-awctl [全局选项] <命令>
+pactl [全局选项] <命令>
 
 选项:
   -c, --config <file>    配置文件路径
@@ -593,90 +632,90 @@ awctl [全局选项] <命令>
 
 ```bash
 # 安装为系统服务
-awctl service install --name polyant --config /etc/polyant/config.json
+pactl service install --name polyant --config /etc/polyant/config.json
 
 # 启动服务
-awctl service start --name polyant
+pactl service start --name polyant
 
 # 停止服务
-awctl service stop --name polyant
+pactl service stop --name polyant
 
 # 重启服务
-awctl service restart --name polyant
+pactl service restart --name polyant
 
 # 查看服务状态
-awctl service status --name polyant
+pactl service status --name polyant
 
 # 查看服务日志
-awctl service logs --name polyant -f --tail 100
+pactl service logs --name polyant -f --tail 100
 
 # 卸载服务
-awctl service uninstall --name polyant
+pactl service uninstall --name polyant
 ```
 
 ### 密钥管理命令
 
 ```bash
 # 生成新密钥对
-awctl key generate
+pactl key generate
 
 # 查看当前公钥
-awctl key show
+pactl key show
 ```
 
 ### 用户管理命令
 
 ```bash
 # 注册新用户
-awctl user register --name "my-agent" --email "agent@example.com"
+pactl user register --name "my-agent" --email "agent@example.com"
 
 # 查看用户信息
-awctl user get <user-id>
+pactl user get <user-id>
 
 # 列出所有用户
-awctl user list
+pactl user list
 ```
 
 ### 条目管理命令
 
 ```bash
 # 搜索条目
-awctl search "人工智能"
+pactl search "人工智能"
 
 # 获取条目详情
-awctl entry get <entry-id>
+pactl entry get <entry-id>
 
 # 创建条目
-awctl entry create --title "新条目" --category "tech" --content "内容..."
+pactl entry create --title "新条目" --category "tech" --content "内容..."
 
 # 更新条目
-awctl entry update <entry-id> --title "更新标题"
+pactl entry update <entry-id> --title "更新标题"
 
 # 删除条目
-awctl entry delete <entry-id>
+pactl entry delete <entry-id>
 ```
 
 ### 同步命令
 
 ```bash
 # 触发同步
-awctl sync trigger
+pactl sync trigger
 
 # 查看同步状态
-awctl sync status
+pactl sync status
 ```
 
 ### 常用命令示例
 
 ```bash
 # 查看节点状态
-./bin/awctl status
+./bin/pactl status
 
 # 搜索知识库
-./bin/awctl -s http://localhost:18531 search "Go 语言"
+./bin/pactl -s http://localhost:8080 search "Go 语言"
 
 # 连接远程服务器
-./bin/awctl -s http://192.168.1.100:18531 status
+./bin/pactl -s http://192.168.1.100:8080 status
 ```
 
 ## 数据管理
@@ -807,7 +846,7 @@ systemctl start polyant
    tar -xzf /tmp/polyant-migration.tar.gz -C ~/
    
    # 启动服务
-   ./bin/polyant -config ~/.polyant/config.json
+   ./bin/user --config ~/.polyant/config.json
    ```
 
 ### 存储维护
@@ -833,7 +872,7 @@ Pebble 存储支持手动压缩：
 
 ```bash
 # 通过 API 触发（如果实现了相关接口）
-curl -X POST http://localhost:18531/api/v1/admin/compact
+curl -X POST http://localhost:8080/api/v1/admin/compact
 ```
 
 ## 监控与日志
@@ -859,10 +898,10 @@ journalctl -u polyant -f
 
 ```bash
 # 检查节点状态
-curl http://localhost:18531/api/v1/node/status
+curl http://localhost:8080/api/v1/node/status
 
 # 检查 API 可用性
-curl http://localhost:18531/api/v1/categories
+curl http://localhost:8080/api/v1/categories
 ```
 
 ## 网络配置
@@ -873,10 +912,10 @@ curl http://localhost:18531/api/v1/categories
 
 ```bash
 # P2P 端口
-sudo ufw allow 18530/tcp
+sudo ufw allow 9000/tcp
 
 # API 端口
-sudo ufw allow 18531/tcp
+sudo ufw allow 8080/tcp
 ```
 
 ### 多节点组网
@@ -885,7 +924,7 @@ sudo ufw allow 18531/tcp
 
 ```bash
 # 在 seed-node-1 上
-./bin/polyant -config seed-config.json
+./bin/seed --config seed-config.json
 ```
 
 2. 配置本地节点连接种子节点：
@@ -894,7 +933,7 @@ sudo ufw allow 18531/tcp
 {
   "network": {
     "seed_nodes": [
-      "/ip4/seed-ip/tcp/18530/p2p/seed-peer-id"
+      "/ip4/seed-ip/tcp/9000/p2p/seed-peer-id"
     ]
   }
 }
@@ -903,7 +942,7 @@ sudo ufw allow 18531/tcp
 3. 启动本地节点：
 
 ```bash
-./bin/polyant -config local-config.json
+./bin/user --config user-config.json
 ```
 
 ## 安全建议
@@ -938,13 +977,13 @@ sudo ufw allow 18531/tcp
 2. 检查防火墙
    ```bash
    sudo ufw status
-   sudo ufw allow 18530/tcp
+   sudo ufw allow 9000/tcp
    ```
 
 3. 验证种子节点地址格式
    ```bash
    # 正确格式
-   /ip4/192.168.1.1/tcp/18530/p2p/QmXXX...
+   /ip4/192.168.1.1/tcp/9000/p2p/QmXXX...
    ```
 
 4. 检查 NAT 穿透
@@ -1009,12 +1048,12 @@ systemctl restart polyant
 检查：
 1. 端口是否被占用
    ```bash
-   netstat -tlnp | grep 18531
+   netstat -tlnp | grep 8080
    ```
 
 2. 服务是否运行
    ```bash
-   curl http://localhost:18531/api/v1/node/status
+   curl http://localhost:8080/api/v1/node/status
    ```
 
 3. 查看日志
@@ -1120,13 +1159,13 @@ export POLYANT_NODE_LOG_LEVEL=debug
 
 ```bash
 # 检查节点状态
-curl http://localhost:18531/api/v1/node/status
+curl http://localhost:8080/api/v1/node/status
 
 # 检查 API 可用性
-curl http://localhost:18531/api/v1/categories
+curl http://localhost:8080/api/v1/categories
 
 # 检查 P2P 连接
-curl http://localhost:18531/api/v1/node/peers
+curl http://localhost:8080/api/v1/node/peers
 ```
 
 ### 常用诊断命令
