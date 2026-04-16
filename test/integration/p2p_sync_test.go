@@ -72,22 +72,18 @@ func TestTwoNodeSync(t *testing.T) {
 	entry.ContentHash = entry.ComputeContentHash()
 	storeA.Entry.Create(ctx, entry)
 
-	// 创建协议和同步引擎
-	protoA := protocol.NewProtocol(hostA, storeA)
-	protoB := protocol.NewProtocol(hostB, storeB)
+	// 创建同步引擎（先传入 nil protocol，后面再设置）
+	syncA := sync.NewSyncEngine(hostA, nil, storeA, &sync.SyncConfig{AutoSync: false})
+	syncB := sync.NewSyncEngine(hostB, nil, storeB, &sync.SyncConfig{AutoSync: false})
 
-	syncA := sync.NewSyncEngine(hostA, protoA, storeA, &sync.SyncConfig{AutoSync: false})
-	syncB := sync.NewSyncEngine(hostB, protoB, storeB, &sync.SyncConfig{AutoSync: false})
+	// 创建协议，传入同步引擎作为 Handler
+	// P2PHost 内嵌了 libp2p host.Host，所以可以直接传给 NewProtocol
+	protoA := protocol.NewProtocol(hostA, syncA)
+	protoB := protocol.NewProtocol(hostB, syncB)
 
-	// 设置协议处理器
-	protoA.SetSyncHandler(syncA)
-	protoB.SetSyncHandler(syncB)
-
-	// 启动协议
-	protoA.Start(ctx)
-	defer protoA.Stop()
-	protoB.Start(ctx)
-	defer protoB.Stop()
+	// 设置协议处理器（解决循环依赖）
+	syncA.SetProtocol(protoA)
+	syncB.SetProtocol(protoB)
 
 	// 节点 B 发起同步
 	err = syncB.IncrementalSync(ctx)
