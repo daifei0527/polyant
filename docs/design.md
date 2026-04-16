@@ -2001,17 +2001,20 @@ all: build
 
 build:
 	@mkdir -p $(BUILD_DIR)
-	go build $(LDFLAGS) -o $(BUILD_DIR)/polyant ./cmd/polyant/
-	go build $(LDFLAGS) -o $(BUILD_DIR)/awctl ./cmd/awctl/
+	go build $(LDFLAGS) -o $(BUILD_DIR)/seed ./cmd/seed/
+	go build $(LDFLAGS) -o $(BUILD_DIR)/user ./cmd/user/
+	go build $(LDFLAGS) -o $(BUILD_DIR)/pactl ./cmd/pactl/
 
 cross-compile:
 	@mkdir -p $(BUILD_DIR)
 	@for p in $(PLATFORMS); do \
 		GOOS=$${p%/*}; GOARCH=$${p#*/}; \
-		out=$(BUILD_DIR)/polyant-$${GOOS}-$${GOARCH}; \
-		[ "$${GOOS}" = "windows" ] && out=$${out}.exe; \
-		echo "Building $$out..."; \
-		GOOS=$${GOOS} GOARCH=$${GOARCH} go build $(LDFLAGS) -o $$out ./cmd/polyant/; \
+		for cmd in seed user pactl; do \
+			out=$(BUILD_DIR)/$${cmd}-$${GOOS}-$${GOARCH}; \
+			[ "$${GOOS}" = "windows" ] && out=$${out}.exe; \
+			echo "Building $$out..."; \
+			GOOS=$${GOOS} GOARCH=$${GOARCH} go build $(LDFLAGS) -o $$out ./cmd/$${cmd}/; \
+		done; \
 	done
 
 test:

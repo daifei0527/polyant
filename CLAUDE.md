@@ -17,11 +17,14 @@ make lint   # runs fmt + vet
 # Run a single test
 go test -v -race ./internal/storage/...
 
-# Run the server
-./bin/polyant -config configs/config.json
+# Run seed node
+./bin/seed -config configs/seed.json
+
+# Run user node
+./bin/user -config configs/user.json
 
 # Run with seed data initialization
-./bin/polyant -init-seed
+./bin/seed -init-seed
 ```
 
 ## Architecture Overview
@@ -30,7 +33,7 @@ Polyant is a distributed P2P knowledge system for AI agents. Key architectural d
 
 ### Layered Structure
 
-- **`cmd/`** - Entry points: `polyant` (server) and `awctl` (CLI tool)
+- **`cmd/`** - Entry points: `seed` (seed node), `user` (user node), `pactl` (CLI tool)
 - **`internal/api/`** - HTTP layer: handlers, router, middleware
 - **`internal/core/`** - Business logic: user, category, rating, email
 - **`internal/network/`** - P2P layer: host, DHT, protocol, sync
