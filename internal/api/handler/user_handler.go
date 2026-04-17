@@ -336,9 +336,13 @@ func (h *UserHandler) UpdateUserInfoHandler(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	if req.AgentName != "" {
-		user.AgentName = req.AgentName
+	// Validate agent_name if provided (empty string is invalid)
+	if req.AgentName == "" {
+		writeError(w, awerrors.ErrInvalidParams)
+		return
 	}
+
+	user.AgentName = req.AgentName
 	user.LastActive = model.NowMillis()
 
 	updated, err := h.userStore.Update(r.Context(), user)
