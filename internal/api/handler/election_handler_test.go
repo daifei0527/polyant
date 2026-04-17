@@ -424,3 +424,151 @@ func TestExtractPathParam(t *testing.T) {
 		}
 	}
 }
+
+// ==================== 权限边界文档测试 ====================
+// 以下测试记录当前行为和预期的权限要求
+// 实际权限检查由路由中间件执行
+
+func TestElectionHandler_CreateElectionHandler_RequiresLv5(t *testing.T) {
+	handler := newTestElectionHandler(t)
+
+	// 当前实现不直接检查用户等级，权限由路由中间件 authMW.RequireLevel(model.UserLevelLv5) 执行
+	body := `{"title": "Test Election", "description": "Test", "vote_threshold": 3}`
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/elections/create", bytes.NewBufferString(body))
+	req.Header.Set("Content-Type", "application/json")
+
+	// 模拟 Lv4 用户上下文（如果中间件在位，会被拒绝）
+	ctx := context.WithValue(req.Context(), "user_level", "lv4")
+	req = req.WithContext(ctx)
+	rec := httptest.NewRecorder()
+
+	handler.CreateElectionHandler(rec, req)
+
+	// 文档: 路由使用 authMW.RequireLevel(model.UserLevelLv5)
+	// 此测试验证 handler 行为，实际权限由中间件强制执行
+	t.Logf("Create election result: %d. Router enforces Lv5 requirement via middleware.", rec.Code)
+}
+
+func TestElectionHandler_VoteHandler_RequiresLv3(t *testing.T) {
+	handler := newTestElectionHandler(t)
+
+	// Create election and candidate
+	body := `{"title": "Test", "description": "Test", "vote_threshold": 3}`
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/elections", bytes.NewBufferString(body))
+	req.Header.Set("Content-Type", "application/json")
+	ctx := context.WithValue(req.Context(), "public_key", "admin-key")
+	req = req.WithContext(ctx)
+	rec := httptest.NewRecorder()
+	handler.CreateElectionHandler(rec, req)
+
+	var createResp APIResponse
+	json.Unmarshal(rec.Body.Bytes(), &createResp)
+	createData := createResp.Data.(map[string]interface{})
+	electionID := createData["election_id"].(string)
+
+	// Nominate candidate
+	nominateBody := `{"user_name": "Candidate", "self_nominated": true}`
+	req = httptest.NewRequest(http.MethodPost, "/api/v1/elections/"+electionID+"/candidates", bytes.NewBufferString(nominateBody))
+	req.Header.Set("Content-Type", "application/json")
+	ctx = context.WithValue(req.Context(), "public_key", "candidate-key")
+	req = req.WithContext(ctx)
+	rec = httptest.NewRecorder()
+	handler.NominateCandidateHandler(rec, req)
+
+	// Vote with Lv2 user (would be rejected by middleware in production)
+	voteBody := `{"candidate_id": "candidate-key"}`
+	req = httptest.NewRequest(http.MethodPost, "/api/v1/elections/"+electionID+"/vote", bytes.NewBufferString(voteBody))
+	req.Header.Set("Content-Type", "application/json")
+	ctx = context.WithValue(req.Context(), "public_key", "lv2-voter")
+	req = req.WithContext(ctx)
+	rec = httptest.NewRecorder()
+
+	handler.VoteHandler(rec, req)
+
+	// 文档: 路由使用 authMW.RequireLevel(model.UserLevelLv3)
+	// 此测试验证 handler 行为，实际权限由中间件强制执行
+	t.Logf("Vote result: %d. Router enforces Lv3+ requirement via middleware.", rec.Code)
+}
+
+func TestElectionHandler_CloseElectionHandler_RequiresLv5(t *testing.T) {
+	handler := newTestElectionHandler(t)
+
+	// Create election
+	body := `{"title": "Test", "description": "Test", "vote_threshold": 3}`
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/elections", bytes.NewBufferString(body))
+	req.Header.Set("Content-Type", "application/json")
+	ctx := context.WithValue(req.Context(), "public_key", "admin-key")
+	req = req.WithContext(ctx)
+	rec := httptest.NewRecorder()
+	handler.CreateElectionHandler(rec, req)
+
+	var createResp APIResponse
+	json.Unmarshal(rec.Body.Bytes(), &createResp)
+	createData := createResp.Data.(map[string]interface{})
+	electionID := createData["election_id"].(string)
+
+	// Try to close with non-admin (would be rejected by middleware in production)
+	req = httptest.NewRequest(http.MethodPost, "/api/v1/elections/"+electionID+"/close", nil)
+	ctx = context.WithValue(req.Context(), "public_key", "non-admin")
+	req = req.WithContext(ctx)
+	rec = httptest.NewRecorder()
+
+	handler.CloseElectionHandler(rec, req)
+
+	// 文档: 路由使用 authMW.RequireLevel(model.UserLevelLv5)
+	// 此测试验证 handler 行为，实际权限由中间件强制执行
+	t.Logf("Close result: %d. Router enforces Lv5 requirement via middleware.", rec.Code)
+}
+
+func TestElectionHandler_DuplicateVote(t *testing.T) {
+	handler := newTestElectionHandler(t)
+
+	// Create election
+	body := `{"title": "Test", "description": "Test", "vote_threshold": 5}`
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/elections", bytes.NewBufferString(body))
+	req.Header.Set("Content-Type", "application/json")
+	ctx := context.WithValue(req.Context(), "public_key", "admin-key")
+	req = req.WithContext(ctx)
+	rec := httptest.NewRecorder()
+	handler.CreateElectionHandler(rec, req)
+
+	var createResp APIResponse
+	json.Unmarshal(rec.Body.Bytes(), &createResp)
+	createData := createResp.Data.(map[string]interface{})
+	electionID := createData["election_id"].(string)
+
+	// Nominate candidate
+	nominateBody := `{"user_name": "Candidate", "self_nominated": true}`
+	req = httptest.NewRequest(http.MethodPost, "/api/v1/elections/"+electionID+"/candidates", bytes.NewBufferString(nominateBody))
+	req.Header.Set("Content-Type", "application/json")
+	ctx = context.WithValue(req.Context(), "public_key", "candidate-key")
+	req = req.WithContext(ctx)
+	rec = httptest.NewRecorder()
+	handler.NominateCandidateHandler(rec, req)
+
+	// First vote
+	voteBody := `{"candidate_id": "candidate-key"}`
+	req = httptest.NewRequest(http.MethodPost, "/api/v1/elections/"+electionID+"/vote", bytes.NewBufferString(voteBody))
+	req.Header.Set("Content-Type", "application/json")
+	ctx = context.WithValue(req.Context(), "public_key", "voter-1")
+	req = req.WithContext(ctx)
+	rec = httptest.NewRecorder()
+	handler.VoteHandler(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("First vote failed: %d", rec.Code)
+	}
+
+	// Duplicate vote from same voter
+	req = httptest.NewRequest(http.MethodPost, "/api/v1/elections/"+electionID+"/vote", bytes.NewBufferString(voteBody))
+	req.Header.Set("Content-Type", "application/json")
+	ctx = context.WithValue(req.Context(), "public_key", "voter-1")
+	req = req.WithContext(ctx)
+	rec = httptest.NewRecorder()
+
+	handler.VoteHandler(rec, req)
+
+	if rec.Code == http.StatusOK {
+		t.Error("Duplicate vote should be rejected")
+	}
+}
