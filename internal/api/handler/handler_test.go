@@ -1467,3 +1467,49 @@ func TestEntryHandler_GetOutlinksHandler_EmptyLinks(t *testing.T) {
 		t.Errorf("Expected empty array, got %d items", len(data))
 	}
 }
+
+// ========== User Update Validation Tests ==========
+
+func TestUserHandler_UpdateUserInfoHandler_EmptyName(t *testing.T) {
+	handler, store := newTestUserHandler(t)
+
+	pubKey, _, _ := ed25519.GenerateKey(rand.Reader)
+	pubKeyB64 := base64.StdEncoding.EncodeToString(pubKey)
+
+	user := &model.User{
+		PublicKey: pubKeyB64,
+		AgentName: "old-name",
+		UserLevel: model.UserLevelLv1,
+		Status:    model.UserStatusActive,
+	}
+	store.User.Create(context.Background(), user)
+
+	// Empty agent_name should be rejected
+	body := `{"agent_name": ""}`
+	req := httptest.NewRequest(http.MethodPut, "/api/v1/user/info", bytes.NewBufferString(body))
+	req.Header.Set("Content-Type", "application/json")
+	ctx := setUserInContext(req.Context(), user)
+	req = req.WithContext(ctx)
+	rec := httptest.NewRecorder()
+
+	handler.UpdateUserInfoHandler(rec, req)
+
+	if rec.Code == http.StatusOK {
+		t.Error("Expected error for empty agent_name")
+	}
+}
+
+func TestUserHandler_UpdateUserInfoHandler_Unauthorized(t *testing.T) {
+	handler, _ := newTestUserHandler(t)
+
+	body := `{"agent_name": "new-name"}`
+	req := httptest.NewRequest(http.MethodPut, "/api/v1/user/info", bytes.NewBufferString(body))
+	req.Header.Set("Content-Type", "application/json")
+	rec := httptest.NewRecorder()
+
+	handler.UpdateUserInfoHandler(rec, req)
+
+	if rec.Code != http.StatusUnauthorized {
+		t.Errorf("Expected status %d, got %d", http.StatusUnauthorized, rec.Code)
+	}
+}
