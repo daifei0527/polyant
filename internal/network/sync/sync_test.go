@@ -3388,3 +3388,459 @@ func TestIncrementalSync_DeletedEntries(t *testing.T) {
 		t.Errorf("条目状态应为 archived: got %s", entry.Status)
 	}
 }
+
+// ==================== processSyncResponse 测试 ====================
+
+// TestProcessSyncResponse_UpdatedEntries 测试处理更新的条目
+func TestProcessSyncResponse_UpdatedEntries(t *testing.T) {
+	store, err := storage.NewMemoryStore()
+	if err != nil {
+		t.Fatalf("创建存储失败: %v", err)
+	}
+
+	// 先创建一个本地条目
+	now := time.Now().UnixMilli()
+	localEntry := &model.KnowledgeEntry{
+		ID:        "entry-1",
+		Title:     "Local Entry",
+		Content:   "local content",
+		Category:  "tech",
+		Version:   1,
+		UpdatedAt: now - 1000,
+		Status:    model.EntryStatusPublished,
+	}
+	localEntry.ContentHash = localEntry.ComputeContentHash()
+	store.Entry.Create(context.Background(), localEntry)
+
+	// 创建更新的条目（内容不同，更新时间更新）
+	updatedEntry := &model.KnowledgeEntry{
+		ID:        "entry-1",
+		Title:     "Updated Entry",
+		Content:   "updated content different", // 内容不同
+		Category:  "tech",
+		Version:   2,
+		UpdatedAt: now,
+		Status:    model.EntryStatusPublished,
+	}
+	updatedEntry.ContentHash = updatedEntry.ComputeContentHash()
+	updatedData, _ := updatedEntry.ToJSON()
+
+	mockHost := host.NewMockP2PHost()
+	mockHost.SetConnectedPeers([]peer.ID{peer.ID("peer-1")})
+
+	mockProtocol := protocol.NewMockProtocol()
+	mockProtocol.SetSyncResponse(&protocol.SyncResponse{
+		RequestID:           "test-1",
+		NewEntries:          [][]byte{},
+		UpdatedEntries:      [][]byte{updatedData},
+		DeletedEntryIDs:     []string{},
+		NewRatings:          [][]byte{},
+		ServerVersionVector: map[string]int64{"entry-1": 2},
+		ServerTimestamp:     now,
+	})
+
+	cfg := &sync.SyncConfig{AutoSync: false}
+	engine := sync.NewSyncEngine(mockHost, mockProtocol, store, cfg)
+
+	// 初始化版本向量，表示本地已有 entry-1 版本 1
+	engine.HandleBitfield(context.Background(), &protocol.Bitfield{
+		VersionVector: map[string]int64{"entry-1": 1},
+	})
+
+	err = engine.IncrementalSync(context.Background())
+	if err != nil {
+		t.Errorf("同步失败: %v", err)
+	}
+
+	// 验证条目已更新（远端更新时间更新，应接受远端）
+	result, err := store.Entry.Get(context.Background(), "entry-1")
+	if err != nil {
+		t.Errorf("获取条目失败: %v", err)
+	}
+	if result.Title != "Updated Entry" {
+		t.Errorf("条目标题应更新: got %s", result.Title)
+	}
+}
+
+// TestProcessSyncResponse_NewRatings 测试处理新评分
+func TestProcessSyncResponse_NewRatings(t *testing.T) {
+	store, err := storage.NewMemoryStore()
+	if err != nil {
+		t.Fatalf("创建存储失败: %v", err)
+	}
+
+	// 创建条目
+	now := time.Now().UnixMilli()
+	entry := &model.KnowledgeEntry{
+		ID:        "entry-1",
+		Title:     "Test Entry",
+		Content:   "content",
+		Category:  "tech",
+		Version:   1,
+		UpdatedAt: now,
+		Status:    model.EntryStatusPublished,
+	}
+	entry.ContentHash = entry.ComputeContentHash()
+	store.Entry.Create(context.Background(), entry)
+
+	// 创建评分
+	rating := &model.Rating{
+		ID:          "rating-1",
+		EntryId:     "entry-1",
+		RaterPubkey: "user-1",
+		Score:       4.5,
+		Comment:     "Great",
+		RatedAt:     now,
+	}
+	ratingData, _ := rating.ToJSON()
+
+	mockHost := host.NewMockP2PHost()
+	mockHost.SetConnectedPeers([]peer.ID{peer.ID("peer-1")})
+
+	mockProtocol := protocol.NewMockProtocol()
+	mockProtocol.SetSyncResponse(&protocol.SyncResponse{
+		RequestID:           "test-1",
+		NewEntries:          [][]byte{},
+		UpdatedEntries:      [][]byte{},
+		DeletedEntryIDs:     []string{},
+		NewRatings:          [][]byte{ratingData},
+		ServerVersionVector: map[string]int64{},
+		ServerTimestamp:     now,
+	})
+
+	cfg := &sync.SyncConfig{AutoSync: false}
+	engine := sync.NewSyncEngine(mockHost, mockProtocol, store, cfg)
+
+	err = engine.IncrementalSync(context.Background())
+	if err != nil {
+		t.Errorf("同步失败: %v", err)
+	}
+
+	// 验证评分已创建
+	ratings, err := store.Rating.ListByEntry(context.Background(), "entry-1")
+	if err != nil {
+		t.Errorf("获取评分失败: %v", err)
+	}
+	if len(ratings) != 1 {
+		t.Errorf("应有一个评分: got %d", len(ratings))
+	}
+
+	// 验证条目评分已更新
+	updatedEntry, err := store.Entry.Get(context.Background(), "entry-1")
+	if err != nil {
+		t.Errorf("获取条目失败: %v", err)
+	}
+	if updatedEntry.Score != 4.5 {
+		t.Errorf("条目评分应为 4.5: got %f", updatedEntry.Score)
+	}
+}
+
+// TestProcessSyncResponse_InvalidEntryData 测试无效条目数据
+func TestProcessSyncResponse_InvalidEntryData(t *testing.T) {
+	store, err := storage.NewMemoryStore()
+	if err != nil {
+		t.Fatalf("创建存储失败: %v", err)
+	}
+
+	mockHost := host.NewMockP2PHost()
+	mockHost.SetConnectedPeers([]peer.ID{peer.ID("peer-1")})
+
+	mockProtocol := protocol.NewMockProtocol()
+	mockProtocol.SetSyncResponse(&protocol.SyncResponse{
+		RequestID:           "test-1",
+		NewEntries:          [][]byte{[]byte("invalid json")},
+		UpdatedEntries:      [][]byte{[]byte("also invalid")},
+		DeletedEntryIDs:     []string{},
+		NewRatings:          [][]byte{[]byte("invalid rating")},
+		ServerVersionVector: map[string]int64{},
+		ServerTimestamp:     time.Now().UnixMilli(),
+	})
+
+	cfg := &sync.SyncConfig{AutoSync: false}
+	engine := sync.NewSyncEngine(mockHost, mockProtocol, store, cfg)
+
+	// 不应 panic，应优雅处理错误
+	err = engine.IncrementalSync(context.Background())
+	if err != nil {
+		t.Errorf("同步不应返回错误: %v", err)
+	}
+}
+
+// TestUpdateEntryScore_MultipleRatings 测试多个评分的平均值
+func TestUpdateEntryScore_MultipleRatings(t *testing.T) {
+	store, err := storage.NewMemoryStore()
+	if err != nil {
+		t.Fatalf("创建存储失败: %v", err)
+	}
+
+	// 创建条目
+	now := time.Now().UnixMilli()
+	entry := &model.KnowledgeEntry{
+		ID:        "entry-1",
+		Title:     "Test Entry",
+		Content:   "content",
+		Category:  "tech",
+		Version:   1,
+		UpdatedAt: now,
+		Status:    model.EntryStatusPublished,
+	}
+	entry.ContentHash = entry.ComputeContentHash()
+	store.Entry.Create(context.Background(), entry)
+
+	// 创建多个评分
+	for i := 0; i < 3; i++ {
+		rating := &model.Rating{
+			ID:          fmt.Sprintf("rating-%d", i),
+			EntryId:     "entry-1",
+			RaterPubkey: fmt.Sprintf("user-%d", i),
+			Score:       float64(3 + i), // 3, 4, 5
+			RatedAt:     now,
+		}
+		store.Rating.Create(context.Background(), rating)
+	}
+
+	// 同步一个评分触发更新
+	rating4 := &model.Rating{
+		ID:          "rating-4",
+		EntryId:     "entry-1",
+		RaterPubkey: "user-4",
+		Score:       4,
+		RatedAt:     now,
+	}
+	ratingData, _ := rating4.ToJSON()
+
+	mockHost := host.NewMockP2PHost()
+	mockHost.SetConnectedPeers([]peer.ID{peer.ID("peer-1")})
+
+	mockProtocol := protocol.NewMockProtocol()
+	mockProtocol.SetSyncResponse(&protocol.SyncResponse{
+		RequestID:           "test-1",
+		NewRatings:          [][]byte{ratingData},
+		ServerVersionVector: map[string]int64{},
+		ServerTimestamp:     now,
+	})
+
+	cfg := &sync.SyncConfig{AutoSync: false}
+	engine := sync.NewSyncEngine(mockHost, mockProtocol, store, cfg)
+
+	engine.IncrementalSync(context.Background())
+
+	// 验证平均分: (3+4+5+4)/4 = 4.0
+	updatedEntry, _ := store.Entry.Get(context.Background(), "entry-1")
+	expectedScore := 4.0
+	if math.Abs(updatedEntry.Score-expectedScore) > 0.01 {
+		t.Errorf("条目评分应为 %.1f: got %.1f", expectedScore, updatedEntry.Score)
+	}
+	if updatedEntry.ScoreCount != 4 {
+		t.Errorf("评分数量应为 4: got %d", updatedEntry.ScoreCount)
+	}
+}
+
+// TestResolveConflictAndMerge_LocalNewer 测试本地更新时的冲突解决
+func TestResolveConflictAndMerge_LocalNewer(t *testing.T) {
+	store, err := storage.NewMemoryStore()
+	if err != nil {
+		t.Fatalf("创建存储失败: %v", err)
+	}
+
+	now := time.Now().UnixMilli()
+
+	// 先创建本地条目
+	localEntry := &model.KnowledgeEntry{
+		ID:          "entry-1",
+		Title:       "Local Title",
+		Content:     "local content",
+		Category:    "tech",
+		Version:     1,
+		UpdatedAt:   now,
+		Status:      model.EntryStatusPublished,
+		ContentHash: "hash-local",
+	}
+	store.Entry.Create(context.Background(), localEntry)
+
+	// 创建远端条目（内容不同，更新时间更早）
+	remoteEntry := &model.KnowledgeEntry{
+		ID:          "entry-1",
+		Title:       "Remote Title",
+		Content:     "remote content",
+		Category:    "tech",
+		Version:     2,
+		UpdatedAt:   now - 1000, // 更早
+		Status:      model.EntryStatusPublished,
+		ContentHash: "hash-remote",
+	}
+	remoteData, _ := remoteEntry.ToJSON()
+
+	mockHost := host.NewMockP2PHost()
+	mockHost.SetConnectedPeers([]peer.ID{peer.ID("peer-1")})
+
+	mockProtocol := protocol.NewMockProtocol()
+	mockProtocol.SetSyncResponse(&protocol.SyncResponse{
+		RequestID:           "test-1",
+		NewEntries:          [][]byte{remoteData},
+		ServerVersionVector: map[string]int64{"entry-1": 2},
+		ServerTimestamp:     now,
+	})
+
+	cfg := &sync.SyncConfig{AutoSync: false}
+	engine := sync.NewSyncEngine(mockHost, mockProtocol, store, cfg)
+
+	engine.IncrementalSync(context.Background())
+
+	// 本地更新时间更新，应保留本地内容
+	result, _ := store.Entry.Get(context.Background(), "entry-1")
+	if result.Title != "Local Title" {
+		t.Errorf("应保留本地条目: got %s", result.Title)
+	}
+}
+
+// TestResolveConflictAndMerge_SameContentHash 测试相同内容哈希
+func TestResolveConflictAndMerge_SameContentHash(t *testing.T) {
+	store, err := storage.NewMemoryStore()
+	if err != nil {
+		t.Fatalf("创建存储失败: %v", err)
+	}
+
+	now := time.Now().UnixMilli()
+
+	// 创建本地条目
+	localEntry := &model.KnowledgeEntry{
+		ID:        "entry-1",
+		Title:     "Same Title",
+		Content:   "same content",
+		Category:  "tech",
+		Version:   1,
+		UpdatedAt: now - 1000,
+		Status:    model.EntryStatusPublished,
+	}
+	localEntry.ContentHash = localEntry.ComputeContentHash()
+	store.Entry.Create(context.Background(), localEntry)
+
+	// 创建远端条目（相同内容，更高版本）
+	remoteEntry := &model.KnowledgeEntry{
+		ID:        "entry-1",
+		Title:     "Same Title",
+		Content:   "same content",
+		Category:  "tech",
+		Version:   2,
+		UpdatedAt: now,
+		Status:    model.EntryStatusPublished,
+	}
+	remoteEntry.ContentHash = remoteEntry.ComputeContentHash()
+	remoteData, _ := remoteEntry.ToJSON()
+
+	mockHost := host.NewMockP2PHost()
+	mockHost.SetConnectedPeers([]peer.ID{peer.ID("peer-1")})
+
+	mockProtocol := protocol.NewMockProtocol()
+	mockProtocol.SetSyncResponse(&protocol.SyncResponse{
+		RequestID:           "test-1",
+		UpdatedEntries:      [][]byte{remoteData}, // 使用 UpdatedEntries 而不是 NewEntries
+		ServerVersionVector: map[string]int64{"entry-1": 2},
+		ServerTimestamp:     now,
+	})
+
+	cfg := &sync.SyncConfig{AutoSync: false}
+	engine := sync.NewSyncEngine(mockHost, mockProtocol, store, cfg)
+
+	// 初始化版本向量
+	engine.HandleBitfield(context.Background(), &protocol.Bitfield{
+		VersionVector: map[string]int64{"entry-1": 1},
+	})
+
+	engine.IncrementalSync(context.Background())
+
+	// 应更新版本号
+	result, _ := store.Entry.Get(context.Background(), "entry-1")
+	if result.Version != 2 {
+		t.Errorf("版本号应更新为 2: got %d", result.Version)
+	}
+}
+
+// TestProcessSyncResponse_Complete 测试完整的同步响应处理
+func TestProcessSyncResponse_Complete(t *testing.T) {
+	store, err := storage.NewMemoryStore()
+	if err != nil {
+		t.Fatalf("创建存储失败: %v", err)
+	}
+
+	now := time.Now().UnixMilli()
+
+	// 创建本地条目
+	localEntry := &model.KnowledgeEntry{
+		ID:        "local-entry",
+		Title:     "Local Entry",
+		Content:   "local",
+		Category:  "tech",
+		Version:   1,
+		UpdatedAt: now - 2000,
+		Status:    model.EntryStatusPublished,
+	}
+	localEntry.ContentHash = localEntry.ComputeContentHash()
+	store.Entry.Create(context.Background(), localEntry)
+
+	// 准备同步响应
+	newEntry := &model.KnowledgeEntry{
+		ID:        "new-entry",
+		Title:     "New Entry",
+		Content:   "new content",
+		Category:  "tech",
+		Version:   1,
+		UpdatedAt: now,
+		Status:    model.EntryStatusPublished,
+	}
+	newEntry.ContentHash = newEntry.ComputeContentHash()
+	newData, _ := newEntry.ToJSON()
+
+	// 更新的条目（内容不同，更新时间更新）
+	updatedEntry := &model.KnowledgeEntry{
+		ID:        "local-entry",
+		Title:     "Updated Local",
+		Content:   "updated content different", // 内容不同
+		Category:  "tech",
+		Version:   2,
+		UpdatedAt: now,
+		Status:    model.EntryStatusPublished,
+	}
+	updatedEntry.ContentHash = updatedEntry.ComputeContentHash()
+	updatedData, _ := updatedEntry.ToJSON()
+
+	mockHost := host.NewMockP2PHost()
+	mockHost.SetConnectedPeers([]peer.ID{peer.ID("peer-1")})
+
+	mockProtocol := protocol.NewMockProtocol()
+	mockProtocol.SetSyncResponse(&protocol.SyncResponse{
+		RequestID:           "test-complete",
+		NewEntries:          [][]byte{newData},
+		UpdatedEntries:      [][]byte{updatedData},
+		DeletedEntryIDs:     []string{},
+		NewRatings:          [][]byte{},
+		ServerVersionVector: map[string]int64{"new-entry": 1, "local-entry": 2},
+		ServerTimestamp:     now,
+	})
+
+	cfg := &sync.SyncConfig{AutoSync: false}
+	engine := sync.NewSyncEngine(mockHost, mockProtocol, store, cfg)
+
+	// 初始化版本向量
+	engine.HandleBitfield(context.Background(), &protocol.Bitfield{
+		VersionVector: map[string]int64{"local-entry": 1},
+	})
+
+	err = engine.IncrementalSync(context.Background())
+	if err != nil {
+		t.Errorf("同步失败: %v", err)
+	}
+
+	// 验证新条目
+	entry, _ := store.Entry.Get(context.Background(), "new-entry")
+	if entry.Title != "New Entry" {
+		t.Errorf("新条目标题错误: got %s", entry.Title)
+	}
+
+	// 验证更新条目
+	updated, _ := store.Entry.Get(context.Background(), "local-entry")
+	if updated.Title != "Updated Local" {
+		t.Errorf("更新条目标题错误: got %s", updated.Title)
+	}
+}
