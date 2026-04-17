@@ -1363,3 +1363,55 @@ func TestParseInt(t *testing.T) {
 		}
 	}
 }
+
+// ========== Backlinks Boundary Tests ==========
+
+func TestEntryHandler_GetBacklinksHandler_EntryNotFound(t *testing.T) {
+	store := newTestStore(t)
+	handler := NewEntryHandler(store.Entry, store.Search, store.Backlink, store.User)
+
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/entry/nonexistent-entry/backlinks", nil)
+	rec := httptest.NewRecorder()
+
+	handler.GetBacklinksHandler(rec, req)
+
+	if rec.Code != http.StatusNotFound {
+		t.Errorf("Expected status %d for nonexistent entry, got %d", http.StatusNotFound, rec.Code)
+	}
+}
+
+func TestEntryHandler_GetBacklinksHandler_EmptyLinks(t *testing.T) {
+	store := newTestStore(t)
+	handler := NewEntryHandler(store.Entry, store.Search, store.Backlink, store.User)
+
+	// Create entry with no backlinks
+	entry := &model.KnowledgeEntry{
+		ID:       "entry-no-backlinks",
+		Title:    "Entry with no backlinks",
+		Content:  "Content",
+		Category: "test",
+		Status:   model.EntryStatusPublished,
+	}
+	store.Entry.Create(context.Background(), entry)
+
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/entry/entry-no-backlinks/backlinks", nil)
+	rec := httptest.NewRecorder()
+
+	handler.GetBacklinksHandler(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Errorf("Expected status %d, got %d", http.StatusOK, rec.Code)
+	}
+
+	var resp APIResponse
+	json.Unmarshal(rec.Body.Bytes(), &resp)
+
+	data, ok := resp.Data.([]interface{})
+	if !ok {
+		t.Fatal("Response data should be an array")
+	}
+
+	if len(data) != 0 {
+		t.Errorf("Expected empty array, got %d items", len(data))
+	}
+}
