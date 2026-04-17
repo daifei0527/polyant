@@ -1415,3 +1415,55 @@ func TestEntryHandler_GetBacklinksHandler_EmptyLinks(t *testing.T) {
 		t.Errorf("Expected empty array, got %d items", len(data))
 	}
 }
+
+// ========== Outlinks Boundary Tests ==========
+
+func TestEntryHandler_GetOutlinksHandler_EntryNotFound(t *testing.T) {
+	store := newTestStore(t)
+	handler := NewEntryHandler(store.Entry, store.Search, store.Backlink, store.User)
+
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/entry/nonexistent-entry/outlinks", nil)
+	rec := httptest.NewRecorder()
+
+	handler.GetOutlinksHandler(rec, req)
+
+	if rec.Code != http.StatusNotFound {
+		t.Errorf("Expected status %d for nonexistent entry, got %d", http.StatusNotFound, rec.Code)
+	}
+}
+
+func TestEntryHandler_GetOutlinksHandler_EmptyLinks(t *testing.T) {
+	store := newTestStore(t)
+	handler := NewEntryHandler(store.Entry, store.Search, store.Backlink, store.User)
+
+	// Create entry with no outlinks
+	entry := &model.KnowledgeEntry{
+		ID:       "entry-no-outlinks",
+		Title:    "Entry with no links",
+		Content:  "Plain content without [[wiki-links]]",
+		Category: "test",
+		Status:   model.EntryStatusPublished,
+	}
+	store.Entry.Create(context.Background(), entry)
+
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/entry/entry-no-outlinks/outlinks", nil)
+	rec := httptest.NewRecorder()
+
+	handler.GetOutlinksHandler(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Errorf("Expected status %d, got %d", http.StatusOK, rec.Code)
+	}
+
+	var resp APIResponse
+	json.Unmarshal(rec.Body.Bytes(), &resp)
+
+	data, ok := resp.Data.([]interface{})
+	if !ok {
+		t.Fatal("Response data should be an array")
+	}
+
+	if len(data) != 0 {
+		t.Errorf("Expected empty array, got %d items", len(data))
+	}
+}
