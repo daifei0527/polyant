@@ -3,6 +3,7 @@ package host
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"testing"
 	"time"
@@ -756,5 +757,103 @@ func TestMockP2PHost_NodeID(t *testing.T) {
 	mock.SetNodeID("new-node")
 	if mock.NodeID() != "new-node" {
 		t.Errorf("SetNodeID 后 NodeID = %q, want 'new-node'", mock.NodeID())
+	}
+}
+
+// TestMockP2PHost_GetConnectedPeers 测试获取连接节点
+func TestMockP2PHost_GetConnectedPeers(t *testing.T) {
+	mock := NewMockP2PHost()
+
+	// 初始应为空
+	peers := mock.GetConnectedPeers()
+	if len(peers) != 0 {
+		t.Errorf("初始连接节点应为空，got %d", len(peers))
+	}
+
+	// 设置连接节点
+	mock.SetConnectedPeers([]peer.ID{"peer1", "peer2"})
+	peers = mock.GetConnectedPeers()
+	if len(peers) != 2 {
+		t.Errorf("SetConnectedPeers 后应有 2 个节点，got %d", len(peers))
+	}
+}
+
+// TestMockP2PHost_Connect 测试连接方法
+func TestMockP2PHost_Connect(t *testing.T) {
+	mock := NewMockP2PHost()
+
+	// 正常连接
+	addr := peer.AddrInfo{ID: "test-peer"}
+	err := mock.Connect(context.Background(), addr)
+	if err != nil {
+		t.Errorf("Connect 不应返回错误: %v", err)
+	}
+
+	peers := mock.GetConnectedPeers()
+	if len(peers) != 1 {
+		t.Errorf("连接后应有 1 个节点，got %d", len(peers))
+	}
+
+	// 测试错误情况
+	mock.SetConnectError(errors.New("connection failed"))
+	err = mock.Connect(context.Background(), addr)
+	if err == nil {
+		t.Error("设置错误后 Connect 应返回错误")
+	}
+}
+
+// TestMockP2PHost_NewStream 测试创建流
+func TestMockP2PHost_NewStream(t *testing.T) {
+	mock := NewMockP2PHost()
+
+	// 正常情况返回 (nil, nil)
+	stream, err := mock.NewStream(context.Background(), "test-peer", "/test/protocol")
+	if err != nil {
+		t.Errorf("NewStream 不应返回错误: %v", err)
+	}
+	if stream != nil {
+		t.Error("MockHost NewStream 应返回 nil stream")
+	}
+
+	// 测试错误情况
+	mock.SetStreamError(errors.New("stream failed"))
+	_, err = mock.NewStream(context.Background(), "test-peer", "/test/protocol")
+	if err == nil {
+		t.Error("设置错误后 NewStream 应返回错误")
+	}
+}
+
+// TestMockP2PHost_Close 测试关闭方法
+func TestMockP2PHost_Close(t *testing.T) {
+	mock := NewMockP2PHost()
+
+	err := mock.Close()
+	if err != nil {
+		t.Errorf("Close 不应返回错误: %v", err)
+	}
+}
+
+// TestMockP2PHost_Reset 测试重置方法
+func TestMockP2PHost_Reset(t *testing.T) {
+	mock := NewMockP2PHost()
+
+	// 设置一些状态
+	mock.SetConnectedPeers([]peer.ID{"peer1", "peer2"})
+	mock.SetConnectError(errors.New("error"))
+	mock.SetStreamError(errors.New("error"))
+
+	// 重置
+	mock.Reset()
+
+	// 验证状态已清除
+	peers := mock.GetConnectedPeers()
+	if len(peers) != 0 {
+		t.Errorf("Reset 后连接节点应为空，got %d", len(peers))
+	}
+
+	// 连接应成功
+	err := mock.Connect(context.Background(), peer.AddrInfo{ID: "test"})
+	if err != nil {
+		t.Error("Reset 后 Connect 应成功")
 	}
 }
