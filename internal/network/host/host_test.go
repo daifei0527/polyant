@@ -699,3 +699,62 @@ func TestPermissiveACL_AllMethods(t *testing.T) {
 	// AllowReserve 和 AllowConnect 需要参数，测试它们能被调用即可
 	_ = acl
 }
+
+// ==================== MockHost 测试 ====================
+
+// TestNewMockP2PHost 测试创建 MockHost
+func TestNewMockP2PHost(t *testing.T) {
+	mock := NewMockP2PHost()
+	if mock == nil {
+		t.Fatal("NewMockP2PHost 不应返回 nil")
+	}
+
+	// 验证默认值
+	if mock.ID() == "" {
+		t.Error("ID 不应为空")
+	}
+
+	if mock.NodeID() == "" {
+		t.Error("NodeID 不应为空")
+	}
+
+	peers := mock.GetConnectedPeers()
+	if peers == nil {
+		t.Error("GetConnectedPeers 不应返回 nil")
+	}
+	if len(peers) != 0 {
+		t.Errorf("初始连接节点应为空，got %d", len(peers))
+	}
+}
+
+// TestMockP2PHost_ID 测试 ID 方法
+func TestMockP2PHost_ID(t *testing.T) {
+	mock := NewMockP2PHost()
+
+	id := mock.ID()
+	if id != "mock-peer-id" {
+		t.Errorf("ID = %q, want 'mock-peer-id'", id)
+	}
+
+	// 测试设置 ID
+	mock.SetID("new-mock-id")
+	if mock.ID() != "new-mock-id" {
+		t.Errorf("SetID 后 ID = %q, want 'new-mock-id'", mock.ID())
+	}
+}
+
+// TestMockP2PHost_NodeID 测试 NodeID 方法
+func TestMockP2PHost_NodeID(t *testing.T) {
+	mock := NewMockP2PHost()
+
+	nodeID := mock.NodeID()
+	if nodeID != "mock-node" {
+		t.Errorf("NodeID = %q, want 'mock-node'", nodeID)
+	}
+
+	// 测试设置 NodeID
+	mock.SetNodeID("new-node")
+	if mock.NodeID() != "new-node" {
+		t.Errorf("SetNodeID 后 NodeID = %q, want 'new-node'", mock.NodeID())
+	}
+}
