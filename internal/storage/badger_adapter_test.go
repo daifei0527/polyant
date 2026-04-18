@@ -641,3 +641,133 @@ func TestHashPublicKey(t *testing.T) {
 		t.Error("hashPublicKey should produce different results for different inputs")
 	}
 }
+
+// ==================== BacklinkIndex Tests ====================
+
+// TestNewBadgerBacklinkIndex tests creating a backlink index
+func TestNewBadgerBacklinkIndex(t *testing.T) {
+	idx := NewBadgerBacklinkIndex()
+	if idx == nil {
+		t.Fatal("NewBadgerBacklinkIndex should not return nil")
+	}
+}
+
+// TestBacklinkIndex_UpdateIndex tests updating the index
+func TestBacklinkIndex_UpdateIndex(t *testing.T) {
+	idx := NewBadgerBacklinkIndex()
+
+	// Add links for a new entry
+	err := idx.UpdateIndex("entry-1", []string{"entry-2", "entry-3"})
+	if err != nil {
+		t.Fatalf("UpdateIndex failed: %v", err)
+	}
+
+	// Verify outlinks
+	outlinks, _ := idx.GetOutlinks("entry-1")
+	if len(outlinks) != 2 {
+		t.Errorf("Expected 2 outlinks, got %d", len(outlinks))
+	}
+
+	// Verify backlinks
+	backlinks, _ := idx.GetBacklinks("entry-2")
+	if len(backlinks) != 1 {
+		t.Errorf("Expected 1 backlink for entry-2, got %d", len(backlinks))
+	}
+}
+
+// TestBacklinkIndex_UpdateIndex_ExistingEntry tests updating an existing entry's index
+func TestBacklinkIndex_UpdateIndex_ExistingEntry(t *testing.T) {
+	idx := NewBadgerBacklinkIndex()
+
+	// Initial links
+	idx.UpdateIndex("entry-1", []string{"entry-2", "entry-3"})
+
+	// Update links (remove entry-2, add entry-4)
+	idx.UpdateIndex("entry-1", []string{"entry-3", "entry-4"})
+
+	// Verify entry-2's backlink was removed
+	backlinks, _ := idx.GetBacklinks("entry-2")
+	if len(backlinks) != 0 {
+		t.Errorf("entry-2 should have 0 backlinks after update, got %d", len(backlinks))
+	}
+
+	// Verify entry-4's backlink was added
+	backlinks, _ = idx.GetBacklinks("entry-4")
+	if len(backlinks) != 1 {
+		t.Errorf("entry-4 should have 1 backlink, got %d", len(backlinks))
+	}
+}
+
+// TestBacklinkIndex_DeleteIndex tests deleting an index
+func TestBacklinkIndex_DeleteIndex(t *testing.T) {
+	idx := NewBadgerBacklinkIndex()
+
+	// Add links
+	idx.UpdateIndex("entry-1", []string{"entry-2"})
+
+	// Delete index
+	err := idx.DeleteIndex("entry-1")
+	if err != nil {
+		t.Fatalf("DeleteIndex failed: %v", err)
+	}
+
+	// Verify outlinks were deleted
+	outlinks, _ := idx.GetOutlinks("entry-1")
+	if len(outlinks) != 0 {
+		t.Errorf("Expected 0 outlinks after delete, got %d", len(outlinks))
+	}
+
+	// Verify backlinks were deleted
+	backlinks, _ := idx.GetBacklinks("entry-2")
+	if len(backlinks) != 0 {
+		t.Errorf("Expected 0 backlinks after delete, got %d", len(backlinks))
+	}
+}
+
+// TestBacklinkIndex_GetBacklinks_Empty tests getting empty backlinks
+func TestBacklinkIndex_GetBacklinks_Empty(t *testing.T) {
+	idx := NewBadgerBacklinkIndex()
+
+	backlinks, err := idx.GetBacklinks("non-existent")
+	if err != nil {
+		t.Fatalf("GetBacklinks failed: %v", err)
+	}
+
+	if len(backlinks) != 0 {
+		t.Errorf("Expected empty backlinks for non-existent entry, got %d", len(backlinks))
+	}
+}
+
+// TestBacklinkIndex_GetOutlinks_Empty tests getting empty outlinks
+func TestBacklinkIndex_GetOutlinks_Empty(t *testing.T) {
+	idx := NewBadgerBacklinkIndex()
+
+	outlinks, err := idx.GetOutlinks("non-existent")
+	if err != nil {
+		t.Fatalf("GetOutlinks failed: %v", err)
+	}
+
+	if len(outlinks) != 0 {
+		t.Errorf("Expected empty outlinks for non-existent entry, got %d", len(outlinks))
+	}
+}
+
+// TestBacklinkIndex_SelfLink tests that self-links are ignored
+func TestBacklinkIndex_SelfLink(t *testing.T) {
+	idx := NewBadgerBacklinkIndex()
+
+	// Entry links to itself (should be ignored)
+	idx.UpdateIndex("entry-1", []string{"entry-1", "entry-2"})
+
+	// Verify outlinks don't include self
+	outlinks, _ := idx.GetOutlinks("entry-1")
+	if len(outlinks) != 1 {
+		t.Errorf("Expected 1 outlink (self-link ignored), got %d", len(outlinks))
+	}
+
+	// Verify entry-1 has no backlink to itself
+	backlinks, _ := idx.GetBacklinks("entry-1")
+	if len(backlinks) != 0 {
+		t.Errorf("Expected 0 backlinks for self, got %d", len(backlinks))
+	}
+}
