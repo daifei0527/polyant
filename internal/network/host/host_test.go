@@ -776,6 +776,9 @@ func TestMockP2PHost_GetConnectedPeers(t *testing.T) {
 	if len(peers) != 2 {
 		t.Errorf("SetConnectedPeers 后应有 2 个节点，got %d", len(peers))
 	}
+	if peers[0] != "peer1" || peers[1] != "peer2" {
+		t.Errorf("peers = %v, want [peer1, peer2]", peers)
+	}
 }
 
 // TestMockP2PHost_Connect 测试连接方法
@@ -792,6 +795,9 @@ func TestMockP2PHost_Connect(t *testing.T) {
 	peers := mock.GetConnectedPeers()
 	if len(peers) != 1 {
 		t.Errorf("连接后应有 1 个节点，got %d", len(peers))
+	}
+	if peers[0] != "test-peer" {
+		t.Errorf("connected peer = %q, want 'test-peer'", peers[0])
 	}
 
 	// 测试错误情况
