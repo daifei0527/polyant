@@ -313,24 +313,24 @@ func TestLocalOnlyMiddleware_LocalRequest(t *testing.T) {
 	}
 }
 
-// ==================== Admin Handler 测试 ====================
+// ==================== Admin Handler Tests ====================
 
-// TestNewHandler 测试创建 Handler
+// TestNewHandler tests creating a Handler
 func TestNewHandler(t *testing.T) {
 	store, _ := storage.NewMemoryStore()
 	handler := NewHandler(store)
 
 	if handler == nil {
-		t.Fatal("NewHandler 不应返回 nil")
+		t.Fatal("NewHandler should not return nil")
 	}
 }
 
-// TestListUsersHandler_Success 测试成功获取用户列表
+// TestListUsersHandler_Success tests successfully listing users
 func TestListUsersHandler_Success(t *testing.T) {
 	store, _ := storage.NewMemoryStore()
 	handler := NewHandler(store)
 
-	// 创建测试用户
+	// Create test users
 	for i := 0; i < 3; i++ {
 		user := &model.User{
 			PublicKey: "test-pk-" + string(rune('a'+i)),
@@ -338,7 +338,10 @@ func TestListUsersHandler_Success(t *testing.T) {
 			UserLevel: model.UserLevelLv1,
 			Status:    model.UserStatusActive,
 		}
-		store.User.Create(context.Background(), user)
+		_, err := store.User.Create(context.Background(), user)
+		if err != nil {
+			t.Fatalf("Failed to create test user: %v", err)
+		}
 	}
 
 	req := httptest.NewRequest(http.MethodGet, "/api/v1/admin/users", nil)
@@ -370,7 +373,7 @@ func TestListUsersHandler_Success(t *testing.T) {
 	}
 }
 
-// TestListUsersHandler_Empty 测试空用户列表
+// TestListUsersHandler_Empty tests empty user list
 func TestListUsersHandler_Empty(t *testing.T) {
 	store, _ := storage.NewMemoryStore()
 	handler := NewHandler(store)
@@ -385,9 +388,14 @@ func TestListUsersHandler_Empty(t *testing.T) {
 	}
 
 	var resp map[string]interface{}
-	json.Unmarshal(w.Body.Bytes(), &resp)
+	if err := json.Unmarshal(w.Body.Bytes(), &resp); err != nil {
+		t.Fatalf("Failed to parse response: %v", err)
+	}
 
-	data := resp["data"].(map[string]interface{})
+	data, ok := resp["data"].(map[string]interface{})
+	if !ok {
+		t.Fatal("Response data is not a map")
+	}
 	users := data["users"]
 
 	// users may be nil (null in JSON) or empty array when no users exist
