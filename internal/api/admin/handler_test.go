@@ -312,3 +312,96 @@ func TestLocalOnlyMiddleware_LocalRequest(t *testing.T) {
 		t.Errorf("Expected 200 OK, got %d", w.Code)
 	}
 }
+
+// ==================== Admin Handler 测试 ====================
+
+// TestNewHandler 测试创建 Handler
+func TestNewHandler(t *testing.T) {
+	store, _ := storage.NewMemoryStore()
+	handler := NewHandler(store)
+
+	if handler == nil {
+		t.Fatal("NewHandler 不应返回 nil")
+	}
+}
+
+// TestListUsersHandler_Success 测试成功获取用户列表
+func TestListUsersHandler_Success(t *testing.T) {
+	store, _ := storage.NewMemoryStore()
+	handler := NewHandler(store)
+
+	// 创建测试用户
+	for i := 0; i < 3; i++ {
+		user := &model.User{
+			PublicKey: "test-pk-" + string(rune('a'+i)),
+			AgentName: "test-agent-" + string(rune('a'+i)),
+			UserLevel: model.UserLevelLv1,
+			Status:    model.UserStatusActive,
+		}
+		store.User.Create(context.Background(), user)
+	}
+
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/admin/users", nil)
+	w := httptest.NewRecorder()
+
+	handler.ListUsersHandler(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Errorf("Expected status %d, got %d: %s", http.StatusOK, w.Code, w.Body.String())
+	}
+
+	var resp map[string]interface{}
+	if err := json.Unmarshal(w.Body.Bytes(), &resp); err != nil {
+		t.Fatalf("Failed to parse response: %v", err)
+	}
+
+	data, ok := resp["data"].(map[string]interface{})
+	if !ok {
+		t.Fatal("Response data is not a map")
+	}
+
+	users, ok := data["users"].([]interface{})
+	if !ok {
+		t.Fatal("Response users is not an array")
+	}
+
+	if len(users) != 3 {
+		t.Errorf("Expected 3 users, got %d", len(users))
+	}
+}
+
+// TestListUsersHandler_Empty 测试空用户列表
+func TestListUsersHandler_Empty(t *testing.T) {
+	store, _ := storage.NewMemoryStore()
+	handler := NewHandler(store)
+
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/admin/users", nil)
+	w := httptest.NewRecorder()
+
+	handler.ListUsersHandler(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Errorf("Expected status %d, got %d", http.StatusOK, w.Code)
+	}
+
+	var resp map[string]interface{}
+	json.Unmarshal(w.Body.Bytes(), &resp)
+
+	data := resp["data"].(map[string]interface{})
+	users := data["users"]
+
+	// users may be nil (null in JSON) or empty array when no users exist
+	if users == nil {
+		// nil is acceptable for empty list
+		return
+	}
+
+	usersArr, ok := users.([]interface{})
+	if !ok {
+		t.Fatalf("Response users is not an array or nil: %T", users)
+	}
+
+	if len(usersArr) != 0 {
+		t.Errorf("Expected 0 users, got %d", len(usersArr))
+	}
+}
