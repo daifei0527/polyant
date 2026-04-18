@@ -537,3 +537,79 @@ func TestSetUserLevelHandler_Success(t *testing.T) {
 		t.Errorf("Expected level 3, got %d", updated.UserLevel)
 	}
 }
+
+// ==================== Stats Handler Tests ====================
+
+// TestGetUserStatsHandler_Success tests getting user statistics
+func TestGetUserStatsHandler_Success(t *testing.T) {
+	store, _ := storage.NewMemoryStore()
+	handler := NewHandler(store)
+
+	// Create test users
+	for i := 0; i < 5; i++ {
+		user := &model.User{
+			PublicKey: "stats-pk-" + string(rune('a'+i)),
+			AgentName: "stats-agent-" + string(rune('a'+i)),
+			UserLevel: model.UserLevelLv1,
+			Status:    model.UserStatusActive,
+		}
+		_, err := store.User.Create(context.Background(), user)
+		if err != nil {
+			t.Fatalf("Failed to create test user: %v", err)
+		}
+	}
+
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/admin/stats/users", nil)
+	w := httptest.NewRecorder()
+
+	handler.GetUserStatsHandler(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Errorf("Expected status %d, got %d: %s", http.StatusOK, w.Code, w.Body.String())
+	}
+}
+
+// TestGetContributionStatsHandler_Success tests getting contribution statistics
+func TestGetContributionStatsHandler_Success(t *testing.T) {
+	store, _ := storage.NewMemoryStore()
+	handler := NewHandler(store)
+
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/admin/stats/contributions", nil)
+	w := httptest.NewRecorder()
+
+	handler.GetContributionStatsHandler(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Errorf("Expected status %d, got %d: %s", http.StatusOK, w.Code, w.Body.String())
+	}
+}
+
+// TestGetActivityTrendHandler_Success tests getting activity trend
+func TestGetActivityTrendHandler_Success(t *testing.T) {
+	store, _ := storage.NewMemoryStore()
+	handler := NewHandler(store)
+
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/admin/stats/activity", nil)
+	w := httptest.NewRecorder()
+
+	handler.GetActivityTrendHandler(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Errorf("Expected status %d, got %d: %s", http.StatusOK, w.Code, w.Body.String())
+	}
+}
+
+// TestGetRegistrationTrendHandler_Success tests getting registration trend
+func TestGetRegistrationTrendHandler_Success(t *testing.T) {
+	store, _ := storage.NewMemoryStore()
+	handler := NewHandler(store)
+
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/admin/stats/registrations", nil)
+	w := httptest.NewRecorder()
+
+	handler.GetRegistrationTrendHandler(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Errorf("Expected status %d, got %d: %s", http.StatusOK, w.Code, w.Body.String())
+	}
+}
