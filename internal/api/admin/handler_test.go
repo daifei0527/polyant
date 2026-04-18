@@ -413,3 +413,127 @@ func TestListUsersHandler_Empty(t *testing.T) {
 		t.Errorf("Expected 0 users, got %d", len(usersArr))
 	}
 }
+
+// TestBanUserHandler_Success tests successfully banning a user
+func TestBanUserHandler_Success(t *testing.T) {
+	store, _ := storage.NewMemoryStore()
+	handler := NewHandler(store)
+
+	// Create a test user
+	user := &model.User{
+		PublicKey: "ban-test-pk",
+		AgentName: "ban-test-agent",
+		UserLevel: model.UserLevelLv1,
+		Status:    model.UserStatusActive,
+	}
+	_, err := store.User.Create(context.Background(), user)
+	if err != nil {
+		t.Fatalf("Failed to create test user: %v", err)
+	}
+
+	// Ban the user (public_key is in URL path)
+	body := `{"reason": "violation of terms", "ban_type": "full"}`
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/admin/users/ban-test-pk/ban", bytes.NewBufferString(body))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+
+	handler.BanUserHandler(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Errorf("Expected status %d, got %d: %s", http.StatusOK, w.Code, w.Body.String())
+	}
+
+	// Verify user status
+	updated, _ := store.User.Get(context.Background(), "ban-test-pk")
+	if updated.Status != model.UserStatusBanned {
+		t.Errorf("Expected status banned, got %s", updated.Status)
+	}
+}
+
+// TestBanUserHandler_NotFound tests banning a non-existent user
+func TestBanUserHandler_NotFound(t *testing.T) {
+	store, _ := storage.NewMemoryStore()
+	handler := NewHandler(store)
+
+	body := `{"reason": "test", "ban_type": "full"}`
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/admin/users/non-existent-pk/ban", bytes.NewBufferString(body))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+
+	handler.BanUserHandler(w, req)
+
+	if w.Code != http.StatusBadRequest {
+		t.Errorf("Expected status %d, got %d: %s", http.StatusBadRequest, w.Code, w.Body.String())
+	}
+}
+
+// TestUnbanUserHandler_Success tests successfully unbanning a user
+func TestUnbanUserHandler_Success(t *testing.T) {
+	store, _ := storage.NewMemoryStore()
+	handler := NewHandler(store)
+
+	// Create a banned user
+	user := &model.User{
+		PublicKey: "unban-test-pk",
+		AgentName: "unban-test-agent",
+		UserLevel: model.UserLevelLv1,
+		Status:    model.UserStatusBanned,
+	}
+	_, err := store.User.Create(context.Background(), user)
+	if err != nil {
+		t.Fatalf("Failed to create test user: %v", err)
+	}
+
+	// Unban the user (public_key is in URL path)
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/admin/users/unban-test-pk/unban", nil)
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+
+	handler.UnbanUserHandler(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Errorf("Expected status %d, got %d: %s", http.StatusOK, w.Code, w.Body.String())
+	}
+
+	// Verify user status
+	updated, _ := store.User.Get(context.Background(), "unban-test-pk")
+	if updated.Status != model.UserStatusActive {
+		t.Errorf("Expected status active, got %s", updated.Status)
+	}
+}
+
+// TestSetUserLevelHandler_Success tests successfully setting user level
+func TestSetUserLevelHandler_Success(t *testing.T) {
+	store, _ := storage.NewMemoryStore()
+	handler := NewHandler(store)
+
+	// Create a test user
+	user := &model.User{
+		PublicKey: "level-test-pk",
+		AgentName: "level-test-agent",
+		UserLevel: model.UserLevelLv1,
+		Status:    model.UserStatusActive,
+	}
+	_, err := store.User.Create(context.Background(), user)
+	if err != nil {
+		t.Fatalf("Failed to create test user: %v", err)
+	}
+
+	// Set user level (PUT method, public_key in URL path)
+	body := `{"level": 3, "reason": "promotion"}`
+	req := httptest.NewRequest(http.MethodPut, "/api/v1/admin/users/level-test-pk/level", bytes.NewBufferString(body))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+
+	handler.SetUserLevelHandler(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Errorf("Expected status %d, got %d: %s", http.StatusOK, w.Code, w.Body.String())
+	}
+
+	// Verify user level
+	updated, _ := store.User.Get(context.Background(), "level-test-pk")
+	if updated.UserLevel != model.UserLevelLv3 {
+		t.Errorf("Expected level 3, got %d", updated.UserLevel)
+	}
+}
