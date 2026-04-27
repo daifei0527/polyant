@@ -41,6 +41,7 @@ func NewTestServer(t *testing.T) *TestServer {
 
 	// 创建路由
 	handler, err := router.NewRouterWithDeps(&router.Dependencies{
+		Store:         store,
 		EntryStore:    store.Entry,
 		UserStore:     store.User,
 		RatingStore:   store.Rating,
