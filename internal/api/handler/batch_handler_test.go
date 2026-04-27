@@ -19,7 +19,7 @@ func newTestBatchHandler(t *testing.T) (*BatchHandler, *storage.Store) {
 	if err != nil {
 		t.Fatalf("Failed to create store: %v", err)
 	}
-	handler := NewBatchHandler(store.Entry, store.Search, store.Backlink, store.User)
+	handler := NewBatchHandler(store.Entry, store.Search, store.Backlink, store.User, store.TitleIdx)
 	return handler, store
 }
 

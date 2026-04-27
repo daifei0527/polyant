@@ -115,7 +115,7 @@ func NewRouterWithDeps(deps *Dependencies) (http.Handler, error) {
 	}
 
 	// 创建批量操作 handler
-	batchHandler := handler.NewBatchHandler(deps.EntryStore, deps.SearchEngine, deps.Backlink, deps.UserStore)
+	batchHandler := handler.NewBatchHandler(deps.EntryStore, deps.SearchEngine, deps.Backlink, deps.UserStore, titleIdx)
 
 	// 创建审计 handler 和中间件
 	var auditHandler *handler.AuditHandler
