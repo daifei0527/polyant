@@ -291,7 +291,30 @@ func TestTitleIndex_MatchAll_SpecialChars(t *testing.T) {
 }
 
 // =============================================================================
-// 10. TestTitleIndex_Concurrent
+// 10. TestTitleIndex_MultipleAdds
+// =============================================================================
+func TestTitleIndex_MultipleAdds(t *testing.T) {
+	ti := NewTitleIndex()
+	ti.Build([]TitleEntry{{ID: "e1", Title: "A"}})
+	ti.Add(TitleEntry{ID: "e2", Title: "B"})
+	ti.Add(TitleEntry{ID: "e3", Title: "AB"})
+	ti.Add(TitleEntry{ID: "e4", Title: "C"})
+
+	matches := ti.MatchAll("AB C")
+	// verify no duplicate match titles
+	seen := make(map[string]int)
+	for _, m := range matches {
+		seen[m.Title]++
+	}
+	for title, count := range seen {
+		if count > 1 {
+			t.Errorf("duplicate match for %q: %d occurrences", title, count)
+		}
+	}
+}
+
+// =============================================================================
+// 11. TestTitleIndex_Concurrent
 // =============================================================================
 func TestTitleIndex_Concurrent(t *testing.T) {
 	ti := NewTitleIndex()

@@ -65,14 +65,16 @@ func (ti *TitleIndex) Build(entries []TitleEntry) error {
 	return nil
 }
 
-// Add adds a single entry and rebuilds fail links incrementally.
+// Add adds a single entry and triggers a full rebuild.
 func (ti *TitleIndex) Add(entry TitleEntry) error {
+	if entry.Title == "" {
+		return nil
+	}
 	ti.mu.Lock()
 	defer ti.mu.Unlock()
 
 	ti.entries[entry.Title] = entry
-	ti.insert(entry.Title, entry.ID)
-	ti.buildFailLinks()
+	ti.rebuildLocked()
 	return nil
 }
 
