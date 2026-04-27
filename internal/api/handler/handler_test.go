@@ -165,7 +165,7 @@ func TestUserHandler_GetUserInfoHandler_Unauthorized(t *testing.T) {
 
 func TestEntryHandler_CreateEntryHandler(t *testing.T) {
 	store := newTestStore(t)
-	handler := NewEntryHandler(store.Entry, store.Search, store.Backlink, store.User)
+	handler := NewEntryHandler(store.Entry, store.Search, store.Backlink, store.User, store.TitleIdx)
 
 	// Create test user
 	pubKey, _, _ := ed25519.GenerateKey(rand.Reader)
@@ -213,7 +213,7 @@ func TestEntryHandler_CreateEntryHandler(t *testing.T) {
 
 func TestEntryHandler_CreateEntryHandler_Unauthorized(t *testing.T) {
 	store := newTestStore(t)
-	handler := NewEntryHandler(store.Entry, store.Search, store.Backlink, store.User)
+	handler := NewEntryHandler(store.Entry, store.Search, store.Backlink, store.User, store.TitleIdx)
 
 	body := `{"title": "Test", "content": "Content", "category": "test"}`
 	req := httptest.NewRequest(http.MethodPost, "/api/v1/entry", bytes.NewBufferString(body))
@@ -228,7 +228,7 @@ func TestEntryHandler_CreateEntryHandler_Unauthorized(t *testing.T) {
 
 func TestEntryHandler_CreateEntryHandler_InsufficientPermission(t *testing.T) {
 	store := newTestStore(t)
-	handler := NewEntryHandler(store.Entry, store.Search, store.Backlink, store.User)
+	handler := NewEntryHandler(store.Entry, store.Search, store.Backlink, store.User, store.TitleIdx)
 
 	// Lv0 user cannot create entries
 	user := &model.User{
@@ -254,7 +254,7 @@ func TestEntryHandler_CreateEntryHandler_InsufficientPermission(t *testing.T) {
 
 func TestEntryHandler_GetEntryHandler(t *testing.T) {
 	store := newTestStore(t)
-	handler := NewEntryHandler(store.Entry, store.Search, store.Backlink, store.User)
+	handler := NewEntryHandler(store.Entry, store.Search, store.Backlink, store.User, store.TitleIdx)
 
 	// Create test entry
 	entry := &model.KnowledgeEntry{
@@ -290,7 +290,7 @@ func TestEntryHandler_GetEntryHandler(t *testing.T) {
 
 func TestEntryHandler_GetEntryHandler_NotFound(t *testing.T) {
 	store := newTestStore(t)
-	handler := NewEntryHandler(store.Entry, store.Search, store.Backlink, store.User)
+	handler := NewEntryHandler(store.Entry, store.Search, store.Backlink, store.User, store.TitleIdx)
 
 	req := httptest.NewRequest(http.MethodGet, "/api/v1/entry/non-existing", nil)
 	rec := httptest.NewRecorder()
@@ -304,7 +304,7 @@ func TestEntryHandler_GetEntryHandler_NotFound(t *testing.T) {
 
 func TestEntryHandler_SearchHandler(t *testing.T) {
 	store := newTestStore(t)
-	handler := NewEntryHandler(store.Entry, store.Search, store.Backlink, store.User)
+	handler := NewEntryHandler(store.Entry, store.Search, store.Backlink, store.User, store.TitleIdx)
 
 	// Create test entries
 	for i := 0; i < 5; i++ {
@@ -350,7 +350,7 @@ func TestEntryHandler_SearchHandler(t *testing.T) {
 
 func TestEntryHandler_SearchHandler_MissingQuery(t *testing.T) {
 	store := newTestStore(t)
-	handler := NewEntryHandler(store.Entry, store.Search, store.Backlink, store.User)
+	handler := NewEntryHandler(store.Entry, store.Search, store.Backlink, store.User, store.TitleIdx)
 
 	req := httptest.NewRequest(http.MethodGet, "/api/v1/search", nil)
 	rec := httptest.NewRecorder()
@@ -364,7 +364,7 @@ func TestEntryHandler_SearchHandler_MissingQuery(t *testing.T) {
 
 func TestEntryHandler_DeleteEntryHandler(t *testing.T) {
 	store := newTestStore(t)
-	handler := NewEntryHandler(store.Entry, store.Search, store.Backlink, store.User)
+	handler := NewEntryHandler(store.Entry, store.Search, store.Backlink, store.User, store.TitleIdx)
 
 	// Create test user and entry
 	pubKey, _, _ := ed25519.GenerateKey(rand.Reader)
@@ -749,7 +749,7 @@ func TestUserHandler_RateEntryHandler_EntryNotFound(t *testing.T) {
 
 func TestEntryHandler_UpdateEntryHandler(t *testing.T) {
 	store := newTestStore(t)
-	handler := NewEntryHandler(store.Entry, store.Search, store.Backlink, store.User)
+	handler := NewEntryHandler(store.Entry, store.Search, store.Backlink, store.User, store.TitleIdx)
 
 	// Create test user
 	pubKey, _, _ := ed25519.GenerateKey(rand.Reader)
@@ -800,7 +800,7 @@ func TestEntryHandler_UpdateEntryHandler(t *testing.T) {
 
 func TestEntryHandler_UpdateEntryHandler_NotOwner(t *testing.T) {
 	store := newTestStore(t)
-	handler := NewEntryHandler(store.Entry, store.Search, store.Backlink, store.User)
+	handler := NewEntryHandler(store.Entry, store.Search, store.Backlink, store.User, store.TitleIdx)
 
 	// Create test user (not the owner)
 	user := &model.User{
@@ -838,7 +838,7 @@ func TestEntryHandler_UpdateEntryHandler_NotOwner(t *testing.T) {
 
 func TestEntryHandler_UpdateEntryHandler_Lv3CanUpdateAny(t *testing.T) {
 	store := newTestStore(t)
-	handler := NewEntryHandler(store.Entry, store.Search, store.Backlink, store.User)
+	handler := NewEntryHandler(store.Entry, store.Search, store.Backlink, store.User, store.TitleIdx)
 
 	// Lv3 user can update any entry
 	user := &model.User{
@@ -875,7 +875,7 @@ func TestEntryHandler_UpdateEntryHandler_Lv3CanUpdateAny(t *testing.T) {
 
 func TestEntryHandler_DeleteEntryHandler_NotOwner(t *testing.T) {
 	store := newTestStore(t)
-	handler := NewEntryHandler(store.Entry, store.Search, store.Backlink, store.User)
+	handler := NewEntryHandler(store.Entry, store.Search, store.Backlink, store.User, store.TitleIdx)
 
 	// Lv1 user who is not the owner
 	user := &model.User{
@@ -910,7 +910,7 @@ func TestEntryHandler_DeleteEntryHandler_NotOwner(t *testing.T) {
 
 func TestEntryHandler_DeleteEntryHandler_Lv4CanDeleteAny(t *testing.T) {
 	store := newTestStore(t)
-	handler := NewEntryHandler(store.Entry, store.Search, store.Backlink, store.User)
+	handler := NewEntryHandler(store.Entry, store.Search, store.Backlink, store.User, store.TitleIdx)
 
 	// Lv4 user can delete any entry
 	user := &model.User{
@@ -945,7 +945,7 @@ func TestEntryHandler_DeleteEntryHandler_Lv4CanDeleteAny(t *testing.T) {
 
 func TestEntryHandler_GetBacklinksHandler(t *testing.T) {
 	store := newTestStore(t)
-	handler := NewEntryHandler(store.Entry, store.Search, store.Backlink, store.User)
+	handler := NewEntryHandler(store.Entry, store.Search, store.Backlink, store.User, store.TitleIdx)
 
 	// Create test entry
 	entry := &model.KnowledgeEntry{
@@ -973,7 +973,7 @@ func TestEntryHandler_GetBacklinksHandler(t *testing.T) {
 
 func TestEntryHandler_GetOutlinksHandler(t *testing.T) {
 	store := newTestStore(t)
-	handler := NewEntryHandler(store.Entry, store.Search, store.Backlink, store.User)
+	handler := NewEntryHandler(store.Entry, store.Search, store.Backlink, store.User, store.TitleIdx)
 
 	// Create test entry with links
 	entry := &model.KnowledgeEntry{
@@ -1368,7 +1368,7 @@ func TestParseInt(t *testing.T) {
 
 func TestEntryHandler_GetBacklinksHandler_EntryNotFound(t *testing.T) {
 	store := newTestStore(t)
-	handler := NewEntryHandler(store.Entry, store.Search, store.Backlink, store.User)
+	handler := NewEntryHandler(store.Entry, store.Search, store.Backlink, store.User, store.TitleIdx)
 
 	req := httptest.NewRequest(http.MethodGet, "/api/v1/entry/nonexistent-entry/backlinks", nil)
 	rec := httptest.NewRecorder()
@@ -1382,7 +1382,7 @@ func TestEntryHandler_GetBacklinksHandler_EntryNotFound(t *testing.T) {
 
 func TestEntryHandler_GetBacklinksHandler_EmptyLinks(t *testing.T) {
 	store := newTestStore(t)
-	handler := NewEntryHandler(store.Entry, store.Search, store.Backlink, store.User)
+	handler := NewEntryHandler(store.Entry, store.Search, store.Backlink, store.User, store.TitleIdx)
 
 	// Create entry with no backlinks
 	entry := &model.KnowledgeEntry{
@@ -1420,7 +1420,7 @@ func TestEntryHandler_GetBacklinksHandler_EmptyLinks(t *testing.T) {
 
 func TestEntryHandler_GetOutlinksHandler_EntryNotFound(t *testing.T) {
 	store := newTestStore(t)
-	handler := NewEntryHandler(store.Entry, store.Search, store.Backlink, store.User)
+	handler := NewEntryHandler(store.Entry, store.Search, store.Backlink, store.User, store.TitleIdx)
 
 	req := httptest.NewRequest(http.MethodGet, "/api/v1/entry/nonexistent-entry/outlinks", nil)
 	rec := httptest.NewRecorder()
@@ -1434,7 +1434,7 @@ func TestEntryHandler_GetOutlinksHandler_EntryNotFound(t *testing.T) {
 
 func TestEntryHandler_GetOutlinksHandler_EmptyLinks(t *testing.T) {
 	store := newTestStore(t)
-	handler := NewEntryHandler(store.Entry, store.Search, store.Backlink, store.User)
+	handler := NewEntryHandler(store.Entry, store.Search, store.Backlink, store.User, store.TitleIdx)
 
 	// Create entry with no outlinks
 	entry := &model.KnowledgeEntry{

@@ -107,8 +107,9 @@ type Store struct {
 	Category CategoryStore
 	Search   index.SearchEngine
 	Backlink BacklinkIndex
-	Audit    kv.AuditStore // 审计日志存储
-	kvStore  kv.Store      // underlying KV store for cleanup
+	TitleIdx *index.TitleIndex // 标题索引 (AC 自动机)
+	Audit    kv.AuditStore     // 审计日志存储
+	kvStore  kv.Store          // underlying KV store for cleanup
 }
 
 // NewMemoryStore 创建内存存储实例
@@ -123,6 +124,15 @@ func NewMemoryStore() (*Store, error) {
 	// 创建内存 KV 存储用于审计日志
 	memKV := kv.NewMemoryStore()
 
+	// 创建标题索引并从已发布条目构建
+	titleIdx := index.NewTitleIndex()
+	entries, _, _ := entryStore.List(context.Background(), EntryFilter{Status: model.EntryStatusPublished, Limit: 100000})
+	titleEntries := make([]index.TitleEntry, 0, len(entries))
+	for _, e := range entries {
+		titleEntries = append(titleEntries, index.TitleEntry{ID: e.ID, Title: e.Title})
+	}
+	titleIdx.Build(titleEntries)
+
 	return &Store{
 		Entry:    entryStore,
 		User:     userStore,
@@ -130,6 +140,7 @@ func NewMemoryStore() (*Store, error) {
 		Category: categoryStore,
 		Search:   searchEngine,
 		Backlink: backlinkIndex,
+		TitleIdx: titleIdx,
 		Audit:    kv.NewAuditStore(memKV),
 	}, nil
 }
@@ -178,13 +189,25 @@ func NewPersistentStore(cfg *StoreConfig) (*Store, error) {
 	}
 
 	// 使用适配器组装存储
+	entryStore := NewBadgerEntryStore(kvStore)
+
+	// 创建标题索引并从已发布条目构建
+	titleIdx := index.NewTitleIndex()
+	entries, _, _ := entryStore.List(context.Background(), EntryFilter{Status: model.EntryStatusPublished, Limit: 100000})
+	titleEntries := make([]index.TitleEntry, 0, len(entries))
+	for _, e := range entries {
+		titleEntries = append(titleEntries, index.TitleEntry{ID: e.ID, Title: e.Title})
+	}
+	titleIdx.Build(titleEntries)
+
 	return &Store{
-		Entry:    NewBadgerEntryStore(kvStore),
+		Entry:    entryStore,
 		User:     NewBadgerUserStore(kvStore),
 		Rating:   NewBadgerRatingStore(kvStore),
 		Category: NewBadgerCategoryStore(kvStore),
 		Search:   searchEngine,
 		Backlink: NewMemoryBacklinkIndex(),  // 反向链接仍使用内存实现
+		TitleIdx: titleIdx,
 		Audit:    kv.NewAuditStore(kvStore), // 共享 KV 存储
 		kvStore:  kvStore,                   // Store reference for cleanup
 	}, nil

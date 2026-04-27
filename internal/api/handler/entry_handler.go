@@ -5,6 +5,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"log"
 	"net/http"
 	"strconv"
 	"strings"
@@ -29,15 +30,17 @@ type EntryHandler struct {
 	backlink      storage.BacklinkIndex
 	userStore     storage.UserStore
 	remoteQuerier RemoteQuerier
+	enricher      *ResultEnricher
 }
 
 // NewEntryHandler 创建新的 EntryHandler 实例
-func NewEntryHandler(entryStore storage.EntryStore, searchEngine index.SearchEngine, backlinkIndex storage.BacklinkIndex, userStore storage.UserStore) *EntryHandler {
+func NewEntryHandler(entryStore storage.EntryStore, searchEngine index.SearchEngine, backlinkIndex storage.BacklinkIndex, userStore storage.UserStore, titleIndex *index.TitleIndex) *EntryHandler {
 	return &EntryHandler{
 		entryStore:   entryStore,
 		searchEngine: searchEngine,
 		backlink:     backlinkIndex,
 		userStore:    userStore,
+		enricher:     NewResultEnricher(titleIndex, entryStore),
 	}
 }
 
@@ -134,6 +137,16 @@ func (h *EntryHandler) SearchHandler(w http.ResponseWriter, r *http.Request) {
 
 	hasMore := result.TotalCount > (offset + len(result.Entries))
 
+	var graph *SearchGraph
+	if h.enricher != nil {
+		enrichResult, enrichErr := h.enricher.Enrich(result.Entries)
+		if enrichErr != nil {
+			log.Printf("[SearchHandler] result enrichment failed: %v", enrichErr)
+		} else {
+			graph = enrichResult
+		}
+	}
+
 	writeJSON(w, http.StatusOK, &APIResponse{
 		Code:    0,
 		Message: "success",
@@ -141,6 +154,7 @@ func (h *EntryHandler) SearchHandler(w http.ResponseWriter, r *http.Request) {
 			TotalCount: result.TotalCount,
 			HasMore:    hasMore,
 			Items:      result.Entries,
+			Graph:      graph,
 		},
 	})
 }
@@ -239,6 +253,11 @@ func (h *EntryHandler) CreateEntryHandler(w http.ResponseWriter, r *http.Request
 		_ = h.searchEngine.IndexEntry(created)
 	}
 
+	// 更新标题索引
+	if h.enricher != nil {
+		_ = h.enricher.titleIndex.Add(index.TitleEntry{ID: created.ID, Title: created.Title})
+	}
+
 	// 建立反向链接索引
 	if h.backlink != nil {
 		linkedEntryIDs := linkparser.ParseLinks(created.Content)
@@ -293,6 +312,9 @@ func (h *EntryHandler) UpdateEntryHandler(w http.ResponseWriter, r *http.Request
 		return
 	}
 
+	// 保存旧标题（用于标题索引更新）
+	oldTitle := existing.Title
+
 	// 解析更新请求
 	var req UpdateEntryRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -334,6 +356,15 @@ func (h *EntryHandler) UpdateEntryHandler(w http.ResponseWriter, r *http.Request
 	// 更新全文索引
 	if h.searchEngine != nil {
 		_ = h.searchEngine.UpdateIndex(updated)
+	}
+
+	// 更新标题索引
+	if h.enricher != nil && req.Title != nil {
+		oldEntry := index.TitleEntry{ID: existing.ID, Title: oldTitle}
+		newEntry := index.TitleEntry{ID: updated.ID, Title: updated.Title}
+		if oldEntry.Title != newEntry.Title {
+			_ = h.enricher.titleIndex.Update(oldEntry, newEntry)
+		}
 	}
 
 	// 更新反向链接索引
@@ -394,6 +425,11 @@ func (h *EntryHandler) DeleteEntryHandler(w http.ResponseWriter, r *http.Request
 	// 从全文索引中删除
 	if h.searchEngine != nil {
 		_ = h.searchEngine.DeleteIndex(id)
+	}
+
+	// 从标题索引中删除
+	if h.enricher != nil {
+		_ = h.enricher.titleIndex.Remove(existing.Title)
 	}
 
 	// 从反向链接索引中删除

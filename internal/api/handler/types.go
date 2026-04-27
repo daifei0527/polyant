@@ -14,6 +14,7 @@ type PagedData struct {
 	TotalCount int         `json:"total_count"`
 	HasMore    bool        `json:"has_more"`
 	Items      interface{} `json:"items"`
+	Graph      interface{} `json:"graph,omitempty"`
 }
 
 // SearchParams 搜索请求参数

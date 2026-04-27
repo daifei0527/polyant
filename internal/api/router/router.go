@@ -82,7 +82,11 @@ func NewRouterWithDeps(deps *Dependencies) (http.Handler, error) {
 	}
 
 	// 创建各 handler
-	entryHandler := handler.NewEntryHandler(deps.EntryStore, deps.SearchEngine, deps.Backlink, deps.UserStore)
+	var titleIdx *index.TitleIndex
+	if deps.Store != nil {
+		titleIdx = deps.Store.TitleIdx
+	}
+	entryHandler := handler.NewEntryHandler(deps.EntryStore, deps.SearchEngine, deps.Backlink, deps.UserStore, titleIdx)
 
 	// 设置远程查询服务
 	if deps.RemoteQuerier != nil {
