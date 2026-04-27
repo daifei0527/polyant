@@ -42,6 +42,9 @@ polyant_deploy.pub
 # Temp
 /data/
 
+# Worktrees
+.worktrees/
+
 # Web
 web/admin/node_modules/
 pactl
