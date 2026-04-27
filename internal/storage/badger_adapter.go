@@ -504,6 +504,15 @@ func NewBadgerStore(dataDir string) (*Store, error) {
 	searchEngine := NewBadgerSearchEngine(entryStore)
 	backlinkIndex := NewBadgerBacklinkIndex()
 
+	// 创建标题索引并从已发布条目构建
+	titleIdx := index.NewTitleIndex()
+	entries, _, _ := entryStore.List(context.Background(), EntryFilter{Status: model.EntryStatusPublished, Limit: 100000})
+	titleEntries := make([]index.TitleEntry, 0, len(entries))
+	for _, e := range entries {
+		titleEntries = append(titleEntries, index.TitleEntry{ID: e.ID, Title: e.Title})
+	}
+	titleIdx.Build(titleEntries)
+
 	log.Printf("[Storage] BadgerDB initialized at %s", dataDir)
 
 	return &Store{
@@ -513,6 +522,7 @@ func NewBadgerStore(dataDir string) (*Store, error) {
 		Category: categoryStore,
 		Search:   searchEngine,
 		Backlink: backlinkIndex,
+		TitleIdx: titleIdx,
 	}, nil
 }
 
@@ -532,6 +542,15 @@ func NewBadgerStoreWithCloser(dataDir string) (*BadgerStoreWrapper, error) {
 	searchEngine := NewBadgerSearchEngine(entryStore)
 	backlinkIndex := NewBadgerBacklinkIndex()
 
+	// 创建标题索引并从已发布条目构建
+	titleIdx := index.NewTitleIndex()
+	entries, _, _ := entryStore.List(context.Background(), EntryFilter{Status: model.EntryStatusPublished, Limit: 100000})
+	titleEntries := make([]index.TitleEntry, 0, len(entries))
+	for _, e := range entries {
+		titleEntries = append(titleEntries, index.TitleEntry{ID: e.ID, Title: e.Title})
+	}
+	titleIdx.Build(titleEntries)
+
 	log.Printf("[Storage] BadgerDB initialized at %s", dataDir)
 
 	return &BadgerStoreWrapper{
@@ -542,6 +561,7 @@ func NewBadgerStoreWithCloser(dataDir string) (*BadgerStoreWrapper, error) {
 			Category: categoryStore,
 			Search:   searchEngine,
 			Backlink: backlinkIndex,
+			TitleIdx: titleIdx,
 		},
 		kvStore: kvStore,
 	}, nil
