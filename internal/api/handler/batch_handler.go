@@ -19,15 +19,17 @@ type BatchHandler struct {
 	searchEngine index.SearchEngine
 	backlink     storage.BacklinkIndex
 	userStore    storage.UserStore
+	titleIndex   *index.TitleIndex
 }
 
 // NewBatchHandler 创建新的 BatchHandler 实例
-func NewBatchHandler(entryStore storage.EntryStore, searchEngine index.SearchEngine, backlinkIndex storage.BacklinkIndex, userStore storage.UserStore) *BatchHandler {
+func NewBatchHandler(entryStore storage.EntryStore, searchEngine index.SearchEngine, backlinkIndex storage.BacklinkIndex, userStore storage.UserStore, titleIndex *index.TitleIndex) *BatchHandler {
 	return &BatchHandler{
 		entryStore:   entryStore,
 		searchEngine: searchEngine,
 		backlink:     backlinkIndex,
 		userStore:    userStore,
+		titleIndex:   titleIndex,
 	}
 }
 
@@ -396,6 +398,11 @@ func (h *BatchHandler) executeBatchCreate(r *http.Request, entries []BatchEntry,
 			_ = h.backlink.UpdateIndex(created.ID, linkedEntryIDs)
 		}
 
+		// 更新标题索引
+		if h.titleIndex != nil {
+			_ = h.titleIndex.Add(index.TitleEntry{ID: created.ID, Title: created.Title})
+		}
+
 		response.Summary.Created++
 		response.Results = append(response.Results, BatchResult{
 			Index:   i,
@@ -434,6 +441,9 @@ func (h *BatchHandler) executeBatchUpdate(r *http.Request, entries []BatchUpdate
 			})
 			continue
 		}
+
+		// 保存旧标题（用于标题索引更新）
+		oldTitle := existing.Title
 
 		// 应用更新
 		if entry.Title != nil {
@@ -484,6 +494,15 @@ func (h *BatchHandler) executeBatchUpdate(r *http.Request, entries []BatchUpdate
 			_ = h.backlink.UpdateIndex(updated.ID, linkedEntryIDs)
 		}
 
+		// 更新标题索引
+		if h.titleIndex != nil && entry.Title != nil {
+			oldEntry := index.TitleEntry{ID: existing.ID, Title: oldTitle}
+			newEntry := index.TitleEntry{ID: updated.ID, Title: updated.Title}
+			if oldEntry.Title != newEntry.Title {
+				_ = h.titleIndex.Update(oldEntry, newEntry)
+			}
+		}
+
 		response.Summary.Updated++
 		response.Results = append(response.Results, BatchResult{
 			Index:   i,
@@ -509,7 +528,7 @@ func (h *BatchHandler) executeBatchDelete(r *http.Request, ids []string, user *m
 
 	for i, id := range ids {
 		// 检查条目是否存在
-		_, err := h.entryStore.Get(r.Context(), id)
+		existing, err := h.entryStore.Get(r.Context(), id)
 		if err != nil {
 			response.Success = false
 			response.Summary.Failed++
@@ -522,6 +541,9 @@ func (h *BatchHandler) executeBatchDelete(r *http.Request, ids []string, user *m
 			})
 			continue
 		}
+
+		// 保存标题（用于从标题索引中删除）
+		entryTitle := existing.Title
 
 		// 执行软删除
 		if err := h.entryStore.Delete(r.Context(), id); err != nil {
@@ -544,6 +566,11 @@ func (h *BatchHandler) executeBatchDelete(r *http.Request, ids []string, user *m
 		// 从反向链接索引中删除
 		if h.backlink != nil {
 			_ = h.backlink.DeleteIndex(id)
+		}
+
+		// 从标题索引中删除
+		if h.titleIndex != nil {
+			_ = h.titleIndex.Remove(entryTitle)
 		}
 
 		response.Summary.Deleted++
