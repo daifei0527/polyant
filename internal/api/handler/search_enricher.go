@@ -44,7 +44,12 @@ type ResultEnricher struct {
 }
 
 // NewResultEnricher creates a new ResultEnricher.
+// Returns nil when titleIndex is nil — callers check enricher != nil
+// before using, so this prevents nil pointer dereference panics.
 func NewResultEnricher(ti *index.TitleIndex, es storage.EntryStore) *ResultEnricher {
+	if ti == nil {
+		return nil
+	}
 	return &ResultEnricher{
 		titleIndex: ti,
 		entryStore: es,
