@@ -406,40 +406,7 @@ func TestEntryHandler_DeleteEntryHandler(t *testing.T) {
 	}
 }
 
-func TestCategoryHandler_ListCategoriesHandler(t *testing.T) {
-	store := newTestStore(t)
-	handler := NewCategoryHandler(store.Category, store.Entry)
-
-	// Create test categories
-	categories := []*model.Category{
-		{ID: "cat-1", Path: "programming", Name: "编程", Level: 0},
-		{ID: "cat-2", Path: "programming/go", Name: "Go", ParentId: "cat-1", Level: 1},
-	}
-	for _, cat := range categories {
-		_, _ = store.Category.Create(context.Background(), cat)
-	}
-
-	req := httptest.NewRequest(http.MethodGet, "/api/v1/categories", nil)
-	rec := httptest.NewRecorder()
-
-	handler.ListCategoriesHandler(rec, req)
-
-	if rec.Code != http.StatusOK {
-		t.Errorf("Expected status %d, got %d", http.StatusOK, rec.Code)
-	}
-
-	var resp APIResponse
-	json.Unmarshal(rec.Body.Bytes(), &resp)
-
-	data, ok := resp.Data.([]interface{})
-	if !ok {
-		t.Fatal("Response data is not an array")
-	}
-
-	if len(data) < 2 {
-		t.Errorf("Expected at least 2 categories, got %d", len(data))
-	}
-}
+// CategoryHandler_ListCategoriesHandler tests moved to category_handler_test.go
 
 // ========== UserHandler Additional Tests ==========
 
@@ -1054,95 +1021,7 @@ func TestNodeHandler_TriggerSyncHandler(t *testing.T) {
 	}
 }
 
-// ========== CategoryHandler Additional Tests ==========
-
-func TestCategoryHandler_GetCategoryEntriesHandler(t *testing.T) {
-	store := newTestStore(t)
-	handler := NewCategoryHandler(store.Category, store.Entry)
-
-	// Create test category
-	cat := &model.Category{
-		ID:    "cat-1",
-		Path:  "programming",
-		Name:  "编程",
-		Level: 0,
-	}
-	store.Category.Create(context.Background(), cat)
-
-	// Create test entries
-	for i := 0; i < 3; i++ {
-		entry := &model.KnowledgeEntry{
-			ID:       fmt.Sprintf("entry-%d", i),
-			Title:    fmt.Sprintf("Entry %d", i),
-			Content:  "Content",
-			Category: "programming",
-			Status:   model.EntryStatusPublished,
-		}
-		store.Entry.Create(context.Background(), entry)
-	}
-
-	// URL needs to have the category path in the URL for extractPathVar
-	req := httptest.NewRequest(http.MethodGet, "/api/v1/categories/programming/entries?limit=10", nil)
-	rec := httptest.NewRecorder()
-
-	handler.GetCategoryEntriesHandler(rec, req)
-
-	if rec.Code != http.StatusOK {
-		t.Errorf("Expected status %d, got %d: %s", http.StatusOK, rec.Code, rec.Body.String())
-	}
-}
-
-func TestCategoryHandler_CreateCategoryHandler(t *testing.T) {
-	store := newTestStore(t)
-	handler := NewCategoryHandler(store.Category, store.Entry)
-
-	// Create test user (Lv2 can create categories)
-	user := &model.User{
-		PublicKey: "test-key",
-		AgentName: "test-user",
-		UserLevel: model.UserLevelLv2,
-		Status:    model.UserStatusActive,
-	}
-
-	body := `{"path": "programming/rust", "name": "Rust"}`
-	req := httptest.NewRequest(http.MethodPost, "/api/v1/categories/create", bytes.NewBufferString(body))
-	req.Header.Set("Content-Type", "application/json")
-	ctx := setUserInContext(req.Context(), user)
-	req = req.WithContext(ctx)
-	rec := httptest.NewRecorder()
-
-	handler.CreateCategoryHandler(rec, req)
-
-	if rec.Code != http.StatusCreated {
-		t.Errorf("Expected status %d, got %d: %s", http.StatusCreated, rec.Code, rec.Body.String())
-	}
-}
-
-func TestCategoryHandler_CreateCategoryHandler_InsufficientPermission(t *testing.T) {
-	store := newTestStore(t)
-	handler := NewCategoryHandler(store.Category, store.Entry)
-
-	// Lv1 user cannot create categories
-	user := &model.User{
-		PublicKey: "test-key",
-		AgentName: "test-user",
-		UserLevel: model.UserLevelLv1,
-		Status:    model.UserStatusActive,
-	}
-
-	body := `{"path": "test", "name": "Test"}`
-	req := httptest.NewRequest(http.MethodPost, "/api/v1/categories/create", bytes.NewBufferString(body))
-	req.Header.Set("Content-Type", "application/json")
-	ctx := setUserInContext(req.Context(), user)
-	req = req.WithContext(ctx)
-	rec := httptest.NewRecorder()
-
-	handler.CreateCategoryHandler(rec, req)
-
-	if rec.Code == http.StatusCreated {
-		t.Error("Expected error for Lv1 user creating category")
-	}
-}
+// CategoryHandler tests moved to category_handler_test.go
 
 // ========== Helper Tests ==========
 
