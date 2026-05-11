@@ -90,6 +90,22 @@ func (rs *RatingStore) GetRating(entryId, raterPubkey string) (*model.Rating, er
 	return rating, nil
 }
 
+// ListAllRatings 获取所有评分（用于增量同步等场景）
+func (rs *RatingStore) ListAllRatings() ([]*model.Rating, error) {
+	ratings, err := ScanAndParse(rs.store, PrefixRating, func(data []byte) (*model.Rating, error) {
+		rating := &model.Rating{}
+		if err := rating.FromJSON(data); err != nil {
+			return nil, err
+		}
+		return rating, nil
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to list all ratings: %w", err)
+	}
+
+	return ratings, nil
+}
+
 // UpdateEntryScore 重新计算指定条目的加权平均评分
 // 返回新的加权平均分
 func (rs *RatingStore) UpdateEntryScore(entryId string) (float64, error) {
