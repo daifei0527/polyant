@@ -226,6 +226,10 @@ func (s *BadgerRatingStore) GetByRater(ctx context.Context, entryID, raterPubkey
 	return nil, fmt.Errorf("rating not found")
 }
 
+func (s *BadgerRatingStore) ListRatedAfter(ctx context.Context, after int64) ([]*model.Rating, error) {
+	return nil, fmt.Errorf("ListRatedAfter not implemented for BadgerRatingStore")
+}
+
 // BadgerCategoryStore 适配 kv.CategoryStore 到 storage.CategoryStore 接口
 type BadgerCategoryStore struct {
 	store *kv.CategoryStore
