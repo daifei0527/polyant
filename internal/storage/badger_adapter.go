@@ -227,7 +227,18 @@ func (s *BadgerRatingStore) GetByRater(ctx context.Context, entryID, raterPubkey
 }
 
 func (s *BadgerRatingStore) ListRatedAfter(ctx context.Context, after int64) ([]*model.Rating, error) {
-	return nil, fmt.Errorf("ListRatedAfter not implemented for BadgerRatingStore")
+	allRatings, err := s.store.ListAllRatings()
+	if err != nil {
+		return nil, err
+	}
+
+	var result []*model.Rating
+	for _, r := range allRatings {
+		if r.RatedAt > after {
+			result = append(result, r)
+		}
+	}
+	return result, nil
 }
 
 // BadgerCategoryStore 适配 kv.CategoryStore 到 storage.CategoryStore 接口
