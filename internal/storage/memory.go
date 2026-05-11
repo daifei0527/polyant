@@ -387,6 +387,21 @@ func (s *MemoryRatingStore) GetByRater(ctx context.Context, entryID, raterPubkey
 	return nil, fmt.Errorf("rating not found")
 }
 
+// ListRatedAfter 获取指定时间戳之后创建的所有评分
+func (s *MemoryRatingStore) ListRatedAfter(ctx context.Context, after int64) ([]*model.Rating, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	var result []*model.Rating
+	for _, r := range s.ratings {
+		if r.RatedAt > after {
+			cp := *r
+			result = append(result, &cp)
+		}
+	}
+	return result, nil
+}
+
 // MemoryCategoryStore 基于内存的分类存储实现
 type MemoryCategoryStore struct {
 	mu         sync.RWMutex
