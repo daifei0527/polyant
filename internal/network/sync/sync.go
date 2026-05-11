@@ -446,8 +446,20 @@ func (se *SyncEngine) HandleSyncRequest(ctx context.Context, req *protocolpkg.Sy
 		}
 	}
 
-	// TODO: 需要在 EntryStore 添加 ListUpdatedAfter 接口来获取在指定时间戳后新增/更新的评分
-	// 暂时先不查询评分，后续存储层完善后补全
+	// 获取指定时间戳之后新增/更新的评分
+	if se.store.Rating != nil {
+		ratings, err := se.store.Rating.ListRatedAfter(ctx, req.LastSyncTimestamp)
+		if err != nil {
+			return nil, fmt.Errorf("list ratings: %w", err)
+		}
+		for _, rating := range ratings {
+			data, err := rating.ToJSON()
+			if err != nil {
+				continue
+			}
+			resp.NewRatings = append(resp.NewRatings, data)
+		}
+	}
 
 	return resp, nil
 }
