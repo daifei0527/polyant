@@ -966,87 +966,12 @@ func TestEntryHandler_GetOutlinksHandler(t *testing.T) {
 	}
 }
 
-// ========== NodeHandler Tests ==========
-
-func TestNodeHandler_GetNodeStatusHandler(t *testing.T) {
-	handler := NewNodeHandler("test-node-1", "seed", "v1.0.0", nil)
-
-	req := httptest.NewRequest(http.MethodGet, "/api/v1/node/status", nil)
-	rec := httptest.NewRecorder()
-
-	handler.GetNodeStatusHandler(rec, req)
-
-	if rec.Code != http.StatusOK {
-		t.Errorf("Expected status %d, got %d", http.StatusOK, rec.Code)
-	}
-
-	var resp APIResponse
-	json.Unmarshal(rec.Body.Bytes(), &resp)
-
-	// The Data is returned as a pointer to NodeStatusResponse
-	// but json.Unmarshal converts it to map[string]interface{}
-	data, ok := resp.Data.(map[string]interface{})
-	if !ok {
-		t.Fatal("Response data is not a map")
-	}
-
-	if data["node_id"] != "test-node-1" {
-		t.Errorf("Expected node_id 'test-node-1', got '%s'", data["node_id"])
-	}
-	if data["node_type"] != "seed" {
-		t.Errorf("Expected node_type 'seed', got '%s'", data["node_type"])
-	}
-	if data["version"] != "v1.0.0" {
-		t.Errorf("Expected version 'v1.0.0', got '%s'", data["version"])
-	}
-}
-
-func TestNodeHandler_TriggerSyncHandler(t *testing.T) {
-	handler := NewNodeHandler("test-node-1", "local", "v1.0.0", nil)
-
-	req := httptest.NewRequest(http.MethodPost, "/api/v1/node/sync", nil)
-	rec := httptest.NewRecorder()
-
-	handler.TriggerSyncHandler(rec, req)
-
-	if rec.Code != http.StatusOK {
-		t.Errorf("Expected status %d, got %d", http.StatusOK, rec.Code)
-	}
-
-	var resp APIResponse
-	json.Unmarshal(rec.Body.Bytes(), &resp)
-
-	if resp.Message != "sync triggered" {
-		t.Errorf("Expected message 'sync triggered', got '%s'", resp.Message)
-	}
-}
-
 // CategoryHandler tests moved to category_handler_test.go
+// NodeHandler tests moved to node_handler_test.go
 
 // ========== Helper Tests ==========
 
-func TestIsValidEmail(t *testing.T) {
-	tests := []struct {
-		email    string
-		expected bool
-	}{
-		{"test@example.com", true},
-		{"user.name@domain.org", true},
-		{"invalid", false},
-		{"no-at-sign.com", false},
-		// Note: The simple isValidEmail function only checks for @ and .
-		// So "@nodomain.com" is considered valid by this simple check
-		{"@nodomain.com", true}, // Simple validation allows this
-		{"", false},
-	}
-
-	for _, tt := range tests {
-		result := isValidEmail(tt.email)
-		if result != tt.expected {
-			t.Errorf("isValidEmail(%q) = %v, expected %v", tt.email, result, tt.expected)
-		}
-	}
-}
+// isValidEmail tests moved to helpers_test.go
 
 func TestComputeContentHash(t *testing.T) {
 	hash1 := computeContentHash("Title", "Content", "Category")
@@ -1186,62 +1111,7 @@ func TestWriteErrorI18n_DefaultStatus(t *testing.T) {
 	}
 }
 
-func TestGenerateUUID(t *testing.T) {
-	uuid1 := generateUUID()
-	uuid2 := generateUUID()
-
-	// Should be different
-	if uuid1 == uuid2 {
-		t.Error("UUIDs should be unique")
-	}
-
-	// Check format: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
-	if len(uuid1) != 36 {
-		t.Errorf("Expected UUID length 36, got %d", len(uuid1))
-	}
-
-	// Check version 4
-	if uuid1[14] != '4' {
-		t.Errorf("Expected UUID v4, got version char: %c", uuid1[14])
-	}
-
-	// Check variant
-	variantChar := uuid1[19]
-	if variantChar != '8' && variantChar != '9' && variantChar != 'a' && variantChar != 'b' {
-		t.Errorf("Invalid variant character: %c", variantChar)
-	}
-}
-
-func TestParseInt(t *testing.T) {
-	tests := []struct {
-		input    string
-		expected int
-		hasError bool
-	}{
-		{"123", 123, false},
-		{"0", 0, false},
-		{"-42", -42, false},
-		{"abc", 0, true},
-		{"", 0, true},
-		{"999999999999999999999", 0, true}, // overflow
-	}
-
-	for _, tt := range tests {
-		result, err := parseInt(tt.input)
-		if tt.hasError {
-			if err == nil {
-				t.Errorf("parseInt(%q) should return error", tt.input)
-			}
-		} else {
-			if err != nil {
-				t.Errorf("parseInt(%q) returned unexpected error: %v", tt.input, err)
-			}
-			if result != tt.expected {
-				t.Errorf("parseInt(%q) = %d, expected %d", tt.input, result, tt.expected)
-			}
-		}
-	}
-}
+// GenerateUUID and ParseInt tests moved to helpers_test.go
 
 // ========== Backlinks Boundary Tests ==========
 
