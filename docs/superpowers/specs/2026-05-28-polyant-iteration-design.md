@@ -26,8 +26,8 @@
 | 覆盖率等级 | 模块 |
 |-----------|------|
 | **高 (>80%)** | rbac (100%), admin core (100%), config (96.1%), linkparser (94.6%), category (92.2%), errors (90%), user (87.5%), detect (86.7%), index (85.5%), seed (85%), logger (81.1%), daemon (81.6%) |
-| **中 (60-80%)** | handler (76.9%), middleware (82.9%), ed25519 (81.2%), audit (79.7%), email (77.6%), export (77%), rating (73.7%), host (78.4%), protocol (69.9%), sync (68.9%), storage (71.7%), kv (73.1%), model (79.2%) |
-| **低 (<60%)** | pactl (39.5%), crypto (64.3%), i18n (70.4%) |
+| **中 (60-80%)** | handler (76.9%), middleware (82.9%), ed25519 (81.2%), audit (79.7%), email (77.6%), export (77%), rating (73.7%), host (78.4%), protocol (69.9%), sync (68.9%), storage (71.7%), kv (73.1%), model (79.2%), i18n (70.4%) |
+| **低 (<60%)** | pactl (39.5%), crypto (64.3%) |
 | **零覆盖** | seed cmd, user cmd, proto, scripts |
 
 ### 已知缺失功能
