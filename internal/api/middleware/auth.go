@@ -53,30 +53,42 @@ const (
 // 验证通过后将用户信息注入到请求上下文中
 type AuthMiddleware struct {
 	userStore    storage.UserStore
-	seenRequests sync.Map // map[string]time.Time - tracks request signatures for replay protection
+	seenRequests sync.Map       // map[string]time.Time - tracks request signatures for replay protection
+	stopCleanup  chan struct{}   // signals cleanup goroutine to stop
 }
 
 // NewAuthMiddleware 创建认证中间件实例
 func NewAuthMiddleware(userStore storage.UserStore) *AuthMiddleware {
 	m := &AuthMiddleware{
-		userStore: userStore,
+		userStore:   userStore,
+		stopCleanup: make(chan struct{}),
 	}
 	go m.cleanupSeenRequests()
 	return m
+}
+
+// Close 停止清理 goroutine，释放资源
+func (m *AuthMiddleware) Close() {
+	close(m.stopCleanup)
 }
 
 // cleanupSeenRequests 定期清理过期的请求指纹，防止内存泄漏
 func (m *AuthMiddleware) cleanupSeenRequests() {
 	ticker := time.NewTicker(5 * time.Minute)
 	defer ticker.Stop()
-	for range ticker.C {
-		now := time.Now()
-		m.seenRequests.Range(func(key, value interface{}) bool {
-			if t, ok := value.(time.Time); ok && now.Sub(t) > 10*time.Minute {
-				m.seenRequests.Delete(key)
-			}
-			return true
-		})
+	for {
+		select {
+		case <-m.stopCleanup:
+			return
+		case <-ticker.C:
+			now := time.Now()
+			m.seenRequests.Range(func(key, value interface{}) bool {
+				if t, ok := value.(time.Time); ok && now.Sub(t) > 10*time.Minute {
+					m.seenRequests.Delete(key)
+				}
+				return true
+			})
+		}
 	}
 }
 
@@ -152,7 +164,7 @@ func (m *AuthMiddleware) Middleware(next http.Handler) http.Handler {
 
 		user, err := m.userStore.Get(r.Context(), pubKeyHash)
 		if err != nil {
-			writeAuthError(w, awerrors.ErrUserNotFound)
+			writeAuthError(w, awerrors.ErrInvalidSignature)
 			return
 		}
 

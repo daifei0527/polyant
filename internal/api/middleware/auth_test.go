@@ -51,6 +51,7 @@ func newTestUserStore(t *testing.T) (storage.UserStore, *model.User, ed25519.Pri
 func TestAuthMiddleware_ValidSignature(t *testing.T) {
 	store, user, privKey := newTestUserStore(t)
 	authMW := NewAuthMiddleware(store)
+	defer authMW.Close()
 
 	// Create test handler
 	testHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -91,13 +92,19 @@ func TestAuthMiddleware_ValidSignature(t *testing.T) {
 	handler := authMW.Middleware(testHandler)
 	handler.ServeHTTP(rec, req)
 
-	// Note: This test may fail due to signature format - need to match exactly
-	// The main point is testing the middleware structure
+	assert.Equal(t, http.StatusOK, rec.Code, "expected 200 OK for valid signature")
+
+	// Verify user was injected into context by checking the response body
+	var resp map[string]string
+	err := json.NewDecoder(rec.Body).Decode(&resp)
+	assert.NoError(t, err)
+	assert.Equal(t, "ok", resp["status"])
 }
 
 func TestAuthMiddleware_MissingHeaders(t *testing.T) {
 	store, _, _ := newTestUserStore(t)
 	authMW := NewAuthMiddleware(store)
+	defer authMW.Close()
 
 	testHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		t.Error("Handler should not be called")
@@ -117,6 +124,7 @@ func TestAuthMiddleware_MissingHeaders(t *testing.T) {
 func TestAuthMiddleware_InvalidPublicKey(t *testing.T) {
 	store, _, _ := newTestUserStore(t)
 	authMW := NewAuthMiddleware(store)
+	defer authMW.Close()
 
 	testHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		t.Error("Handler should not be called")
@@ -137,9 +145,10 @@ func TestAuthMiddleware_InvalidPublicKey(t *testing.T) {
 	}
 }
 
-func TestAuthMiddleware_ExpiredTimestamp(t *testing.T) {
+func TestAuthMiddleware_TimestampExpired(t *testing.T) {
 	store, user, privKey := newTestUserStore(t)
 	authMW := NewAuthMiddleware(store)
+	defer authMW.Close()
 
 	testHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		t.Error("Handler should not be called")
@@ -153,11 +162,11 @@ func TestAuthMiddleware_ExpiredTimestamp(t *testing.T) {
 
 	pubKeyB64 := user.PublicKey
 	bodyHash := sha256.Sum256(body)
-	signContent := "POST\n/api/v1/test\n" + string(rune(oldTimestamp)) + "\n" + hex.EncodeToString(bodyHash[:])
+	signContent := fmt.Sprintf("POST\n/api/v1/test\n%d\n%s", oldTimestamp, hex.EncodeToString(bodyHash[:]))
 	signature := ed25519.Sign(privKey, []byte(signContent))
 
 	req.Header.Set("X-Polyant-PublicKey", pubKeyB64)
-	req.Header.Set("X-Polyant-Timestamp", string(rune(oldTimestamp)))
+	req.Header.Set("X-Polyant-Timestamp", fmt.Sprintf("%d", oldTimestamp))
 	req.Header.Set("X-Polyant-Signature", base64.StdEncoding.EncodeToString(signature))
 
 	rec := httptest.NewRecorder()
@@ -174,6 +183,7 @@ func TestAuthMiddleware_UserNotFound(t *testing.T) {
 	// Create store without user
 	store := storage.NewMemoryUserStore()
 	authMW := NewAuthMiddleware(store)
+	defer authMW.Close()
 
 	testHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		t.Error("Handler should not be called")
@@ -188,11 +198,11 @@ func TestAuthMiddleware_UserNotFound(t *testing.T) {
 
 	timestamp := time.Now().UnixMilli()
 	bodyHash := sha256.Sum256(body)
-	signContent := "POST\n/api/v1/test\n" + string(rune(timestamp)) + "\n" + hex.EncodeToString(bodyHash[:])
+	signContent := fmt.Sprintf("POST\n/api/v1/test\n%d\n%s", timestamp, hex.EncodeToString(bodyHash[:]))
 	signature := ed25519.Sign(privKey, []byte(signContent))
 
 	req.Header.Set("X-Polyant-PublicKey", pubKeyB64)
-	req.Header.Set("X-Polyant-Timestamp", string(rune(timestamp)))
+	req.Header.Set("X-Polyant-Timestamp", fmt.Sprintf("%d", timestamp))
 	req.Header.Set("X-Polyant-Signature", base64.StdEncoding.EncodeToString(signature))
 
 	rec := httptest.NewRecorder()
@@ -234,6 +244,16 @@ func TestGetUserFromContext(t *testing.T) {
 	}
 }
 
+func TestAuthMiddleware_Close(t *testing.T) {
+	store := storage.NewMemoryUserStore()
+	authMW := NewAuthMiddleware(store)
+
+	// Close should stop the cleanup goroutine without panic
+	assert.NotPanics(t, func() {
+		authMW.Close()
+	}, "Close should not panic")
+}
+
 func TestAuthMiddleware_SuspendedUser(t *testing.T) {
 	store := storage.NewMemoryUserStore()
 
@@ -249,6 +269,7 @@ func TestAuthMiddleware_SuspendedUser(t *testing.T) {
 	_, _ = store.Create(context.Background(), user)
 
 	authMW := NewAuthMiddleware(store)
+	defer authMW.Close()
 
 	testHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		t.Error("Handler should not be called for suspended user")
@@ -283,6 +304,7 @@ func TestAuthMiddleware_SuspendedUser(t *testing.T) {
 func TestAuthMiddleware_RequireLevel(t *testing.T) {
 	store := storage.NewMemoryUserStore()
 	authMW := NewAuthMiddleware(store)
+	defer authMW.Close()
 
 	// Test handler that should only be accessible by Lv2+
 	testHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -320,6 +342,7 @@ func TestAuthMiddleware_RequireLevel(t *testing.T) {
 func TestAuthMiddleware_RequireLevel_NoLevel(t *testing.T) {
 	store := storage.NewMemoryUserStore()
 	authMW := NewAuthMiddleware(store)
+	defer authMW.Close()
 
 	testHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		t.Error("Handler should not be called")
@@ -342,6 +365,7 @@ func TestAuthMiddleware_RequireLevel_NoLevel(t *testing.T) {
 func TestAuthMiddleware_ReplayAttack(t *testing.T) {
 	store, user, privKey := newTestUserStore(t)
 	authMW := NewAuthMiddleware(store)
+	defer authMW.Close()
 
 	testHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
