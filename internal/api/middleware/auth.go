@@ -15,6 +15,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/daifei0527/polyant/internal/storage"
@@ -51,13 +52,31 @@ const (
 // 解析请求头中的公钥、时间戳和签名，验证请求合法性
 // 验证通过后将用户信息注入到请求上下文中
 type AuthMiddleware struct {
-	userStore storage.UserStore
+	userStore    storage.UserStore
+	seenRequests sync.Map // map[string]time.Time - tracks request signatures for replay protection
 }
 
 // NewAuthMiddleware 创建认证中间件实例
 func NewAuthMiddleware(userStore storage.UserStore) *AuthMiddleware {
-	return &AuthMiddleware{
+	m := &AuthMiddleware{
 		userStore: userStore,
+	}
+	go m.cleanupSeenRequests()
+	return m
+}
+
+// cleanupSeenRequests 定期清理过期的请求指纹，防止内存泄漏
+func (m *AuthMiddleware) cleanupSeenRequests() {
+	ticker := time.NewTicker(5 * time.Minute)
+	defer ticker.Stop()
+	for range ticker.C {
+		now := time.Now()
+		m.seenRequests.Range(func(key, value interface{}) bool {
+			if t, ok := value.(time.Time); ok && now.Sub(t) > 10*time.Minute {
+				m.seenRequests.Delete(key)
+			}
+			return true
+		})
 	}
 }
 
@@ -120,9 +139,16 @@ func (m *AuthMiddleware) Middleware(next http.Handler) http.Handler {
 			return
 		}
 
-		// 计算公钥哈希，查找用户
+		// 计算公钥哈希，用于查找用户和生成请求指纹
 		pubKeyHashBytes := sha256.Sum256(publicKey)
 		pubKeyHash := hex.EncodeToString(pubKeyHashBytes[:])
+
+		// 生成请求指纹用于重放攻击检测
+		reqFingerprint := fmt.Sprintf("%s:%d:%s", pubKeyHash, timestamp, hex.EncodeToString(bodyHash[:]))
+		if _, loaded := m.seenRequests.LoadOrStore(reqFingerprint, time.Now()); loaded {
+			writeAuthError(w, awerrors.New(429, awerrors.CategoryAPI, "duplicate request detected", http.StatusTooManyRequests))
+			return
+		}
 
 		user, err := m.userStore.Get(r.Context(), pubKeyHash)
 		if err != nil {

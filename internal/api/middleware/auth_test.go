@@ -17,6 +17,7 @@ import (
 
 	"github.com/daifei0527/polyant/internal/storage"
 	"github.com/daifei0527/polyant/internal/storage/model"
+	"github.com/stretchr/testify/assert"
 )
 
 func newTestUserStore(t *testing.T) (storage.UserStore, *model.User, ed25519.PrivateKey) {
@@ -336,6 +337,39 @@ func TestAuthMiddleware_RequireLevel_NoLevel(t *testing.T) {
 	if rec.Code != http.StatusForbidden {
 		t.Errorf("Expected status %d for missing level, got %d", http.StatusForbidden, rec.Code)
 	}
+}
+
+func TestAuthMiddleware_ReplayAttack(t *testing.T) {
+	store, user, privKey := newTestUserStore(t)
+	authMW := NewAuthMiddleware(store)
+
+	testHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	})
+
+	body := []byte(`{"test":"data"}`)
+	timestamp := time.Now().UnixMilli()
+	bodyHash := sha256.Sum256(body)
+	signContent := fmt.Sprintf("POST\n/api/v1/test\n%d\n%s", timestamp, hex.EncodeToString(bodyHash[:]))
+	signature := ed25519.Sign(privKey, []byte(signContent))
+
+	// First request should succeed
+	req1 := httptest.NewRequest(http.MethodPost, "/api/v1/test", bytes.NewBuffer(body))
+	req1.Header.Set("X-Polyant-PublicKey", user.PublicKey)
+	req1.Header.Set("X-Polyant-Timestamp", fmt.Sprintf("%d", timestamp))
+	req1.Header.Set("X-Polyant-Signature", base64.StdEncoding.EncodeToString(signature))
+	rec1 := httptest.NewRecorder()
+	authMW.Middleware(testHandler).ServeHTTP(rec1, req1)
+	assert.Equal(t, http.StatusOK, rec1.Result().StatusCode)
+
+	// Replay request with same timestamp+body should be rejected
+	req2 := httptest.NewRequest(http.MethodPost, "/api/v1/test", bytes.NewBuffer(body))
+	req2.Header.Set("X-Polyant-PublicKey", user.PublicKey)
+	req2.Header.Set("X-Polyant-Timestamp", fmt.Sprintf("%d", timestamp))
+	req2.Header.Set("X-Polyant-Signature", base64.StdEncoding.EncodeToString(signature))
+	rec2 := httptest.NewRecorder()
+	authMW.Middleware(testHandler).ServeHTTP(rec2, req2)
+	assert.Equal(t, http.StatusTooManyRequests, rec2.Result().StatusCode)
 }
 
 func TestIsWriteOperation(t *testing.T) {
