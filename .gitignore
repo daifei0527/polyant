@@ -47,4 +47,4 @@ polyant_deploy.pub
 
 # Web
 web/admin/node_modules/
-pactl
+/pactl
