@@ -147,5 +147,5 @@ var (
 	ErrVerificationExpired = NewWithI18n(803, CategoryUser, "common.invalid_params", "verification code expired", 400)
 	ErrVerificationSent    = NewWithI18n(804, CategoryUser, "common.internal_error", "verification code already sent, please check your email", 429)
 	ErrEmailAlreadyUsed    = NewWithI18n(805, CategoryUser, "common.internal_error", "email already used by another user", 409)
-	ErrVerificationFailed  = NewWithI18n(806, CategoryAuth, "api.auth.invalid_signature", "verification failed", 401)
+	ErrVerificationFailed  = NewWithI18n(806, CategoryUser, "api.user.verification_failed", "verification failed", 401)
 )

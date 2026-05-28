@@ -14,6 +14,7 @@
   "api.user.not_found": "用户不存在",
   "api.user.updated": "用户信息更新成功",
   "api.user.info_loaded": "用户信息加载成功",
+  "api.user.verification_failed": "邮箱验证失败",
 
   "api.auth.missing": "缺少认证信息",
   "api.auth.invalid_signature": "签名验证失败",

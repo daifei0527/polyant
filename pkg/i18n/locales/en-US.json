@@ -14,6 +14,7 @@
   "api.user.not_found": "User not found",
   "api.user.updated": "User updated successfully",
   "api.user.info_loaded": "User info loaded",
+  "api.user.verification_failed": "Email verification failed",
 
   "api.auth.missing": "Missing authentication info",
   "api.auth.invalid_signature": "Invalid signature",

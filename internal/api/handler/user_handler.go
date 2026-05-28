@@ -197,7 +197,7 @@ func (h *UserHandler) VerifyEmailHandler(w http.ResponseWriter, r *http.Request)
 
 	// 验证必填字段
 	req.Email = strings.TrimSpace(strings.ToLower(req.Email))
-	if req.Email == "" || req.Code == "" {
+	if req.Email == "" || req.Code == "" || !isValidEmail(req.Email) {
 		writeError(w, awerrors.ErrInvalidParams)
 		return
 	}
