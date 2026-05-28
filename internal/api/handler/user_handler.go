@@ -231,12 +231,15 @@ func (h *UserHandler) VerifyEmailHandler(w http.ResponseWriter, r *http.Request)
 	}
 
 	if !valid {
-		writeError(w, awerrors.ErrInvalidEmailToken)
+		writeError(w, awerrors.ErrVerificationFailed)
 		return
 	}
 
 	// 检查邮箱是否已被其他用户使用
-	// 生产环境应该在 UserStore 中添加 GetByEmail 方法
+	if existingUser, _ := h.userStore.GetByEmail(r.Context(), req.Email); existingUser != nil {
+		writeError(w, awerrors.ErrEmailAlreadyUsed)
+		return
+	}
 
 	// 更新用户邮箱和验证状态
 	user.Email = req.Email
