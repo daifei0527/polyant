@@ -376,6 +376,7 @@ func (app *SeedApp) Start() error {
 		NodeID:        app.p2pHost.NodeID(),
 		NodeType:      "seed",
 		Version:       Version,
+		ApiKey:        app.config.Network.ApiKey,
 	})
 	if err != nil {
 		return fmt.Errorf("failed to create API router: %w", err)

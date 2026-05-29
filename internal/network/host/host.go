@@ -98,7 +98,7 @@ func DefaultHostConfig() *HostConfig {
 		EnableMDNS:         true,
 		EnableNAT:          true,
 		EnableRelay:        true,
-		EnableAutoRelay:    true,
+		EnableAutoRelay:    false,
 		EnableWebSocket:    true,
 		EnableQUIC:         true,
 		QUICListenPort:     0,

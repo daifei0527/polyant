@@ -278,7 +278,7 @@ func (app *UserApp) Start() error {
 		EnableMDNS:      true, // 用户节点启用 mDNS 用于本地发现
 		EnableNAT:       true,
 		EnableRelay:     true,
-		EnableAutoRelay: true, // 用户节点需要自动中继
+		EnableAutoRelay: false, // 禁用自动中继，使用配置的种子节点
 		PrivateKey:      nil,
 	}
 
@@ -418,6 +418,7 @@ func (app *UserApp) Start() error {
 		NodeID:        app.p2pHost.NodeID(),
 		NodeType:      "user",
 		Version:       Version,
+		ApiKey:        app.config.Network.ApiKey,
 	})
 	if err != nil {
 		return fmt.Errorf("failed to create API router: %w", err)
