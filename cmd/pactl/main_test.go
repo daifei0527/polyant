@@ -55,3 +55,41 @@ func TestClientCreation(t *testing.T) {
 	assert.NotNil(t, c)
 	assert.Equal(t, "http://localhost:8080", c.baseURL)
 }
+
+func TestSearchCommandRegistered(t *testing.T) {
+	// 验证 search 命令已注册为顶层命令
+	found := false
+	for _, cmd := range rootCmd.Commands() {
+		if cmd.Name() == "search" {
+			found = true
+			assert.Equal(t, "search <query>", cmd.Use)
+			assert.Equal(t, "搜索知识条目", cmd.Short)
+			break
+		}
+	}
+	assert.True(t, found, "search command should be registered as a top-level command")
+}
+
+func TestSearchCommandRequiresArgs(t *testing.T) {
+	buf := new(bytes.Buffer)
+	rootCmd.SetOut(buf)
+	rootCmd.SetErr(buf)
+	rootCmd.SetArgs([]string{"search"})
+
+	err := rootCmd.Execute()
+	assert.Error(t, err, "search command should require exactly one argument")
+}
+
+func TestSearchCommandHelp(t *testing.T) {
+	buf := new(bytes.Buffer)
+	rootCmd.SetOut(buf)
+	rootCmd.SetArgs([]string{"search", "--help"})
+
+	err := rootCmd.Execute()
+	require.NoError(t, err)
+
+	output := buf.String()
+	assert.Contains(t, output, "搜索知识库中的条目")
+	assert.Contains(t, output, "--category")
+	assert.Contains(t, output, "--limit")
+}
