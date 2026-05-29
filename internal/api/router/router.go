@@ -51,11 +51,12 @@ type Dependencies struct {
 	NodeID          string
 	NodeType        string
 	Version         string
+	ApiKey          string        // API 访问密钥
 }
 
 // NewRouter 创建并配置 HTTP 路由
 // 注册所有 API 端点，配置中间件链
-// 中间件执行顺序: RequestID -> Logging -> Recovery -> CORS -> [Auth] -> Handler
+// 中间件执行顺序: RequestID -> Logging -> Recovery -> CORS -> [ApiKey] -> [Auth] -> Handler
 func NewRouter(store *storage.Store, cfg *config.Config) (http.Handler, error) {
 	return NewRouterWithDeps(&Dependencies{
 		Store:         store,
@@ -69,6 +70,7 @@ func NewRouter(store *storage.Store, cfg *config.Config) (http.Handler, error) {
 		NodeID:        "local-node-1",
 		NodeType:      cfg.Node.Type,
 		Version:       "v0.1.0-dev",
+		ApiKey:        cfg.Network.ApiKey,
 	})
 }
 
@@ -154,8 +156,8 @@ func NewRouterWithDeps(deps *Dependencies) (http.Handler, error) {
 		sessionMgr = coreadmin.NewSessionManager(24 * time.Hour)
 	}
 
-	// 注册公开路由（无需认证）
-	registerPublicRoutes(mux, entryHandler, userHandler, categoryHandler, nodeHandler, electionHandler)
+	// 注册公开路由（通过 ApiKeyMiddleware 保护）
+	registerPublicRoutes(mux, deps.ApiKey, entryHandler, userHandler, categoryHandler, nodeHandler, electionHandler)
 
 	// 注册认证路由（需要 Ed25519 签名认证）
 	registerAuthRoutes(mux, authMW, entryHandler, userHandler, categoryHandler, nodeHandler, adminHandler, electionHandler, batchHandler, exportHandler, auditHandler, statsHandler)
@@ -186,13 +188,22 @@ func (a *remoteQuerierAdapter) SearchWithRemote(ctx context.Context, query index
 	return a.querier.SearchWithRemote(ctx, query)
 }
 
-// registerPublicRoutes 注册公开路由（无需认证）
-func registerPublicRoutes(mux *http.ServeMux, eh *handler.EntryHandler, uh *handler.UserHandler, ch *handler.CategoryHandler, nh *handler.NodeHandler, elh *handler.ElectionHandler) {
+// registerPublicRoutes 注册公开路由（通过 ApiKeyMiddleware 保护）
+// 这些路由无需 Ed25519 签名认证，但需要在请求头中携带 X-Polyant-Api-Key
+func registerPublicRoutes(mux *http.ServeMux, apiKey string, eh *handler.EntryHandler, uh *handler.UserHandler, ch *handler.CategoryHandler, nh *handler.NodeHandler, elh *handler.ElectionHandler) {
+	// 创建 API Key 中间件
+	apiKeyMW := middleware.ApiKeyMiddleware(apiKey)
+
+	// wrap 将 HandlerFunc 包装为带 ApiKey 验证的 Handler
+	wrap := func(h http.HandlerFunc) http.Handler {
+		return apiKeyMW(h)
+	}
+
 	// 搜索知识条目
-	mux.HandleFunc("/api/v1/search", eh.SearchHandler)
+	mux.Handle("/api/v1/search", wrap(eh.SearchHandler))
 
 	// 获取条目详情
-	mux.HandleFunc("/api/v1/entry/", func(w http.ResponseWriter, r *http.Request) {
+	mux.Handle("/api/v1/entry/", wrap(func(w http.ResponseWriter, r *http.Request) {
 		path := r.URL.Path
 		// 检查是否是反向链接请求: /api/v1/entry/{id}/backlinks
 		if strings.HasSuffix(path, "/backlinks") {
@@ -218,46 +229,46 @@ func registerPublicRoutes(mux *http.ServeMux, eh *handler.EntryHandler, uh *hand
 		} else {
 			http.NotFound(w, r)
 		}
-	})
+	}))
 
 	// 获取分类列表
-	mux.HandleFunc("/api/v1/categories", func(w http.ResponseWriter, r *http.Request) {
+	mux.Handle("/api/v1/categories", wrap(func(w http.ResponseWriter, r *http.Request) {
 		// 仅处理 GET 请求为公开路由
 		if r.Method == http.MethodGet {
 			ch.ListCategoriesHandler(w, r)
 		} else {
 			http.NotFound(w, r)
 		}
-	})
+	}))
 
 	// 获取分类下的条目
-	mux.HandleFunc("/api/v1/categories/", func(w http.ResponseWriter, r *http.Request) {
+	mux.Handle("/api/v1/categories/", wrap(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == http.MethodGet && strings.HasSuffix(r.URL.Path, "/entries") {
 			ch.GetCategoryEntriesHandler(w, r)
 		} else {
 			http.NotFound(w, r)
 		}
-	})
+	}))
 
 	// 获取节点状态
-	mux.HandleFunc("/api/v1/node/status", nh.GetNodeStatusHandler)
+	mux.Handle("/api/v1/node/status", wrap(nh.GetNodeStatusHandler))
 
 	// 用户注册
-	mux.HandleFunc("/api/v1/user/register", uh.RegisterHandler)
+	mux.Handle("/api/v1/user/register", wrap(uh.RegisterHandler))
 
 	// 选举公开路由（列出选举、获取选举详情）
 	if elh != nil {
 		// 列出选举 GET /api/v1/elections?status=active
-		mux.HandleFunc("/api/v1/elections", func(w http.ResponseWriter, r *http.Request) {
+		mux.Handle("/api/v1/elections", wrap(func(w http.ResponseWriter, r *http.Request) {
 			if r.Method == http.MethodGet {
 				elh.ListElectionsHandler(w, r)
 			} else {
 				http.NotFound(w, r)
 			}
-		})
+		}))
 
 		// 获取选举详情 GET /api/v1/elections/{id}
-		mux.HandleFunc("/api/v1/elections/", func(w http.ResponseWriter, r *http.Request) {
+		mux.Handle("/api/v1/elections/", wrap(func(w http.ResponseWriter, r *http.Request) {
 			// 检查是否是子资源请求
 			path := r.URL.Path
 			if strings.Contains(path, "/candidates") || strings.Contains(path, "/vote") || strings.Contains(path, "/close") {
@@ -270,7 +281,7 @@ func registerPublicRoutes(mux *http.ServeMux, eh *handler.EntryHandler, uh *hand
 			} else {
 				http.NotFound(w, r)
 			}
-		})
+		}))
 	}
 }
 
