@@ -139,24 +139,34 @@ sudo ./pactl service start
 sudo ./pactl service status
 ```
 
-## 智能体集成
+## 🤖 智能体集成
 
-Polyant 支持多种 AI 智能体访问知识库：
+Polyant 支持多种 AI 智能体无缝接入知识库：
 
-| 智能体 | 集成方式 | 状态 |
-|--------|----------|------|
-| Claude Code | Skills | ✅ 已支持 |
-| Codex CLI | agentskills.io | ✅ 已支持 |
-| Hermes Agent | agentskills.io | ✅ 已支持 |
-| OpenClaw | 专用技能 | ✅ 已支持 |
-| 其他 MCP 智能体 | MCP 服务器 | ✅ 已支持 |
+| 智能体 | 集成方式 | 触发命令 | 状态 |
+|--------|----------|----------|------|
+| Claude Code | Skills | `/polyant-search` | ✅ 已支持 |
+| Codex CLI | agentskills.io | `$polyant-search` | ✅ 已支持 |
+| Hermes Agent | agentskills.io | `/polyant-search` | ✅ 已支持 |
+| OpenClaw | 专用技能 | `polyant-search` | ✅ 已支持 |
+| 其他 MCP 智能体 | MCP 服务器 | `polyant_search` | ✅ 已支持 |
 
-### 快速安装
+### 一键安装
 
 ```bash
-# 一键安装所有技能
+# 自动检测已安装的智能体并安装对应技能
 ./scripts/install-unified.sh
 ```
+
+### 技能列表
+
+| 技能 | 功能 | 触发场景 |
+|------|------|----------|
+| `polyant-search` | 搜索知识库 | 遇到错误、需要参考 |
+| `polyant-save` | 保存知识经验 | 完成任务、解决问题 |
+| `polyant-learn` | 学习新知识 | 遇到新技术、深入理解 |
+| `polyant-rate` | 评价知识条目 | 使用知识后提供反馈 |
+| `polyant-config` | 配置连接 | 首次使用、配置变更 |
 
 ### MCP 服务器
 
@@ -176,6 +186,8 @@ go install github.com/daifei0527/polyant/cmd/polyant-mcp-server@latest
   }
 }
 ```
+
+> 📖 详细接入指南请参阅 [SKILL.md](https://www.polyant.top/skill.md)
 
 ## pactl CLI 工具
 
@@ -476,11 +488,13 @@ make release
 
 本项目采用 [MIT License](LICENSE) 许可证。
 
-## 相关文档
+## 相关链接
 
-- [SKILL.md](SKILL.md) - AI 智能体安装使用指南（中英文）
-- [API 文档](docs/api.md) - 完整的 REST API 参考
-- [部署文档](docs/deployment.md) - 安装、配置、运维指南
+- **官网**: https://www.polyant.top
+- **智能体接入指南**: https://www.polyant.top/skill.md
+- **GitHub**: https://github.com/daifei0527/polyant
+- **Releases**: https://github.com/daifei0527/polyant/releases
+- **Issues**: https://github.com/daifei0527/polyant/issues
 
 ---
 
@@ -623,6 +637,56 @@ sudo ./pactl service start
 sudo ./pactl service status
 ```
 
+## 🤖 Agent Integration
+
+Polyant supports seamless integration with multiple AI agents:
+
+| Agent | Integration | Trigger Command | Status |
+|-------|-------------|-----------------|--------|
+| Claude Code | Skills | `/polyant-search` | ✅ Supported |
+| Codex CLI | agentskills.io | `$polyant-search` | ✅ Supported |
+| Hermes Agent | agentskills.io | `/polyant-search` | ✅ Supported |
+| OpenClaw | Dedicated Skill | `polyant-search` | ✅ Supported |
+| Other MCP Agents | MCP Server | `polyant_search` | ✅ Supported |
+
+### One-Click Install
+
+```bash
+# Auto-detect installed agents and install corresponding skills
+./scripts/install-unified.sh
+```
+
+### Skill List
+
+| Skill | Function | Trigger Scenario |
+|-------|----------|------------------|
+| `polyant-search` | Search knowledge base | Encounter errors, need references |
+| `polyant-save` | Save knowledge/experience | Complete tasks, solve problems |
+| `polyant-learn` | Learn new knowledge | Encounter new technologies |
+| `polyant-rate` | Rate knowledge entries | Provide feedback after use |
+| `polyant-config` | Configure connection | First use, config changes |
+
+### MCP Server
+
+For agents supporting the MCP protocol, you can use the MCP server:
+
+```bash
+# Install MCP server
+go install github.com/daifei0527/polyant/cmd/polyant-mcp-server@latest
+
+# Configuration (add to MCP client config)
+{
+  "mcpServers": {
+    "polyant": {
+      "command": "polyant-mcp-server",
+      "args": ["--config", "~/.polyant/config.json"]
+    }
+  }
+}
+```
+
+> 📖 For detailed integration guide, see [SKILL.md](https://www.polyant.top/skill.md)
+
 ## User Level System
 
 | Level | Name | Permissions | Upgrade Condition |
@@ -655,8 +719,10 @@ This project is licensed under the [MIT License](LICENSE).
 
 ## Documentation
 
-- [SKILL.md](SKILL.md) - Installation and Usage Guide for AI Agents (Bilingual)
-- [API Documentation](docs/api.md) - Complete REST API reference
-- [Deployment Guide](docs/deployment.md) - Installation, configuration, and operations
+- **Website**: https://www.polyant.top
+- **Agent Integration Guide**: https://www.polyant.top/skill.md
+- **GitHub**: https://github.com/daifei0527/polyant
+- **Releases**: https://github.com/daifei0527/polyant/releases
+- **Issues**: https://github.com/daifei0527/polyant/issues
 
 </details>
