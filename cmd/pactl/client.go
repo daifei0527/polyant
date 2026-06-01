@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"context"
 	"crypto/sha256"
+	"crypto/tls"
+	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
@@ -21,6 +23,7 @@ type Client struct {
 	baseURL    string
 	httpClient *http.Client
 	authToken  string
+	apiKey     string // API Key for public routes
 	// Ed25519 密钥
 	publicKey  []byte
 	privateKey []byte
@@ -35,6 +38,26 @@ func NewClient(baseURL string) *Client {
 			Timeout: 30 * time.Second,
 		},
 	}
+}
+
+// NewInsecureClient 创建跳过 TLS 验证的 API 客户端（用于自签名证书）
+func NewInsecureClient(baseURL string) *Client {
+	return &Client{
+		baseURL: baseURL,
+		httpClient: &http.Client{
+			Timeout: 30 * time.Second,
+			Transport: &http.Transport{
+				TLSClientConfig: &tls.Config{
+					InsecureSkipVerify: true,
+				},
+			},
+		},
+	}
+}
+
+// SetApiKey 设置 API Key
+func (c *Client) SetApiKey(apiKey string) {
+	c.apiKey = apiKey
 }
 
 // LoadOrGenerateKeys 加载现有密钥对，如果不存在则生成新的
@@ -93,8 +116,8 @@ func (c *Client) SignRequest(method, path string, body []byte) (pubKey, timestam
 	bodyHash := sha256.Sum256(body)
 
 	// 构造签名内容
-	signContent := fmt.Sprintf("%s\n%s\n%s\n%s",
-		method, path, timestamp, hex.EncodeToString(bodyHash[:]))
+	signContent := fmt.Sprintf("%s\n%s\n%d\n%s",
+		method, path, timestampInt, hex.EncodeToString(bodyHash[:]))
 
 	// 使用 Ed25519 签名
 	sig, err := authed25519.Sign(c.privateKey, []byte(signContent))
@@ -103,7 +126,7 @@ func (c *Client) SignRequest(method, path string, body []byte) (pubKey, timestam
 	}
 
 	pubKey = authed25519.PublicKeyToString(c.publicKey)
-	signature = hex.EncodeToString(sig)
+	signature = base64.StdEncoding.EncodeToString(sig)
 
 	return pubKey, timestamp, signature, nil
 }
@@ -168,6 +191,11 @@ func (c *Client) doRequestWithAuth(ctx context.Context, method, path string, bod
 
 	if body != nil {
 		req.Header.Set("Content-Type", "application/json")
+	}
+
+	// 如果有 API Key，添加 API Key 头
+	if c.apiKey != "" {
+		req.Header.Set("X-Polyant-Api-Key", c.apiKey)
 	}
 
 	// 如果有密钥，添加认证头
@@ -309,7 +337,7 @@ type ServerStatus struct {
 // GetStatus 获取服务器状态
 func (c *Client) GetStatus(ctx context.Context) (*ServerStatus, error) {
 	var resp APIResponse
-	if err := c.Get(ctx, "/api/v1/status", &resp); err != nil {
+	if err := c.Get(ctx, "/api/v1/node/status", &resp); err != nil {
 		return nil, err
 	}
 
@@ -349,9 +377,10 @@ func (c *Client) GetStatus(ctx context.Context) (*ServerStatus, error) {
 
 // ListEntries 列出条目
 func (c *Client) ListEntries(ctx context.Context, category string, limit, offset int) ([]EntryInfo, int, error) {
-	path := fmt.Sprintf("/api/v1/entries?limit=%d&offset=%d", limit, offset)
+	// 使用搜索 API 来获取条目列表
+	path := fmt.Sprintf("/api/v1/search?q=*&limit=%d", limit)
 	if category != "" {
-		path += "&cat=" + category
+		path += "&category=" + category
 	}
 
 	var resp APIResponse

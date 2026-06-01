@@ -11,8 +11,8 @@ import (
 
 func TestClient_GetStatus(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path != "/api/v1/status" {
-			t.Errorf("Expected path /api/v1/status, got %s", r.URL.Path)
+		if r.URL.Path != "/api/v1/node/status" {
+			t.Errorf("Expected path /api/v1/node/status, got %s", r.URL.Path)
 		}
 
 		resp := APIResponse{
@@ -64,8 +64,8 @@ func TestClient_GetStatus(t *testing.T) {
 
 func TestClient_ListEntries(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path != "/api/v1/entries" {
-			t.Errorf("Expected path /api/v1/entries, got %s", r.URL.Path)
+		if r.URL.Path != "/api/v1/search" {
+			t.Errorf("Expected path /api/v1/search, got %s", r.URL.Path)
 		}
 
 		resp := APIResponse{
@@ -2018,8 +2018,8 @@ func TestClient_GetStatus_Complete(t *testing.T) {
 // TestClient_ListEntries_WithCategory 测试带分类的条目列表
 func TestClient_ListEntries_WithCategory(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// 检查分类参数 (使用 "cat" 参数名)
-		category := r.URL.Query().Get("cat")
+		// 检查分类参数 (使用 "category" 参数名)
+		category := r.URL.Query().Get("category")
 		if category != "tech" {
 			t.Errorf("Expected category 'tech', got %s", category)
 		}

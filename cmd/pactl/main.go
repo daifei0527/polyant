@@ -25,6 +25,10 @@ var (
 	keyDir string
 	// 输出语言
 	langFlag string
+	// API Key
+	apiKey string
+	// 跳过 TLS 验证
+	insecure bool
 	// 全局客户端
 	client *Client
 )
@@ -58,7 +62,11 @@ var rootCmd = &cobra.Command{
 		}
 
 		// 初始化客户端
-		client = NewClient(serverAddr)
+		if insecure {
+			client = NewInsecureClient(serverAddr)
+		} else {
+			client = NewClient(serverAddr)
+		}
 
 		// 尝试加载密钥（静默失败，某些命令不需要密钥）
 		keyPath := keyDir
@@ -66,6 +74,14 @@ var rootCmd = &cobra.Command{
 			keyPath = GetDefaultKeyDir()
 		}
 		_ = client.LoadOrGenerateKeys(keyPath) // 静默忽略错误
+
+		// 从环境变量或配置文件读取 API Key
+		apiKeyEnv := os.Getenv("POLYANT_API_KEY")
+		if apiKeyEnv != "" {
+			client.SetApiKey(apiKeyEnv)
+		} else if apiKey != "" {
+			client.SetApiKey(apiKey)
+		}
 	},
 }
 
@@ -134,6 +150,8 @@ func init() {
 	rootCmd.PersistentFlags().StringVarP(&serverAddr, "server", "s", "http://localhost:8080", "API 服务器地址")
 	rootCmd.PersistentFlags().StringVar(&keyDir, "key-dir", "", "密钥目录 (默认 ~/.polyant/keys)")
 	rootCmd.PersistentFlags().StringVar(&langFlag, "lang", "zh-CN", "Output language (zh-CN, en-US)")
+	rootCmd.PersistentFlags().StringVar(&apiKey, "api-key", "", "API Key for public routes (也可以通过 POLYANT_API_KEY 环境变量设置)")
+	rootCmd.PersistentFlags().BoolVar(&insecure, "insecure", false, "跳过 TLS 证书验证（用于自签名证书）")
 
 	// 顶层 search 命令
 	rootCmd.AddCommand(searchCmd)

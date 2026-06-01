@@ -51,6 +51,7 @@ type UpdateEntryRequest struct {
 // RegisterRequest 用户注册请求体
 type RegisterRequest struct {
 	AgentName string `json:"agent_name"`
+	PublicKey string `json:"public_key,omitempty"` // 客户端公钥（Base64 编码）
 	Email     string `json:"email,omitempty"`
 	NodeID    string `json:"node_id,omitempty"`
 }

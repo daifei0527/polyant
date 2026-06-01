@@ -399,7 +399,7 @@ func init() {
 
 	// list 子命令
 	entryCmd.AddCommand(entryListCmd)
-	entryListCmd.Flags().StringP("category", "c", "", "按分类过滤")
+	entryListCmd.Flags().String("category", "", "按分类过滤")
 	entryListCmd.Flags().IntP("limit", "l", 20, "结果数量限制")
 	entryListCmd.Flags().Int("offset", 0, "结果偏移量")
 	entryListCmd.Flags().Bool("json", false, "JSON格式输出")
@@ -412,7 +412,7 @@ func init() {
 	entryCmd.AddCommand(entryCreateCmd)
 	entryCreateCmd.Flags().StringP("title", "t", "", "条目标题")
 	entryCreateCmd.Flags().StringP("content", "C", "", "条目内容")
-	entryCreateCmd.Flags().StringP("category", "c", "other", "分类ID")
+	entryCreateCmd.Flags().String("category", "other", "分类ID")
 	entryCreateCmd.Flags().StringSlice("tags", nil, "标签（逗号分隔）")
 
 	// update 子命令
@@ -428,7 +428,7 @@ func init() {
 
 	// search 子命令
 	entryCmd.AddCommand(entrySearchCmd)
-	entrySearchCmd.Flags().StringP("category", "c", "", "按分类过滤")
+	entrySearchCmd.Flags().String("category", "", "按分类过滤")
 	entrySearchCmd.Flags().IntP("limit", "l", 20, "结果数量限制")
 
 	// rate 子命令

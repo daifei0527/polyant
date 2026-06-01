@@ -114,7 +114,11 @@ func (m *AuthMiddleware) Middleware(next http.Handler) http.Handler {
 
 		// 解码公钥
 		publicKey, err := base64.StdEncoding.DecodeString(publicKeyStr)
-		if err != nil || len(publicKey) != ed25519.PublicKeySize {
+		if err != nil {
+			writeAuthError(w, awerrors.ErrInvalidSignature)
+			return
+		}
+		if len(publicKey) != ed25519.PublicKeySize {
 			writeAuthError(w, awerrors.ErrInvalidSignature)
 			return
 		}
@@ -135,7 +139,11 @@ func (m *AuthMiddleware) Middleware(next http.Handler) http.Handler {
 
 		// 解码签名
 		signature, err := base64.StdEncoding.DecodeString(signatureStr)
-		if err != nil || len(signature) != ed25519.SignatureSize {
+		if err != nil {
+			writeAuthError(w, awerrors.ErrInvalidSignature)
+			return
+		}
+		if len(signature) != ed25519.SignatureSize {
 			writeAuthError(w, awerrors.ErrInvalidSignature)
 			return
 		}

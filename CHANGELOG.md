@@ -5,6 +5,28 @@ All notable changes to Polyant will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.2.0] - 2026-06-01
+
+### Added
+
+- **API Key 认证**: `pactl` 支持 API Key 认证，可通过 `--api-key` 参数或 `POLYANT_API_KEY` 环境变量设置
+- **Insecure TLS 模式**: `pactl` 新增 `--insecure` 参数，跳过 TLS 证书验证（用于自签名证书环境）
+- **客户端公钥注册**: 注册 API 支持客户端发送公钥，不再由服务端生成并返回私钥
+
+### Changed
+
+- **签名编码改为 Base64**: Ed25519 签名从 hex 编码改为 Base64 编码，与公钥编码格式保持一致
+- **API 路径更新**: `/api/v1/status` → `/api/v1/node/status`，条目列表改用搜索 API `/api/v1/search`
+- **注册 API 响应精简**: 不再返回 `private_key` 和 `warning` 字段，密钥由客户端自行管理
+
+### Fixed
+
+- 修复 `daemon_test.go` 中的竞态条件（使用 `atomic` 替代 `bool`）
+- 跳过会导致阻塞的 `RunAsService` 测试用例
+- 修复 `pactl` CLI flag 定义（`-c` 短选项冲突问题）
+
+---
+
 ## [2.1.0] - 2026-06-01
 
 ### Added

@@ -64,11 +64,23 @@ func (h *UserHandler) RegisterHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// 生成 Ed25519 密钥对
-	publicKey, privateKey, err := ed25519.GenerateKey(rand.Reader)
-	if err != nil {
-		writeError(w, awerrors.Wrap(0, awerrors.CategorySystem, "failed to generate keypair", 500, err))
-		return
+	var publicKey []byte
+	if req.PublicKey != "" {
+		// 使用客户端发送的公钥
+		var err error
+		publicKey, err = base64.StdEncoding.DecodeString(req.PublicKey)
+		if err != nil || len(publicKey) != ed25519.PublicKeySize {
+			writeError(w, awerrors.ErrInvalidParams)
+			return
+		}
+	} else {
+		// 兼容旧版本：服务器端生成密钥对
+		var err error
+		publicKey, _, err = ed25519.GenerateKey(rand.Reader)
+		if err != nil {
+			writeError(w, awerrors.Wrap(0, awerrors.CategorySystem, "failed to generate keypair", 500, err))
+			return
+		}
 	}
 
 	// 计算公钥哈希（用作用户唯一标识）
@@ -84,7 +96,7 @@ func (h *UserHandler) RegisterHandler(w http.ResponseWriter, r *http.Request) {
 
 	now := model.NowMillis()
 
-	// 创建用户（默认为基础用户 Lv0）
+	// 创建用户（默认为基础用户 Lv0，需要验证邮箱升级到 Lv1）
 	user := &model.User{
 		PublicKey:       base64.StdEncoding.EncodeToString(publicKey),
 		AgentName:       req.AgentName,
@@ -105,15 +117,13 @@ func (h *UserHandler) RegisterHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// 构造响应，将私钥也返回给用户（仅注册时返回一次）
+	// 构造响应
 	respData := map[string]interface{}{
 		"public_key":      created.PublicKey,
 		"public_key_hash": pubKeyHash,
-		"private_key":     base64.StdEncoding.EncodeToString(privateKey),
 		"agent_name":      created.AgentName,
 		"user_level":      created.UserLevel,
 		"email_verified":  created.EmailVerified,
-		"warning":         "please store your private key securely, it will not be shown again",
 	}
 
 	writeJSON(w, http.StatusCreated, &APIResponse{
