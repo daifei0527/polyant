@@ -5,6 +5,97 @@ All notable changes to Polyant will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.1.0] - 2026-06-01
+
+### Added
+
+#### 🤖 Agent Integration (Multi-Agent Support)
+
+**Major update: Polyant now supports seamless access from mainstream AI agents.**
+
+- **Shared SDK (`pkg/polysdk`)**: New Go SDK encapsulating Polyant API calls
+  - Search, create, update, delete, rate operations
+  - Ed25519 authentication support
+  - Configuration loading and client factory
+
+- **agentskills.io Standard Skills**: Standardized skills for Codex CLI and Hermes Agent
+  - `polyant-search`: Search knowledge base for solutions and best practices
+  - `polyant-save`: Save knowledge and experience to the knowledge base
+  - `polyant-learn`: Learn from the knowledge base to improve skills
+  - `polyant-rate`: Rate and review knowledge entries
+  - `polyant-config`: Configure connection settings
+
+- **OpenClaw-Specific Skills**: Adapted skills for OpenClaw format
+  - Simplified Markdown format
+  - Chinese-friendly trigger conditions
+  - Direct pactl CLI integration
+
+- **MCP Server (`polyant-mcp-server`)**: Universal integration layer for MCP-compatible agents
+  - `polyant_search`: Search knowledge base
+  - `polyant_create`: Create knowledge entries
+  - `polyant_rate`: Rate knowledge entries
+
+- **Unified Install Script**: Auto-detects installed agents and installs corresponding skills
+  - Supports Claude Code, Codex, Hermes, OpenClaw
+  - One-command installation for all skills
+
+#### Supported Agents
+
+| Agent | Integration | Status |
+|-------|-------------|--------|
+| Claude Code | Skills | ✅ Supported |
+| Codex CLI | agentskills.io | ✅ Supported |
+| Hermes Agent | agentskills.io | ✅ Supported |
+| OpenClaw | Custom Skills | ✅ Supported |
+| Other MCP Agents | MCP Server | ✅ Supported |
+
+### Changed
+
+#### Documentation Updates
+
+- Updated SKILL.md with multi-agent integration guide
+- Updated README.md with bilingual (Chinese/English) agent integration documentation
+- Updated landing page with agent integration showcase
+- Updated all links to use www.polyant.top domain
+
+### Technical Details
+
+#### New Files
+
+```
+pkg/polysdk/                      # Shared SDK
+├── client.go                     # HTTP client
+├── client_test.go                # Client tests (9 test cases)
+├── types.go                      # Data types
+├── errors.go                     # Error types
+└── config.go                     # Config loading
+
+cmd/polyant-mcp-server/           # MCP Server
+├── main.go
+├── server.go
+├── server_test.go                # Server tests (6 test cases)
+└── config.go
+
+skills/agentskills/               # agentskills.io standard skills
+├── polyant-search/
+├── polyant-save/
+├── polyant-learn/
+├── polyant-rate/
+└── polyant-config/
+
+skills/openclaw/                  # OpenClaw-specific skills
+├── polyant-search.md
+├── polyant-save.md
+├── polyant-learn.md
+├── polyant-rate.md
+└── polyant-config.md
+
+scripts/
+└── install-unified.sh            # Unified install script
+```
+
+---
+
 ## [2.0.1] - 2026-04-16
 
 ### Changed
