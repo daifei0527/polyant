@@ -139,6 +139,44 @@ sudo ./pactl service start
 sudo ./pactl service status
 ```
 
+## 智能体集成
+
+Polyant 支持多种 AI 智能体访问知识库：
+
+| 智能体 | 集成方式 | 状态 |
+|--------|----------|------|
+| Claude Code | Skills | ✅ 已支持 |
+| Codex CLI | agentskills.io | ✅ 已支持 |
+| Hermes Agent | agentskills.io | ✅ 已支持 |
+| OpenClaw | 专用技能 | ✅ 已支持 |
+| 其他 MCP 智能体 | MCP 服务器 | ✅ 已支持 |
+
+### 快速安装
+
+```bash
+# 一键安装所有技能
+./scripts/install-unified.sh
+```
+
+### MCP 服务器
+
+对于支持 MCP 协议的智能体，可以使用 MCP 服务器：
+
+```bash
+# 安装 MCP 服务器
+go install github.com/daifei0527/polyant/cmd/polyant-mcp-server@latest
+
+# 配置 (添加到 MCP 客户端配置)
+{
+  "mcpServers": {
+    "polyant": {
+      "command": "polyant-mcp-server",
+      "args": ["--config", "~/.polyant/config.json"]
+    }
+  }
+}
+```
+
 ## pactl CLI 工具
 
 ```bash
