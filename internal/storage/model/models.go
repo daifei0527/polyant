@@ -8,6 +8,8 @@ import (
 	"fmt"
 	"strings"
 	"time"
+
+	"github.com/daifei0527/polyant/pkg/crypto"
 )
 
 // ==================== 用户等级常量 ====================
@@ -295,9 +297,10 @@ type SearchResult struct {
 
 // ==================== 辅助函数 ====================
 
-// generateID 生成一个简单的唯一ID
+// generateID 生成一个 UUID v4 格式的唯一标识符。
+// 使用 crypto/rand 保证跨协程/跨节点的唯一性与不可预测性（满足 P0: entry-id-uuid-v4）。
 func generateID() string {
-	return fmt.Sprintf("%d", time.Now().UnixNano())
+	return crypto.GenerateUUID()
 }
 
 // IsCJK 判断一个字符是否为中日韩文字

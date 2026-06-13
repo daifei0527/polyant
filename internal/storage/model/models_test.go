@@ -1,6 +1,7 @@
 package model
 
 import (
+	"strconv"
 	"testing"
 )
 
@@ -375,11 +376,37 @@ func TestGenerateID(t *testing.T) {
 	id2 := generateID()
 
 	if id1 == "" {
-		t.Error("Generated ID should not be empty")
+		t.Fatal("Generated ID should not be empty")
+	}
+	if id1 == id2 {
+		t.Fatal("Generated IDs should be unique")
+	}
+}
+
+// TestGenerateID_IsUUIDv4 asserts generateID now returns UUID v4, not a
+// nanosecond timestamp (P0: entry-id-uuid-v4).
+func TestGenerateID_IsUUIDv4(t *testing.T) {
+	id := generateID()
+
+	// Format: xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx (36 chars)
+	if len(id) != 36 {
+		t.Fatalf("expected UUID length 36, got %d (%q)", len(id), id)
+	}
+	if id[8] != '-' || id[13] != '-' || id[18] != '-' || id[23] != '-' {
+		t.Fatalf("not UUID format (bad hyphens): %q", id)
+	}
+	if id[14] != '4' {
+		t.Fatalf("not UUID v4 (version char = %q): %q", string(id[14]), id)
+	}
+	switch id[19] {
+	case '8', '9', 'a', 'b':
+	default:
+		t.Fatalf("invalid UUID variant char %q: %q", string(id[19]), id)
 	}
 
-	if id1 == id2 {
-		t.Error("Generated IDs should be unique")
+	// Must not be a bare integer (the old nanosecond form).
+	if _, err := strconv.ParseInt(id, 10, 64); err == nil {
+		t.Fatalf("generateID still returns a bare integer: %q", id)
 	}
 }
 
