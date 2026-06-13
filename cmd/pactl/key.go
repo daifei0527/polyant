@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/base64"
 	"encoding/hex"
 	"fmt"
 	"os"
@@ -76,20 +77,18 @@ var keyShowCmd = &cobra.Command{
 
 		switch format {
 		case "hex":
-			// 先解码 base64，再转为 hex
-			decoded, err := hex.DecodeString(pubKey)
+			h, err := pubKeyToHex(pubKey)
 			if err != nil {
 				return fmt.Errorf("解码公钥失败: %w", err)
 			}
-			fmt.Println(hex.EncodeToString(decoded))
+			fmt.Println(h)
 		case "base64":
 			fmt.Println(pubKey)
 		default:
 			fmt.Println("公钥信息:")
 			fmt.Printf("  Base64: %s\n", pubKey)
-			decoded, err := hex.DecodeString(pubKey)
-			if err == nil {
-				fmt.Printf("  Hex:     %s\n", hex.EncodeToString(decoded))
+			if h, err := pubKeyToHex(pubKey); err == nil {
+				fmt.Printf("  Hex:     %s\n", h)
 			}
 			fmt.Printf("  长度:    %d 字节\n", 32) // Ed25519 公钥固定 32 字节
 		}
@@ -122,11 +121,11 @@ var keyExportCmd = &cobra.Command{
 
 		switch format {
 		case "hex":
-			decoded, err := hex.DecodeString(pubKey)
+			h, err := pubKeyToHex(pubKey)
 			if err != nil {
 				return fmt.Errorf("解码公钥失败: %w", err)
 			}
-			content = hex.EncodeToString(decoded)
+			content = h
 		default:
 			content = pubKey
 		}
@@ -174,6 +173,17 @@ var keyStatusCmd = &cobra.Command{
 
 		return nil
 	},
+}
+
+// pubKeyToHex converts a base64-encoded Ed25519 public key to lowercase hex.
+// The client stores/returns the public key as base64, so we must base64-decode
+// before hex-encoding (the previous code hex-decoded a base64 string, which fails).
+func pubKeyToHex(pubKeyBase64 string) (string, error) {
+	b, err := base64.StdEncoding.DecodeString(pubKeyBase64)
+	if err != nil {
+		return "", fmt.Errorf("decode public key: %w", err)
+	}
+	return hex.EncodeToString(b), nil
 }
 
 func init() {
