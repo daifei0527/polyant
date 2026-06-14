@@ -479,6 +479,7 @@ func TestUserHandler_SendVerificationCodeHandler_InvalidEmail(t *testing.T) {
 
 func TestUserHandler_VerifyEmailHandler(t *testing.T) {
 	handler, store := newTestUserHandler(t)
+	handler.SetDevReturnVerificationCode(true) // test needs the code to complete the verify flow
 
 	// Create test user
 	pubKey, _, _ := ed25519.GenerateKey(rand.Reader)

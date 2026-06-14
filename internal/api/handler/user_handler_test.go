@@ -212,3 +212,53 @@ func TestUserHandler_RateEntryHandler_NoAuth(t *testing.T) {
 
 	assert.Equal(t, http.StatusUnauthorized, rec.Result().StatusCode)
 }
+
+// ---------- SendVerificationCodeHandler: verify-code leak gate (P1.1) ----------
+
+// TestSendVerificationCodeHandler_CodeNotLeakedByDefault: with the dev flag off
+// (the default) the response MUST NOT contain the plaintext code.
+func TestSendVerificationCodeHandler_CodeNotLeakedByDefault(t *testing.T) {
+	handler, store := newTestUserHandler(t)
+	user, _ := createTestUser(t, store, "leak-agent", model.UserLevelLv0)
+
+	body, _ := json.Marshal(map[string]string{"email": "leak@example.com"})
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/user/send-verification", bytes.NewBuffer(body))
+	req.Header.Set("Content-Type", "application/json")
+	req = req.WithContext(setUserInContext(req.Context(), user))
+	rec := httptest.NewRecorder()
+
+	handler.SendVerificationCodeHandler(rec, req)
+
+	assert.Equal(t, http.StatusOK, rec.Result().StatusCode)
+
+	var resp APIResponse
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &resp))
+	data, ok := resp.Data.(map[string]interface{})
+	require.True(t, ok, "data is a map")
+
+	_, hasCode := data["code"]
+	assert.False(t, hasCode, "verification code must NOT be leaked by default")
+}
+
+// TestSendVerificationCodeHandler_CodeReturnedInDevMode: with the dev flag on
+// (test environments) the code IS returned so tests can complete the flow.
+func TestSendVerificationCodeHandler_CodeReturnedInDevMode(t *testing.T) {
+	handler, store := newTestUserHandler(t)
+	handler.SetDevReturnVerificationCode(true)
+	user, _ := createTestUser(t, store, "dev-agent", model.UserLevelLv0)
+
+	body, _ := json.Marshal(map[string]string{"email": "dev@example.com"})
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/user/send-verification", bytes.NewBuffer(body))
+	req.Header.Set("Content-Type", "application/json")
+	req = req.WithContext(setUserInContext(req.Context(), user))
+	rec := httptest.NewRecorder()
+
+	handler.SendVerificationCodeHandler(rec, req)
+
+	var resp APIResponse
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &resp))
+	data, _ := resp.Data.(map[string]interface{})
+	code, ok := data["code"].(string)
+	assert.True(t, ok, "code must be present in dev mode")
+	assert.NotEmpty(t, code)
+}

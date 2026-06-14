@@ -131,6 +131,13 @@ type AdminConfig struct {
 	Listen  string `json:"listen"`  // 监听地址，默认 127.0.0.1:18531
 }
 
+// DevConfig 开发/测试专用配置。
+// 这些选项在生产环境中必须保持默认（关闭）。
+type DevConfig struct {
+	// ReturnVerificationCode 为 true 时，发送验证码接口在响应中返回明文验证码，
+	// 仅供开发/测试使用（默认 false：验证码只通过邮件下发，绝不回传）。
+	ReturnVerificationCode bool `json:"return_verification_code"`
+}
 
 // Config 顶层配置结构体
 // 包含所有子模块的配置
@@ -147,7 +154,8 @@ type Config struct {
 	API     APIConfig      `json:"api"`     // API 配置
 	Storage StorageConfig  `json:"storage"` // 存储配置
 	I18n    I18nConfig     `json:"i18n"`    // 国际化
-	Admin   AdminConfig  `json:"admin"`   // 管理页面配置
+	Admin   AdminConfig    `json:"admin"`   // 管理页面配置
+	Dev     DevConfig      `json:"dev"`     // 开发/测试专用（默认全关闭）
 }
 
 // ==================== 配置管理函数 ====================

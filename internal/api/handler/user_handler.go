@@ -27,6 +27,7 @@ type UserHandler struct {
 	ratingStore     storage.RatingStore
 	emailService    *email.Service
 	verificationMgr *email.VerificationManager
+	devReturnCode   bool // 仅 dev/测试：SendVerificationCodeHandler 是否在响应中回传验证码
 }
 
 // NewUserHandler 创建新的 UserHandler 实例
@@ -46,6 +47,12 @@ func NewUserHandler(
 		emailService:    emailService,
 		verificationMgr: verificationMgr,
 	}
+}
+
+// SetDevReturnVerificationCode 控制发送验证码接口是否在响应中返回明文验证码。
+// 默认 false（安全：验证码只通过邮件下发）。仅在开发/测试环境启用。
+func (h *UserHandler) SetDevReturnVerificationCode(v bool) {
+	h.devReturnCode = v
 }
 
 // RegisterHandler 用户注册
@@ -184,14 +191,19 @@ func (h *UserHandler) SendVerificationCodeHandler(w http.ResponseWriter, r *http
 		}
 	}
 
+	respData := map[string]interface{}{
+		"email":      req.Email,
+		"expires_in": 1800, // 30 分钟
+	}
+	if h.devReturnCode {
+		// 仅 dev/测试：回传验证码以便测试完成验证流程。生产环境必须保持关闭。
+		respData["code"] = code
+	}
+
 	writeJSON(w, http.StatusOK, &APIResponse{
 		Code:    0,
 		Message: "verification code sent to your email",
-		Data: map[string]interface{}{
-			"email":      req.Email,
-			"expires_in": 1800, // 30 分钟
-			"code":       code, // 仅用于测试，生产环境应删除此字段
-		},
+		Data:    respData,
 	})
 }
 

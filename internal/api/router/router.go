@@ -35,23 +35,24 @@ type EntryPusher interface {
 // Dependencies 路由依赖注入容器
 // 包含所有 handler 需要的存储和引擎实例
 type Dependencies struct {
-	Store           *storage.Store
-	EntryStore      storage.EntryStore
-	UserStore       storage.UserStore
-	RatingStore     storage.RatingStore
-	CategoryStore   storage.CategoryStore
-	SearchEngine    index.SearchEngine
-	Backlink        storage.BacklinkIndex
-	EmailService    *email.Service
-	VerificationMgr *email.VerificationManager
-	RemoteQuerier   RemoteQuerier // 远程查询服务
-	EntryPusher     EntryPusher   // 条目推送服务
-	KVStore         kv.Store      // KV 存储（选举等功能需要）
-	SessionManager  *coreadmin.SessionManager
-	NodeID          string
-	NodeType        string
-	Version         string
-	ApiKey          string        // API 访问密钥
+	Store                     *storage.Store
+	EntryStore                storage.EntryStore
+	UserStore                 storage.UserStore
+	RatingStore               storage.RatingStore
+	CategoryStore             storage.CategoryStore
+	SearchEngine              index.SearchEngine
+	Backlink                  storage.BacklinkIndex
+	EmailService              *email.Service
+	VerificationMgr           *email.VerificationManager
+	RemoteQuerier             RemoteQuerier // 远程查询服务
+	EntryPusher               EntryPusher   // 条目推送服务
+	KVStore                   kv.Store      // KV 存储（选举等功能需要）
+	SessionManager            *coreadmin.SessionManager
+	NodeID                    string
+	NodeType                  string
+	Version                   string
+	ApiKey                    string // API 访问密钥
+	DevReturnVerificationCode bool   // dev/测试：发送验证码接口是否回传验证码（默认 false）
 }
 
 // NewRouter 创建并配置 HTTP 路由
@@ -59,18 +60,19 @@ type Dependencies struct {
 // 中间件执行顺序: RequestID -> Logging -> Recovery -> CORS -> [ApiKey] -> [Auth] -> Handler
 func NewRouter(store *storage.Store, cfg *config.Config) (http.Handler, error) {
 	return NewRouterWithDeps(&Dependencies{
-		Store:         store,
-		EntryStore:    store.Entry,
-		UserStore:     store.User,
-		RatingStore:   store.Rating,
-		CategoryStore: store.Category,
-		SearchEngine:  store.Search,
-		Backlink:      store.Backlink,
-		KVStore:       store.KVStore(),
-		NodeID:        "local-node-1",
-		NodeType:      cfg.Node.Type,
-		Version:       "v0.1.0-dev",
-		ApiKey:        cfg.Network.ApiKey,
+		Store:                     store,
+		EntryStore:                store.Entry,
+		UserStore:                 store.User,
+		RatingStore:               store.Rating,
+		CategoryStore:             store.Category,
+		SearchEngine:              store.Search,
+		Backlink:                  store.Backlink,
+		KVStore:                   store.KVStore(),
+		NodeID:                    "local-node-1",
+		NodeType:                  cfg.Node.Type,
+		Version:                   "v0.1.0-dev",
+		ApiKey:                    cfg.Network.ApiKey,
+		DevReturnVerificationCode: cfg.Dev.ReturnVerificationCode,
 	})
 }
 
@@ -103,6 +105,7 @@ func NewRouterWithDeps(deps *Dependencies) (http.Handler, error) {
 		deps.EmailService,
 		deps.VerificationMgr,
 	)
+	userHandler.SetDevReturnVerificationCode(deps.DevReturnVerificationCode)
 	categoryHandler := handler.NewCategoryHandler(deps.CategoryStore, deps.EntryStore)
 	nodeHandler := handler.NewNodeHandler(deps.NodeID, deps.NodeType, deps.Version, deps.EntryStore)
 
