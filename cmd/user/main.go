@@ -419,6 +419,7 @@ func (app *UserApp) Start() error {
 		NodeType:      "user",
 		Version:       Version,
 		ApiKey:        app.config.Network.ApiKey,
+		CORSConfig:    router.CORSConfigFromConfig(app.config),
 	})
 	if err != nil {
 		return fmt.Errorf("failed to create API router: %w", err)

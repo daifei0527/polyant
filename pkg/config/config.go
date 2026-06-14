@@ -108,8 +108,10 @@ type SMTPConfig struct {
 
 // APIConfig API 服务配置
 type APIConfig struct {
-	Enabled bool `json:"enabled"` // 是否启用 API 服务
-	CORS    bool `json:"cors"`    // 是否启用 CORS
+	Enabled              bool     `json:"enabled"`                // 是否启用 API 服务
+	CORS                 bool     `json:"cors"`                   // 是否启用 CORS
+	CORSAllowOrigins     []string `json:"cors_allow_origins"`     // 允许的源，空则等价于 ["*"]
+	CORSAllowCredentials bool     `json:"cors_allow_credentials"` // 是否允许携带凭证（与 "*" 互斥）
 }
 
 // StorageConfig 存储配置

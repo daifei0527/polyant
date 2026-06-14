@@ -23,7 +23,7 @@ func DefaultCORSConfig() CORSConfig {
 		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"},
 		AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type", "X-Polyant-PublicKey", "X-Polyant-Timestamp", "X-Polyant-Signature"},
 		ExposedHeaders:   []string{"Content-Length", "X-Request-Id"},
-		AllowCredentials: true,
+		AllowCredentials: false, // "*" + credentials is invalid per CORS spec
 		MaxAge:           86400, // 24小时
 	}
 }
@@ -38,6 +38,16 @@ type CORSMiddleware struct {
 func NewCORSMiddleware(config CORSConfig) *CORSMiddleware {
 	if len(config.AllowedOrigins) == 0 {
 		config = DefaultCORSConfig()
+	}
+	// CORS 规范不允许通配符 origin 与 credentials 同时启用——浏览器会拒绝。
+	// 作为防线，即便配置错误也强制降级。
+	if config.AllowCredentials {
+		for _, o := range config.AllowedOrigins {
+			if o == "*" {
+				config.AllowCredentials = false
+				break
+			}
+		}
 	}
 	return &CORSMiddleware{
 		config: config,

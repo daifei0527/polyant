@@ -51,8 +51,9 @@ type Dependencies struct {
 	NodeID                    string
 	NodeType                  string
 	Version                   string
-	ApiKey                    string // API 访问密钥
-	DevReturnVerificationCode bool   // dev/测试：发送验证码接口是否回传验证码（默认 false）
+	ApiKey                    string                // API 访问密钥
+	DevReturnVerificationCode bool                  // dev/测试：发送验证码接口是否回传验证码（默认 false）
+	CORSConfig                middleware.CORSConfig // 可选；为零值时使用 DefaultCORSConfig
 }
 
 // NewRouter 创建并配置 HTTP 路由
@@ -73,6 +74,7 @@ func NewRouter(store *storage.Store, cfg *config.Config) (http.Handler, error) {
 		Version:                   "v0.1.0-dev",
 		ApiKey:                    cfg.Network.ApiKey,
 		DevReturnVerificationCode: cfg.Dev.ReturnVerificationCode,
+		CORSConfig:                CORSConfigFromConfig(cfg),
 	})
 }
 
@@ -145,8 +147,12 @@ func NewRouterWithDeps(deps *Dependencies) (http.Handler, error) {
 	// 创建认证中间件
 	authMW := middleware.NewAuthMiddleware(deps.UserStore)
 
-	// 创建 CORS 中间件（开发环境配置）
-	corsMW := middleware.NewCORSMiddleware(middleware.DefaultCORSConfig())
+	// 创建 CORS 中间件（使用注入配置，缺省退化为安全的 DefaultCORSConfig）
+	corsConf := deps.CORSConfig
+	if len(corsConf.AllowedOrigins) == 0 && len(corsConf.AllowedMethods) == 0 {
+		corsConf = middleware.DefaultCORSConfig()
+	}
+	corsMW := middleware.NewCORSMiddleware(corsConf)
 
 	// 创建速率限制中间件
 	rateLimitMW := middleware.NewRateLimitMiddleware(middleware.DefaultRateLimitConfig())
@@ -189,6 +195,19 @@ type remoteQuerierAdapter struct {
 
 func (a *remoteQuerierAdapter) SearchWithRemote(ctx context.Context, query index.SearchQuery) (*index.SearchResult, error) {
 	return a.querier.SearchWithRemote(ctx, query)
+}
+
+// CORSConfigFromConfig 根据应用配置构建 CORS 中间件配置。
+// 未配置 origins 时退化为安全的通配符默认值（credentials=false）。
+func CORSConfigFromConfig(cfg *config.Config) middleware.CORSConfig {
+	c := middleware.DefaultCORSConfig()
+	if cfg != nil && len(cfg.API.CORSAllowOrigins) > 0 {
+		c.AllowedOrigins = cfg.API.CORSAllowOrigins
+	}
+	if cfg != nil && cfg.API.CORSAllowCredentials {
+		c.AllowCredentials = true
+	}
+	return c
 }
 
 // registerPublicRoutes 注册公开路由（通过 ApiKeyMiddleware 保护）

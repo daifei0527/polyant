@@ -20,8 +20,8 @@ func TestDefaultCORSConfig(t *testing.T) {
 		t.Error("应配置允许的方法")
 	}
 
-	if !cfg.AllowCredentials {
-		t.Error("默认应允许凭证")
+	if cfg.AllowCredentials {
+		t.Error("默认不应允许凭证（通配符 origin 与 credentials 不能同时启用）")
 	}
 
 	if cfg.MaxAge != 86400 {
@@ -200,5 +200,41 @@ func TestIsOriginAllowed(t *testing.T) {
 		if result != tt.expected {
 			t.Errorf("isOriginAllowed(%v, %q) = %v, want %v", tt.origins, tt.request, result, tt.expected)
 		}
+	}
+}
+
+// ==================== CORS 规范有效性测试 (P1.8) ====================
+
+// TestDefaultCORSConfig_SpecValid: the default must not combine "*" with
+// AllowCredentials=true (browsers reject that combination).
+func TestDefaultCORSConfig_SpecValid(t *testing.T) {
+	c := DefaultCORSConfig()
+	if c.AllowCredentials {
+		for _, o := range c.AllowedOrigins {
+			if o == "*" {
+				t.Fatal("default CORS combines wildcard origin with credentials, which the CORS spec forbids")
+			}
+		}
+	}
+}
+
+// TestCORSMiddleware_WildcardWithCredentialsDowngraded: even if a caller
+// (or config) asks for "*" + credentials, the middleware must drop credentials.
+func TestCORSMiddleware_WildcardWithCredentialsDowngraded(t *testing.T) {
+	mw := NewCORSMiddleware(CORSConfig{
+		AllowedOrigins:   []string{"*"},
+		AllowCredentials: true,
+	})
+
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	req.Header.Set("Origin", "https://example.com")
+	rec := httptest.NewRecorder()
+	mw.Middleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {})).ServeHTTP(rec, req)
+
+	if got := rec.Header().Get("Access-Control-Allow-Credentials"); got != "" {
+		t.Errorf("wildcard origin must not advertise credentials, got %q", got)
+	}
+	if got := rec.Header().Get("Access-Control-Allow-Origin"); got != "*" {
+		t.Errorf("expected wildcard origin, got %q", got)
 	}
 }
