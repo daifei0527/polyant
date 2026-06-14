@@ -55,7 +55,8 @@ func (p *Protocol) handleStream(s network.Stream) {
 			return
 		}
 
-		response, err := p.processMessage(ctx, protoMsg)
+		remotePeer := s.Conn().RemotePeer()
+		response, err := p.processMessage(ctx, remotePeer, protoMsg)
 		if err != nil {
 			return
 		}
@@ -68,7 +69,15 @@ func (p *Protocol) handleStream(s network.Stream) {
 	}
 }
 
-func (p *Protocol) processMessage(ctx context.Context, protoMsg *awsp.Message) (*awsp.Message, error) {
+// mirrorDialTarget 返回镜像数据流应拨号的目标 peer。
+// 恒为请求方的真实 peer（从 stream.Conn().RemotePeer() 传入），绝不是
+// MirrorRequest.RequestID（后者仅是同步关联 id，不是 peer id——旧代码用
+// peer.ID(r.RequestID) 拨号必败，导致全量镜像同步失效）。
+func mirrorDialTarget(requesterPeer peer.ID, _ *MirrorRequest) peer.ID {
+	return requesterPeer
+}
+
+func (p *Protocol) processMessage(ctx context.Context, remotePeer peer.ID, protoMsg *awsp.Message) (*awsp.Message, error) {
 	// Convert proto message to domain message for handler
 	msg := fromProtoMessage(protoMsg)
 
@@ -118,7 +127,7 @@ func (p *Protocol) processMessage(ctx context.Context, protoMsg *awsp.Message) (
 					Header:  NewMessageHeader(MessageTypeMirrorData),
 					Payload: data,
 				})
-				s, _ := p.host.NewStream(ctx, peer.ID(r.RequestID), AWSPProtocolID)
+				s, _ := p.host.NewStream(ctx, mirrorDialTarget(remotePeer, r), AWSPProtocolID)
 				if s != nil {
 					writer := NewProtobufStreamWriter(s)
 					writer.WriteMessage(protoMsg)
