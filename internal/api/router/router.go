@@ -40,6 +40,7 @@ type Dependencies struct {
 	VerificationMgr           *email.VerificationManager
 	RemoteQuerier             RemoteQuerier       // 远程查询服务
 	EntryPusher               handler.EntryPusher // 条目推送服务
+	SyncTrigger               handler.SyncTrigger // /node/sync 增量同步触发器（可选）
 	KVStore                   kv.Store            // KV 存储（选举等功能需要）
 	SessionManager            *coreadmin.SessionManager
 	NodeID                    string
@@ -128,6 +129,9 @@ func NewRouterWithDeps(deps *Dependencies) (*Router, error) {
 	userHandler.SetDevReturnVerificationCode(deps.DevReturnVerificationCode)
 	categoryHandler := handler.NewCategoryHandler(deps.CategoryStore, deps.EntryStore)
 	nodeHandler := handler.NewNodeHandler(deps.NodeID, deps.NodeType, deps.Version, deps.EntryStore)
+	if deps.SyncTrigger != nil {
+		nodeHandler.SetSyncTrigger(deps.SyncTrigger)
+	}
 
 	// 创建管理员和选举 handler
 	var adminHandler *handler.AdminHandler

@@ -1,10 +1,12 @@
 package handler
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -119,4 +121,37 @@ func TestNodeHandler_SetLastSync(t *testing.T) {
 	data, ok := resp.Data.(map[string]interface{})
 	require.True(t, ok, "response data should be a map")
 	assert.Equal(t, float64(1234567890), data["last_sync"])
+}
+
+// ========== SyncTrigger wiring (P1.6) ==========
+
+// fakeSyncTrigger records whether IncrementalSync was invoked (race-free).
+type fakeSyncTrigger struct {
+	called chan struct{}
+}
+
+func (f *fakeSyncTrigger) IncrementalSync(ctx context.Context) error {
+	close(f.called)
+	return nil
+}
+
+// TestNodeHandler_TriggerSyncHandler_InvokesIncrementalSync: /node/sync must
+// actually call IncrementalSync on the injected trigger (was a no-op).
+func TestNodeHandler_TriggerSyncHandler_InvokesIncrementalSync(t *testing.T) {
+	h := NewNodeHandler("n1", "local", "v", nil)
+	trig := &fakeSyncTrigger{called: make(chan struct{})}
+	h.SetSyncTrigger(trig)
+
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/node/sync", nil)
+	rec := httptest.NewRecorder()
+	h.TriggerSyncHandler(rec, req)
+
+	require.Equal(t, http.StatusOK, rec.Code)
+
+	select {
+	case <-trig.called:
+		// IncrementalSync was invoked
+	case <-time.After(2 * time.Second):
+		t.Fatal("TriggerSyncHandler did not invoke IncrementalSync within timeout")
+	}
 }

@@ -415,6 +415,7 @@ func (app *UserApp) Start() error {
 		Backlink:      app.store.Backlink,
 		RemoteQuerier: remoteQueryService,
 		EntryPusher:   app.pushService,
+		SyncTrigger:   app.syncEngine,
 		KVStore:       app.store.KVStore(),
 		NodeID:        app.p2pHost.NodeID(),
 		NodeType:      "user",
