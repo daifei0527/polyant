@@ -707,8 +707,8 @@ func TestRatingStoreGetByEntry(t *testing.T) {
 	}
 }
 
-// TestRatingStoreUpdateEntryScore 测试计算加权平均分
-func TestRatingStoreUpdateEntryScore(t *testing.T) {
+// TestRatingStoreComputeEntryScore 测试计算加权平均分
+func TestRatingStoreComputeEntryScore(t *testing.T) {
 	store := NewMemoryStore()
 	ratingStore := kv.NewRatingStore(store)
 
@@ -729,9 +729,9 @@ func TestRatingStoreUpdateEntryScore(t *testing.T) {
 
 	// 计算加权平均
 	// (4.0 * 1.0 + 5.0 * 2.0) / (1.0 + 2.0) = 14.0 / 3.0 ≈ 4.67
-	avg, err := ratingStore.UpdateEntryScore("entry-score")
+	avg, err := ratingStore.ComputeEntryScore("entry-score")
 	if err != nil {
-		t.Fatalf("UpdateEntryScore 失败: %v", err)
+		t.Fatalf("ComputeEntryScore 失败: %v", err)
 	}
 
 	expected := (4.0*1.0 + 5.0*2.0) / 3.0
@@ -740,14 +740,14 @@ func TestRatingStoreUpdateEntryScore(t *testing.T) {
 	}
 }
 
-// TestRatingStoreUpdateEntryScoreNoRatings 测试无评分时的计算
-func TestRatingStoreUpdateEntryScoreNoRatings(t *testing.T) {
+// TestRatingStoreComputeEntryScoreNoRatings 测试无评分时的计算
+func TestRatingStoreComputeEntryScoreNoRatings(t *testing.T) {
 	store := NewMemoryStore()
 	ratingStore := kv.NewRatingStore(store)
 
-	avg, err := ratingStore.UpdateEntryScore("no-ratings")
+	avg, err := ratingStore.ComputeEntryScore("no-ratings")
 	if err != nil {
-		t.Fatalf("UpdateEntryScore 失败: %v", err)
+		t.Fatalf("ComputeEntryScore 失败: %v", err)
 	}
 
 	if avg != 0 {

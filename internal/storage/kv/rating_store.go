@@ -106,9 +106,11 @@ func (rs *RatingStore) ListAllRatings() ([]*model.Rating, error) {
 	return ratings, nil
 }
 
-// UpdateEntryScore 重新计算指定条目的加权平均评分
-// 返回新的加权平均分
-func (rs *RatingStore) UpdateEntryScore(entryId string) (float64, error) {
+// ComputeEntryScore 重新计算指定条目的加权平均评分。
+// 注意：本方法仅"计算"并返回分数，不持久化到条目；调用方需自行将返回值
+// 写回 entry.Score 并保存（原方法名 UpdateEntryScore 有误导性——它并不 update 存储）。
+// 返回新的加权平均分；无评分时返回 0。
+func (rs *RatingStore) ComputeEntryScore(entryId string) (float64, error) {
 	ratings, err := rs.GetRatingsByEntry(entryId)
 	if err != nil {
 		return 0, fmt.Errorf("failed to get ratings for score update: %w", err)
