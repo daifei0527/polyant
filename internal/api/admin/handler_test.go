@@ -19,7 +19,7 @@ import (
 func TestCreateSession_LocalOnly(t *testing.T) {
 	store, _ := storage.NewMemoryStore()
 	sessionMgr := coreadmin.NewSessionManager(time.Hour)
-	handler := NewSessionHandler(sessionMgr, store.User)
+	handler := NewSessionHandler(sessionMgr, store.User, "127.0.0.1:18531")
 
 	// Create a test user first
 	testUser := &model.User{
@@ -61,7 +61,7 @@ func TestCreateSession_LocalOnly(t *testing.T) {
 func TestCreateSession_Valid(t *testing.T) {
 	store, _ := storage.NewMemoryStore()
 	sessionMgr := coreadmin.NewSessionManager(time.Hour)
-	handler := NewSessionHandler(sessionMgr, store.User)
+	handler := NewSessionHandler(sessionMgr, store.User, "127.0.0.1:18531")
 
 	// Create a test user first
 	testUser := &model.User{
@@ -109,7 +109,7 @@ func TestCreateSession_Valid(t *testing.T) {
 func TestCreateSession_UserNotFound(t *testing.T) {
 	store, _ := storage.NewMemoryStore()
 	sessionMgr := coreadmin.NewSessionManager(time.Hour)
-	handler := NewSessionHandler(sessionMgr, store.User)
+	handler := NewSessionHandler(sessionMgr, store.User, "127.0.0.1:18531")
 
 	// Test with non-existent user
 	body := map[string]string{"public_key": "non-existent-key"}
@@ -130,7 +130,7 @@ func TestCreateSession_UserNotFound(t *testing.T) {
 func TestCreateSession_MissingPublicKey(t *testing.T) {
 	store, _ := storage.NewMemoryStore()
 	sessionMgr := coreadmin.NewSessionManager(time.Hour)
-	handler := NewSessionHandler(sessionMgr, store.User)
+	handler := NewSessionHandler(sessionMgr, store.User, "127.0.0.1:18531")
 
 	// Test with missing public_key
 	body := map[string]string{}
@@ -271,7 +271,7 @@ func TestLocalOnlyMiddleware(t *testing.T) {
 		w.WriteHeader(http.StatusOK)
 	})
 
-	LocalOnlyMiddleware(next).ServeHTTP(w, req)
+	LocalOnlyMiddleware(next, "127.0.0.1:18531").ServeHTTP(w, req)
 
 	if called {
 		t.Fatal("LocalOnlyMiddleware should NOT call next handler for non-local request")
@@ -303,7 +303,7 @@ func TestLocalOnlyMiddleware_LocalRequest(t *testing.T) {
 		w.WriteHeader(http.StatusOK)
 	})
 
-	LocalOnlyMiddleware(next).ServeHTTP(w, req)
+	LocalOnlyMiddleware(next, "127.0.0.1:18531").ServeHTTP(w, req)
 
 	if !called {
 		t.Fatal("LocalOnlyMiddleware should call next handler for local request")

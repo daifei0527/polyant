@@ -50,14 +50,13 @@ func (m *AuthMiddleware) Middleware(next http.Handler) http.Handler {
 	})
 }
 
-// LocalOnlyMiddleware 限制仅本地访问
-func LocalOnlyMiddleware(next http.Handler) http.Handler {
+// LocalOnlyMiddleware 限制仅本地访问。localHost 为配置的本地监听地址。
+func LocalOnlyMiddleware(next http.Handler, localHost string) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if !isLocalRequest(r) {
+		if !isLocalRequest(r, localHost) {
 			writeAdminError(w, awerrors.New(403, awerrors.CategoryAPI, "仅限本地访问", http.StatusForbidden))
 			return
 		}
 		next.ServeHTTP(w, r)
 	})
 }
-

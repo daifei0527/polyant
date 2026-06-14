@@ -50,6 +50,7 @@ type Dependencies struct {
 	ApiKey                    string                // API 访问密钥
 	DevReturnVerificationCode bool                  // dev/测试：发送验证码接口是否回传验证码（默认 false）
 	CORSConfig                middleware.CORSConfig // 可选；为零值时使用 DefaultCORSConfig
+	AdminListenAddr           string                // admin 本地访问校验用的监听地址（默认 127.0.0.1:18531）
 }
 
 // Router 包装已注册路由与中间件链，并暴露 Close 以便优雅停机时
@@ -90,6 +91,7 @@ func NewRouter(store *storage.Store, cfg *config.Config) (*Router, error) {
 		ApiKey:                    cfg.Network.ApiKey,
 		DevReturnVerificationCode: cfg.Dev.ReturnVerificationCode,
 		CORSConfig:                CORSConfigFromConfig(cfg),
+		AdminListenAddr:           cfg.Admin.Listen,
 	})
 }
 
@@ -432,13 +434,13 @@ func registerAuthRoutes(mux *http.ServeMux, authMW *middleware.AuthMiddleware, e
 // 使用 Session Token 认证，独立于 Ed25519 签名认证
 func registerAdminRoutes(mux *http.ServeMux, deps *Dependencies, sessionMgr *coreadmin.SessionManager) {
 	// 创建 handlers
-	sessionHandler := admin.NewSessionHandler(sessionMgr, deps.UserStore)
+	sessionHandler := admin.NewSessionHandler(sessionMgr, deps.UserStore, deps.AdminListenAddr)
 	adminHandler := admin.NewHandler(deps.Store)
 	adminAuthMW := admin.NewAuthMiddleware(sessionMgr)
 
 	// Session API (仅本地访问)
 	mux.Handle("/api/v1/admin/session/create",
-		admin.LocalOnlyMiddleware(http.HandlerFunc(sessionHandler.CreateSessionHandler)))
+		admin.LocalOnlyMiddleware(http.HandlerFunc(sessionHandler.CreateSessionHandler), deps.AdminListenAddr))
 
 	// Admin API (需要 Session Token 认证)
 	// 用户管理

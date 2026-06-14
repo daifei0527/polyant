@@ -3,6 +3,7 @@ package admin
 
 import (
 	"encoding/json"
+	"net"
 	"net/http"
 	"time"
 
@@ -15,13 +16,15 @@ import (
 type SessionHandler struct {
 	sessionMgr *admin.SessionManager
 	userStore  storage.UserStore
+	localHost  string // 期望的本地监听地址（如 "127.0.0.1:18531"），用于 isLocalRequest
 }
 
-// NewSessionHandler 创建会话处理器
-func NewSessionHandler(sessionMgr *admin.SessionManager, userStore storage.UserStore) *SessionHandler {
+// NewSessionHandler 创建会话处理器。localHost 为期望的本地监听地址（来自配置）。
+func NewSessionHandler(sessionMgr *admin.SessionManager, userStore storage.UserStore, localHost string) *SessionHandler {
 	return &SessionHandler{
 		sessionMgr: sessionMgr,
 		userStore:  userStore,
+		localHost:  localHost,
 	}
 }
 
@@ -34,7 +37,7 @@ func (h *SessionHandler) CreateSessionHandler(w http.ResponseWriter, r *http.Req
 	}
 
 	// 检查是否为本地访问
-	if !isLocalRequest(r) {
+	if !isLocalRequest(r, h.localHost) {
 		writeAdminError(w, awerrors.New(403, awerrors.CategoryAPI, "仅限本地访问", http.StatusForbidden))
 		return
 	}
@@ -82,14 +85,30 @@ func (h *SessionHandler) CreateSessionHandler(w http.ResponseWriter, r *http.Req
 	})
 }
 
-// isLocalRequest 检查是否为本地请求
-func isLocalRequest(r *http.Request) bool {
-	host := r.Host
-	// 检查 Host 是否为 127.0.0.1 或 localhost
-	return host == "127.0.0.1:18531" ||
-		host == "localhost:18531" ||
-		r.RemoteAddr == "127.0.0.1" ||
-		r.RemoteAddr == "[::1]"
+// isLocalRequest 检查是否为本地请求。
+// localHost 为配置的本地监听地址（如 "127.0.0.1:18531"）。
+// 主判断用连接级 RemoteAddr（难以伪造）；Host 头作为辅助，按 localHost 的端口比对。
+// 注意：不支持反向代理（X-Forwarded-For 等不被信任）。
+func isLocalRequest(r *http.Request, localHost string) bool {
+	// 连接级判断（主）：RemoteAddr 形如 "127.0.0.1:54321"
+	if host, _, err := net.SplitHostPort(r.RemoteAddr); err == nil {
+		if host == "127.0.0.1" || host == "::1" {
+			return true
+		}
+	} else if r.RemoteAddr == "127.0.0.1" || r.RemoteAddr == "::1" {
+		return true // 无端口的回退
+	}
+
+	// Host 头辅助判断（与配置的本地监听地址比对，端口可配置）
+	if r.Host == localHost {
+		return true
+	}
+	if _, port, err := net.SplitHostPort(localHost); err == nil && port != "" {
+		if r.Host == "localhost:"+port || r.Host == "127.0.0.1:"+port || r.Host == "[::1]:"+port {
+			return true
+		}
+	}
+	return false
 }
 
 func writeAdminJSON(w http.ResponseWriter, status int, data interface{}) {
