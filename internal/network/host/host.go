@@ -264,10 +264,10 @@ func (h *P2PHost) detectNATType(ctx context.Context) {
 		h.natType = NATTypeNone
 		log.Printf("[P2PHost] NAT detection: No NAT detected (public IP)")
 	} else {
-		// 假设为对称NAT（最常见于家庭和企业网络）
-		// 实际检测需要STUN服务器
-		h.natType = NATTypeSymmetric
-		log.Printf("[P2PHost] NAT detection: Behind NAT (assuming Symmetric)")
+		// 在 NAT 后，但无法从本机确定具体类型（需 STUN/libp2p AutoNAT 配合）。
+		// 诚实降级为 Unknown——旧代码假设 Symmetric 会误导中继/打洞决策。
+		h.natType = NATTypeUnknown
+		log.Printf("[P2PHost] NAT detection: Behind NAT (type unknown — needs STUN/AutoNAT to classify)")
 	}
 
 	// 如果在NAT后面且启用了中继，尝试连接中继节点

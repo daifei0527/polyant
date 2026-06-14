@@ -1,7 +1,6 @@
 package detect
 
 import (
-	"fmt"
 	"io"
 	"net"
 	"net/http"
@@ -64,9 +63,11 @@ func (d *Detector) Detect() *NetworkCapability {
 	cap.PublicIP = d.detectPublicIP()
 	cap.HasPublicIP = cap.PublicIP != ""
 
-	// 2. 如果有公网 IP，测试端口可达性
+	// 2. 如果有公网 IP：外部可达性无法从本机可靠判定（旧 testPortReachability 自拨本机
+	//    公网 IP 会假阳性——许多 NAT 允许内部回环）。诚实降级：有公网 IP 视为"可能可达"，
+	//    真实外部可达性需外部探测服务确认。
 	if cap.HasPublicIP {
-		cap.CanBeReached = d.testPortReachability(cap.PublicIP)
+		cap.CanBeReached = true
 		cap.NATType = d.detectNATType()
 	}
 
@@ -109,50 +110,6 @@ func (d *Detector) detectPublicIP() string {
 // detectPublicIP 导出函数（用于测试）
 func detectPublicIP() string {
 	return NewDetector().detectPublicIP()
-}
-
-// testPortReachability 测试端口可达性
-//
-// 注意：此方法存在局限性 - 它从本机尝试连接到公网 IP:port。
-// 这并不能真正测试外部可达性，因为：
-//  1. 许多 NAT/防火墙允许内部回环连接
-//  2. 真正的外部可达性需要从外部网络测试
-//  3. 结果可能产生假阳性（本机能连但外部不能）
-//
-// 生产环境应考虑使用外部可达性检测服务。
-func (d *Detector) testPortReachability(publicIP string) bool {
-	// 1. 监听临时端口
-	ln, err := net.Listen("tcp", ":0")
-	if err != nil {
-		return false
-	}
-	defer ln.Close()
-
-	port := ln.Addr().(*net.TCPAddr).Port
-
-	// 2. 在后台等待连接
-	acceptCh := make(chan bool, 1)
-	go func() {
-		conn, err := ln.Accept()
-		if err == nil {
-			conn.Close()
-			acceptCh <- true
-		} else {
-			acceptCh <- false
-		}
-	}()
-
-	// 3. 尝试从外部连接（这里简化处理，实际需要外部服务配合）
-	// 如果本地能连接到自己的公网 IP:port，说明端口可达
-	conn, err := net.DialTimeout("tcp",
-		net.JoinHostPort(publicIP, fmt.Sprintf("%d", port)),
-		5*time.Second)
-	if err == nil {
-		conn.Close()
-		return <-acceptCh
-	}
-
-	return false
 }
 
 // detectNATType 检测 NAT 类型
