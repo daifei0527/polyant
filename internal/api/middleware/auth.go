@@ -18,6 +18,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/daifei0527/polyant/internal/auth/rbac"
 	"github.com/daifei0527/polyant/internal/storage"
 	"github.com/daifei0527/polyant/internal/storage/model"
 	awerrors "github.com/daifei0527/polyant/pkg/errors"
@@ -53,8 +54,8 @@ const (
 // 验证通过后将用户信息注入到请求上下文中
 type AuthMiddleware struct {
 	userStore    storage.UserStore
-	seenRequests sync.Map       // map[string]time.Time - tracks request signatures for replay protection
-	stopCleanup  chan struct{}   // signals cleanup goroutine to stop
+	seenRequests sync.Map      // map[string]time.Time - tracks request signatures for replay protection
+	stopCleanup  chan struct{} // signals cleanup goroutine to stop
 }
 
 // NewAuthMiddleware 创建认证中间件实例
@@ -209,6 +210,19 @@ func (m *AuthMiddleware) RequireLevel(minLevel int32, next http.Handler) http.Ha
 		userLevel, ok := r.Context().Value(UserLevelKey).(int32)
 		if !ok || userLevel < minLevel {
 			writeAuthError(w, awerrors.New(403, awerrors.CategoryAPI, fmt.Sprintf("需要 Lv%d 或更高等级", minLevel), http.StatusForbidden))
+			return
+		}
+		next.ServeHTTP(w, r)
+	}
+}
+
+// RequirePermission 权限检查中间件：以 rbac 权限矩阵为唯一访问控制源。
+// perm 为 rbac.Perm* 常量。用户等级未持有该权限则返回 403。
+func (m *AuthMiddleware) RequirePermission(perm int, next http.Handler) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		userLevel, ok := r.Context().Value(UserLevelKey).(int32)
+		if !ok || !rbac.HasPermission(userLevel, perm) {
+			writeAuthError(w, awerrors.ErrPermissionDenied)
 			return
 		}
 		next.ServeHTTP(w, r)

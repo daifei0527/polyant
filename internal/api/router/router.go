@@ -11,6 +11,7 @@ import (
 	"github.com/daifei0527/polyant/internal/api/admin"
 	"github.com/daifei0527/polyant/internal/api/handler"
 	"github.com/daifei0527/polyant/internal/api/middleware"
+	"github.com/daifei0527/polyant/internal/auth/rbac"
 	coreadmin "github.com/daifei0527/polyant/internal/core/admin"
 	"github.com/daifei0527/polyant/internal/core/email"
 	"github.com/daifei0527/polyant/internal/storage"
@@ -373,28 +374,28 @@ func registerAuthRoutes(mux *http.ServeMux, authMW *middleware.AuthMiddleware, e
 	// ==================== 审计日志路由 ====================
 	if auh != nil {
 		// 查询审计日志 GET /api/v1/admin/audit/logs - Lv5 (SuperAdmin)
-		mux.Handle("/api/v1/admin/audit/logs", authMW.Middleware(authMW.RequireLevel(model.UserLevelLv5, http.HandlerFunc(auh.ListAuditLogsHandler))))
+		mux.Handle("/api/v1/admin/audit/logs", authMW.Middleware(authMW.RequirePermission(rbac.PermAdmin, http.HandlerFunc(auh.ListAuditLogsHandler))))
 
 		// 获取审计统计 GET /api/v1/admin/audit/stats - Lv5 (SuperAdmin)
-		mux.Handle("/api/v1/admin/audit/stats", authMW.Middleware(authMW.RequireLevel(model.UserLevelLv5, http.HandlerFunc(auh.GetAuditStatsHandler))))
+		mux.Handle("/api/v1/admin/audit/stats", authMW.Middleware(authMW.RequirePermission(rbac.PermAdmin, http.HandlerFunc(auh.GetAuditStatsHandler))))
 
 		// 删除审计日志 DELETE /api/v1/admin/audit/logs - Lv5 (SuperAdmin)
-		mux.Handle("/api/v1/admin/audit/logs/delete", authMW.Middleware(authMW.RequireLevel(model.UserLevelLv5, http.HandlerFunc(auh.DeleteAuditLogsHandler))))
+		mux.Handle("/api/v1/admin/audit/logs/delete", authMW.Middleware(authMW.RequirePermission(rbac.PermAdmin, http.HandlerFunc(auh.DeleteAuditLogsHandler))))
 	}
 
 	// ==================== 数据导出/导入路由 ====================
 	if exh != nil {
 		// 数据导出 GET /api/v1/admin/export - Lv4+ (Admin)
-		mux.Handle("/api/v1/admin/export", authMW.Middleware(authMW.RequireLevel(model.UserLevelLv4, http.HandlerFunc(exh.ExportHandler))))
+		mux.Handle("/api/v1/admin/export", authMW.Middleware(authMW.RequirePermission(rbac.PermManageUser, http.HandlerFunc(exh.ExportHandler))))
 
 		// 数据导入 POST /api/v1/admin/import - Lv4+ (Admin)
-		mux.Handle("/api/v1/admin/import", authMW.Middleware(authMW.RequireLevel(model.UserLevelLv4, http.HandlerFunc(exh.ImportHandler))))
+		mux.Handle("/api/v1/admin/import", authMW.Middleware(authMW.RequirePermission(rbac.PermManageUser, http.HandlerFunc(exh.ImportHandler))))
 	}
 
 	// ==================== 选举路由 ====================
 	if elh != nil {
 		// 创建选举 POST /api/v1/elections - Lv5 (SuperAdmin)
-		mux.Handle("/api/v1/elections/create", authMW.Middleware(authMW.RequireLevel(model.UserLevelLv5, http.HandlerFunc(elh.CreateElectionHandler))))
+		mux.Handle("/api/v1/elections/create", authMW.Middleware(authMW.RequirePermission(rbac.PermAdmin, http.HandlerFunc(elh.CreateElectionHandler))))
 
 		// 提名候选人 POST /api/v1/elections/{id}/candidates - 已认证用户
 		mux.Handle("/api/v1/elections/candidates/", authMW.Middleware(http.HandlerFunc(elh.NominateCandidateHandler)))
@@ -406,7 +407,7 @@ func registerAuthRoutes(mux *http.ServeMux, authMW *middleware.AuthMiddleware, e
 		mux.Handle("/api/v1/elections/vote/", authMW.Middleware(authMW.RequireLevel(model.UserLevelLv3, http.HandlerFunc(elh.VoteHandler))))
 
 		// 关闭选举 POST /api/v1/elections/{id}/close - Lv5 (SuperAdmin)
-		mux.Handle("/api/v1/elections/close/", authMW.Middleware(authMW.RequireLevel(model.UserLevelLv5, http.HandlerFunc(elh.CloseElectionHandler))))
+		mux.Handle("/api/v1/elections/close/", authMW.Middleware(authMW.RequirePermission(rbac.PermAdmin, http.HandlerFunc(elh.CloseElectionHandler))))
 	}
 
 	// ==================== 批量操作路由 ====================
