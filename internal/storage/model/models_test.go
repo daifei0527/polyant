@@ -88,6 +88,31 @@ func TestNewKnowledgeEntry(t *testing.T) {
 	}
 }
 
+// TestKnowledgeEntry_ComputeContentHash_Contract pins the documented hash
+// contract: SHA256(title + "\n" + content + "\n" + category). This must match
+// the entry content-signature scheme so sync/push verification is consistent.
+func TestKnowledgeEntry_ComputeContentHash_Contract(t *testing.T) {
+	e := &KnowledgeEntry{Title: "Title", Content: "Content", Category: "test-category"}
+	want := "49b12e97e9d0c4e09ab363e031293e37f90aa78fe6bb434c57bdab2b6eaba543"
+	if got := e.ComputeContentHash(); got != want {
+		t.Errorf("ComputeContentHash = %q, want %q (contract: SHA256(title\\ncontent\\ncategory))", got, want)
+	}
+
+	// Separators matter: "a"+"bc" must differ from "ab"+"c".
+	a := &KnowledgeEntry{Title: "a", Content: "bc", Category: "z"}
+	b := &KnowledgeEntry{Title: "ab", Content: "c", Category: "z"}
+	if a.ComputeContentHash() == b.ComputeContentHash() {
+		t.Error("hash must distinguish a|bc from ab|c (separator-sensitive)")
+	}
+
+	// Version/JSONData must NOT affect the content hash.
+	x := &KnowledgeEntry{Title: "T", Content: "C", Category: "cat", Version: 1, JSONData: []map[string]interface{}{{"k": "v"}}}
+	y := &KnowledgeEntry{Title: "T", Content: "C", Category: "cat", Version: 99}
+	if x.ComputeContentHash() != y.ComputeContentHash() {
+		t.Error("content hash must be independent of Version/JSONData")
+	}
+}
+
 func TestKnowledgeEntry_ComputeContentHash(t *testing.T) {
 	entry1 := &KnowledgeEntry{
 		Title:    "Title",

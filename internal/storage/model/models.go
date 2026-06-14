@@ -90,9 +90,12 @@ func NewKnowledgeEntry(title, content, category, createdBy string) *KnowledgeEnt
 	return entry
 }
 
-// ComputeContentHash 计算条目内容的SHA256哈希值
+// ComputeContentHash 计算条目内容的 SHA256 哈希值。
+// 契约：SHA256(title + "\n" + content + "\n" + category)
+// 与条目内容签名方案一致，用于同步/push 的完整性校验。
+// 注意：Version 与 JSONData 不参与内容哈希（仅 title/content/category 决定）。
 func (e *KnowledgeEntry) ComputeContentHash() string {
-	data := fmt.Sprintf("%s:%s:%d:%v", e.Title, e.Content, e.Version, e.JSONData)
+	data := fmt.Sprintf("%s\n%s\n%s", e.Title, e.Content, e.Category)
 	hash := sha256.Sum256([]byte(data))
 	return hex.EncodeToString(hash[:])
 }

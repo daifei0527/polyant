@@ -974,14 +974,17 @@ func TestEntryHandler_GetOutlinksHandler(t *testing.T) {
 // isValidEmail tests moved to helpers_test.go
 
 func TestComputeContentHash(t *testing.T) {
-	hash1 := computeContentHash("Title", "Content", "Category")
-	hash2 := computeContentHash("Title", "Content", "Category")
+	e1 := &model.KnowledgeEntry{Title: "Title", Content: "Content", Category: "Category"}
+	e2 := &model.KnowledgeEntry{Title: "Title", Content: "Content", Category: "Category"}
+	hash1 := e1.ComputeContentHash()
+	hash2 := e2.ComputeContentHash()
 
 	if hash1 != hash2 {
 		t.Error("Same content should produce same hash")
 	}
 
-	hash3 := computeContentHash("Different", "Content", "Category")
+	e3 := &model.KnowledgeEntry{Title: "Different", Content: "Content", Category: "Category"}
+	hash3 := e3.ComputeContentHash()
 	if hash1 == hash3 {
 		t.Error("Different content should produce different hash")
 	}

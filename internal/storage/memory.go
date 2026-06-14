@@ -7,8 +7,6 @@ package storage
 
 import (
 	"context"
-	"crypto/sha256"
-	"encoding/hex"
 	"fmt"
 	"sort"
 	"strings"
@@ -609,15 +607,6 @@ func (e *MemorySearchEngine) Search(ctx context.Context, query index.SearchQuery
 // Close 关闭搜索引擎
 func (e *MemorySearchEngine) Close() error {
 	return nil
-}
-
-// computeContentHash 计算内容哈希
-func computeContentHash(title, content, category string) string {
-	h := sha256.New()
-	h.Write([]byte(title))
-	h.Write([]byte(content))
-	h.Write([]byte(category))
-	return hex.EncodeToString(h.Sum(nil))
 }
 
 // MemoryBacklinkIndex 基于内存的反向链接索引实现

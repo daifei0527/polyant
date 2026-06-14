@@ -2,8 +2,6 @@ package handler
 
 import (
 	"context"
-	"crypto/sha256"
-	"encoding/hex"
 	"encoding/json"
 	"log"
 	"net/http"
@@ -211,9 +209,6 @@ func (h *EntryHandler) CreateEntryHandler(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	// 计算内容哈希
-	contentHash := computeContentHash(req.Title, req.Content, req.Category)
-
 	// 生成UUID作为条目ID
 	entryID := generateUUID()
 
@@ -232,7 +227,6 @@ func (h *EntryHandler) CreateEntryHandler(w http.ResponseWriter, r *http.Request
 		CreatedBy:   user.PublicKey,
 		Score:       0,
 		ScoreCount:  0,
-		ContentHash: contentHash,
 		Status:      model.EntryStatusPublished,
 		License:     req.License,
 		SourceRef:   req.SourceRef,
@@ -240,6 +234,9 @@ func (h *EntryHandler) CreateEntryHandler(w http.ResponseWriter, r *http.Request
 	if entry.License == "" {
 		entry.License = "CC-BY-SA-4.0"
 	}
+
+	// 计算内容哈希（统一契约：SHA256(title\ncontent\ncategory)）
+	entry.ContentHash = entry.ComputeContentHash()
 
 	// 存储条目
 	created, err := h.entryStore.Create(r.Context(), entry)
@@ -344,7 +341,7 @@ func (h *EntryHandler) UpdateEntryHandler(w http.ResponseWriter, r *http.Request
 	existing.UpdatedAt = model.NowMillis()
 
 	// 重新计算内容哈希
-	existing.ContentHash = computeContentHash(existing.Title, existing.Content, existing.Category)
+	existing.ContentHash = existing.ComputeContentHash()
 
 	// 执行更新
 	updated, err := h.entryStore.Update(r.Context(), existing)
@@ -442,16 +439,6 @@ func (h *EntryHandler) DeleteEntryHandler(w http.ResponseWriter, r *http.Request
 		Message: "success",
 		Data:    nil,
 	})
-}
-
-// computeContentHash 计算条目内容哈希（SHA-256）
-// 用于数据完整性校验
-func computeContentHash(title, content, category string) string {
-	h := sha256.New()
-	h.Write([]byte(title))
-	h.Write([]byte(content))
-	h.Write([]byte(category))
-	return hex.EncodeToString(h.Sum(nil))
 }
 
 // GetBacklinksHandler 获取条目的反向链接列表

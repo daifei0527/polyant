@@ -343,9 +343,6 @@ func (h *BatchHandler) executeBatchCreate(r *http.Request, entries []BatchEntry,
 	}
 
 	for i, entry := range entries {
-		// 计算内容哈希
-		contentHash := computeContentHash(entry.Title, entry.Content, entry.Category)
-
 		// 生成UUID作为条目ID
 		entryID := generateUUID()
 
@@ -364,7 +361,6 @@ func (h *BatchHandler) executeBatchCreate(r *http.Request, entries []BatchEntry,
 			CreatedBy:   user.PublicKey,
 			Score:       0,
 			ScoreCount:  0,
-			ContentHash: contentHash,
 			Status:      model.EntryStatusPublished,
 			License:     entry.License,
 			SourceRef:   entry.SourceRef,
@@ -372,6 +368,8 @@ func (h *BatchHandler) executeBatchCreate(r *http.Request, entries []BatchEntry,
 		if newEntry.License == "" {
 			newEntry.License = "CC-BY-SA-4.0"
 		}
+		// 计算内容哈希（统一契约：SHA256(title\ncontent\ncategory)）
+		newEntry.ContentHash = newEntry.ComputeContentHash()
 
 		// 存储条目
 		created, err := h.entryStore.Create(r.Context(), newEntry)
@@ -467,7 +465,7 @@ func (h *BatchHandler) executeBatchUpdate(r *http.Request, entries []BatchUpdate
 		existing.UpdatedAt = model.NowMillis()
 
 		// 重新计算内容哈希
-		existing.ContentHash = computeContentHash(existing.Title, existing.Content, existing.Category)
+		existing.ContentHash = existing.ComputeContentHash()
 
 		// 执行更新
 		updated, err := h.entryStore.Update(r.Context(), existing)
