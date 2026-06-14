@@ -100,7 +100,11 @@ func (s *KVVoteStore) HasVoted(ctx context.Context, voterID, electionID string) 
 	indexKey := []byte(fmt.Sprintf("%s%s:%s", votesByVoterKey, electionID, voterID))
 	_, err := s.kv.Get(indexKey)
 	if err != nil {
-		return false, nil
+		if err == ErrKeyNotFound {
+			return false, nil // 确实没投过
+		}
+		// 存储 error 必须向上传播，绝不能当作"未投"（否则 KV 故障时会允许重复投票）
+		return false, fmt.Errorf("check voted: %w", err)
 	}
 	return true, nil
 }

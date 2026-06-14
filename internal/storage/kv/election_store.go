@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"sync"
 
 	"github.com/daifei0527/polyant/internal/storage/model"
 )
@@ -95,6 +96,7 @@ type CandidateStore interface {
 // KVCandidateStore KV 候选人存储实现
 type KVCandidateStore struct {
 	kv Store
+	mu sync.Map // electionID -> *sync.Mutex，保证计票原子性
 }
 
 // NewCandidateStore 创建候选人存储
@@ -142,7 +144,17 @@ func (s *KVCandidateStore) ListByElection(ctx context.Context, electionID string
 	return candidates, nil
 }
 
+// lockFor 返回某选举的计票互斥锁（惰性创建），保证 UpdateVoteCount 的
+// 读取-累加-写回是原子的，避免并发投票丢票。
+func (s *KVCandidateStore) lockFor(electionID string) *sync.Mutex {
+	actual, _ := s.mu.LoadOrStore(electionID, &sync.Mutex{})
+	return actual.(*sync.Mutex)
+}
+
 func (s *KVCandidateStore) UpdateVoteCount(ctx context.Context, electionID, userID string, delta int32) error {
+	s.lockFor(electionID).Lock()
+	defer s.lockFor(electionID).Unlock()
+
 	candidate, err := s.Get(ctx, electionID, userID)
 	if err != nil {
 		return err
