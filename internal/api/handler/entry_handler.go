@@ -156,6 +156,13 @@ func (h *EntryHandler) SearchHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	// 按查询参数 lang 投影本地化 Title/Content（不修改索引/存储）
+	if lang := r.URL.Query().Get("lang"); lang != "" {
+		for i, e := range result.Entries {
+			result.Entries[i] = e.ProjectToLang(lang)
+		}
+	}
+
 	writeJSON(w, http.StatusOK, &APIResponse{
 		Code:    0,
 		Message: "success",
@@ -181,6 +188,11 @@ func (h *EntryHandler) GetEntryHandler(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		writeError(w, awerrors.ErrEntryNotFound)
 		return
+	}
+
+	// 按查询参数 lang 投影本地化 Title/Content（不修改存储）
+	if lang := r.URL.Query().Get("lang"); lang != "" {
+		entry = entry.ProjectToLang(lang)
 	}
 
 	writeJSON(w, http.StatusOK, &APIResponse{

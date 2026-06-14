@@ -507,3 +507,29 @@ func TestUserBanHelperMethods(t *testing.T) {
 		t.Error("Active user should not be read-only")
 	}
 }
+
+// TestKnowledgeEntry_ProjectToLang 验证按语言投影 Title/Content，且不改原条目。
+func TestKnowledgeEntry_ProjectToLang(t *testing.T) {
+	e := &KnowledgeEntry{
+		Title:       "Hello",
+		Content:     "World",
+		TitleI18n:   map[string]string{"zh-CN": "你好"},
+		ContentI18n: map[string]string{"zh-CN": "世界"},
+	}
+	zh := e.ProjectToLang("zh-CN")
+	if zh.Title != "你好" {
+		t.Errorf("zh-CN title = %q, want 你好", zh.Title)
+	}
+	if zh.Content != "世界" {
+		t.Errorf("zh-CN content = %q, want 世界", zh.Content)
+	}
+	if e.Title != "Hello" {
+		t.Error("ProjectToLang must not mutate the original entry")
+	}
+	if en := e.ProjectToLang("en-US"); en.Title != "Hello" {
+		t.Errorf("en-US fallback title = %q, want Hello", en.Title)
+	}
+	if got := e.ProjectToLang(""); got != e {
+		t.Error("ProjectToLang(\"\") should return the original entry")
+	}
+}

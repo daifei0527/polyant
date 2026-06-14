@@ -172,3 +172,34 @@ func TestCreateEntryHandler_PushesToSeed(t *testing.T) {
 		t.Fatal("newly created entry was not pushed to seed within timeout")
 	}
 }
+
+// TestGetEntryHandler_LangProjection: /entry/{id}?lang= 返回本地化 Title/Content。
+func TestGetEntryHandler_LangProjection(t *testing.T) {
+	memStore, err := storage.NewMemoryStore()
+	require.NoError(t, err)
+	h := NewEntryHandler(memStore.Entry, memStore.Search, memStore.Backlink, memStore.User, memStore.TitleIdx)
+
+	entry := &model.KnowledgeEntry{
+		ID:          "e-i18n",
+		Title:       "Hello",
+		Content:     "World",
+		Category:    "test",
+		Status:      model.EntryStatusPublished,
+		TitleI18n:   map[string]string{"zh-CN": "你好"},
+		ContentI18n: map[string]string{"zh-CN": "世界"},
+	}
+	_, err = memStore.Entry.Create(context.Background(), entry)
+	require.NoError(t, err)
+
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/entry/e-i18n?lang=zh-CN", nil)
+	rec := httptest.NewRecorder()
+	h.GetEntryHandler(rec, req)
+
+	assert.Equal(t, http.StatusOK, rec.Result().StatusCode)
+	var resp APIResponse
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &resp))
+	data, ok := resp.Data.(map[string]interface{})
+	require.True(t, ok)
+	assert.Equal(t, "你好", data["title"])
+	assert.Equal(t, "世界", data["content"])
+}

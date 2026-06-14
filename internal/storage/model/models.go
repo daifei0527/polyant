@@ -130,6 +130,19 @@ func (e *KnowledgeEntry) GetContentByLang(lang string) string {
 	return e.Content
 }
 
+// ProjectToLang 返回按指定语言投影 Title/Content 的（浅拷贝）条目。
+// 若该语言无本地化字段，对应字段保留原值；lang 为空时原样返回。
+// 用于 API 层按 ?lang= 返回本地化视图，不修改存储中的原始条目。
+func (e *KnowledgeEntry) ProjectToLang(lang string) *KnowledgeEntry {
+	if e == nil || lang == "" {
+		return e
+	}
+	cp := *e
+	cp.Title = e.GetTitleByLang(lang)
+	cp.Content = e.GetContentByLang(lang)
+	return &cp
+}
+
 // ==================== 用户 ====================
 
 // User 表示系统中的一个用户
