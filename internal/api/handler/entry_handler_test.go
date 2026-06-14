@@ -1,11 +1,13 @@
 package handler
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -129,4 +131,44 @@ func TestSearchHandler_NoGraphWhenEmpty(t *testing.T) {
 	// Should have 1 result node and 0 edges (self-reference filtered)
 	assert.Equal(t, 1, len(nodes))
 	assert.Equal(t, 0, len(edges))
+}
+
+// ========== EntryPusher wiring (P1.5) ==========
+
+// fakeEntryPusher records pushed entries via a buffered channel (race-free).
+type fakeEntryPusher struct {
+	pushed chan *model.KnowledgeEntry
+}
+
+func (f *fakeEntryPusher) PushEntry(entry *model.KnowledgeEntry, signature []byte) error {
+	f.pushed <- entry
+	return nil
+}
+
+// TestCreateEntryHandler_PushesToSeed: creating an entry must push it to the
+// configured EntryPusher (the dormant push half-flow is now wired).
+func TestCreateEntryHandler_PushesToSeed(t *testing.T) {
+	memStore, err := storage.NewMemoryStore()
+	require.NoError(t, err)
+	h := NewEntryHandler(memStore.Entry, memStore.Search, memStore.Backlink, memStore.User, memStore.TitleIdx)
+	pusher := &fakeEntryPusher{pushed: make(chan *model.KnowledgeEntry, 1)}
+	h.SetEntryPusher(pusher)
+
+	user, _ := createTestUser(t, memStore, "author", model.UserLevelLv1)
+	body := `{"title":"T","content":"C","category":"cat"}`
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/entry/create", bytes.NewBufferString(body))
+	req.Header.Set("Content-Type", "application/json")
+	req = req.WithContext(setUserInContext(req.Context(), user))
+	rec := httptest.NewRecorder()
+
+	h.CreateEntryHandler(rec, req)
+
+	assert.Equal(t, http.StatusCreated, rec.Result().StatusCode)
+
+	select {
+	case got := <-pusher.pushed:
+		assert.Equal(t, "T", got.Title)
+	case <-time.After(2 * time.Second):
+		t.Fatal("newly created entry was not pushed to seed within timeout")
+	}
 }

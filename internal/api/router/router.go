@@ -26,12 +26,6 @@ type RemoteQuerier interface {
 	SearchWithRemote(ctx context.Context, query index.SearchQuery) (*index.SearchResult, error)
 }
 
-// EntryPusher 条目推送接口
-type EntryPusher interface {
-	// PushEntry 推送条目到种子节点
-	PushEntry(entry *model.KnowledgeEntry, signature []byte) error
-}
-
 // Dependencies 路由依赖注入容器
 // 包含所有 handler 需要的存储和引擎实例
 type Dependencies struct {
@@ -44,9 +38,9 @@ type Dependencies struct {
 	Backlink                  storage.BacklinkIndex
 	EmailService              *email.Service
 	VerificationMgr           *email.VerificationManager
-	RemoteQuerier             RemoteQuerier // 远程查询服务
-	EntryPusher               EntryPusher   // 条目推送服务
-	KVStore                   kv.Store      // KV 存储（选举等功能需要）
+	RemoteQuerier             RemoteQuerier       // 远程查询服务
+	EntryPusher               handler.EntryPusher // 条目推送服务
+	KVStore                   kv.Store            // KV 存储（选举等功能需要）
 	SessionManager            *coreadmin.SessionManager
 	NodeID                    string
 	NodeType                  string
@@ -116,6 +110,11 @@ func NewRouterWithDeps(deps *Dependencies) (*Router, error) {
 	// 设置远程查询服务
 	if deps.RemoteQuerier != nil {
 		entryHandler.SetRemoteQuerier(&remoteQuerierAdapter{deps.RemoteQuerier})
+	}
+
+	// 设置条目推送服务（新建/更新条目推送到种子节点）
+	if deps.EntryPusher != nil {
+		entryHandler.SetEntryPusher(deps.EntryPusher)
 	}
 
 	userHandler := handler.NewUserHandler(

@@ -20,6 +20,11 @@ type RemoteQuerier interface {
 	SearchWithRemote(ctx context.Context, query index.SearchQuery) (*index.SearchResult, error)
 }
 
+// EntryPusher 推送新建/更新的条目到种子节点（P2P push 半流程）。
+type EntryPusher interface {
+	PushEntry(entry *model.KnowledgeEntry, signature []byte) error
+}
+
 // EntryHandler 知识条目 HTTP 处理器
 // 负责处理知识条目的 CRUD 操作和搜索
 type EntryHandler struct {
@@ -29,6 +34,7 @@ type EntryHandler struct {
 	userStore     storage.UserStore
 	remoteQuerier RemoteQuerier
 	enricher      *ResultEnricher
+	entryPusher   EntryPusher // 可选：条目创建/更新后异步推送到种子节点
 }
 
 // NewEntryHandler 创建新的 EntryHandler 实例
@@ -45,6 +51,11 @@ func NewEntryHandler(entryStore storage.EntryStore, searchEngine index.SearchEng
 // SetRemoteQuerier 设置远程查询服务
 func (h *EntryHandler) SetRemoteQuerier(rq RemoteQuerier) {
 	h.remoteQuerier = rq
+}
+
+// SetEntryPusher 注入条目推送服务，使新建/更新条目异步推送到种子节点。
+func (h *EntryHandler) SetEntryPusher(p EntryPusher) {
+	h.entryPusher = p
 }
 
 // SearchHandler 搜索知识条目
@@ -215,21 +226,21 @@ func (h *EntryHandler) CreateEntryHandler(w http.ResponseWriter, r *http.Request
 	now := model.NowMillis()
 
 	entry := &model.KnowledgeEntry{
-		ID:          entryID,
-		Title:       req.Title,
-		Content:     req.Content,
-		JSONData:    req.JsonData,
-		Category:    req.Category,
-		Tags:        req.Tags,
-		Version:     1,
-		CreatedAt:   now,
-		UpdatedAt:   now,
-		CreatedBy:   user.PublicKey,
-		Score:       0,
-		ScoreCount:  0,
-		Status:      model.EntryStatusPublished,
-		License:     req.License,
-		SourceRef:   req.SourceRef,
+		ID:         entryID,
+		Title:      req.Title,
+		Content:    req.Content,
+		JSONData:   req.JsonData,
+		Category:   req.Category,
+		Tags:       req.Tags,
+		Version:    1,
+		CreatedAt:  now,
+		UpdatedAt:  now,
+		CreatedBy:  user.PublicKey,
+		Score:      0,
+		ScoreCount: 0,
+		Status:     model.EntryStatusPublished,
+		License:    req.License,
+		SourceRef:  req.SourceRef,
 	}
 	if entry.License == "" {
 		entry.License = "CC-BY-SA-4.0"
@@ -259,6 +270,15 @@ func (h *EntryHandler) CreateEntryHandler(w http.ResponseWriter, r *http.Request
 	if h.backlink != nil {
 		linkedEntryIDs := linkparser.ParseLinks(created.Content)
 		_ = h.backlink.UpdateIndex(created.ID, linkedEntryIDs)
+	}
+
+	// 异步推送到种子节点（失败仅记日志，不阻塞主流程）
+	if h.entryPusher != nil {
+		go func(e *model.KnowledgeEntry) {
+			if err := h.entryPusher.PushEntry(e, nil); err != nil {
+				log.Printf("[EntryHandler] push entry %s to seed failed: %v", e.ID, err)
+			}
+		}(created)
 	}
 
 	writeJSON(w, http.StatusCreated, &APIResponse{
@@ -368,6 +388,15 @@ func (h *EntryHandler) UpdateEntryHandler(w http.ResponseWriter, r *http.Request
 	if h.backlink != nil {
 		linkedEntryIDs := linkparser.ParseLinks(updated.Content)
 		_ = h.backlink.UpdateIndex(updated.ID, linkedEntryIDs)
+	}
+
+	// 异步推送更新到种子节点（失败仅记日志，不阻塞主流程）
+	if h.entryPusher != nil {
+		go func(e *model.KnowledgeEntry) {
+			if err := h.entryPusher.PushEntry(e, nil); err != nil {
+				log.Printf("[EntryHandler] push entry %s to seed failed: %v", e.ID, err)
+			}
+		}(updated)
 	}
 
 	writeJSON(w, http.StatusOK, &APIResponse{
