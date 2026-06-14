@@ -54,6 +54,7 @@ type SeedApp struct {
 	syncEngine   *sync.SyncEngine
 	pushService  *sync.PushService
 	httpServer   *http.Server
+	apiRouter    *router.Router
 	levelChecker *user.LevelUpgradeChecker
 	cancel       context.CancelFunc
 	tlsCertPath  string
@@ -362,7 +363,7 @@ func (app *SeedApp) Start() error {
 	}
 
 	// 创建 API 路由
-	apiHandler, err := router.NewRouterWithDeps(&router.Dependencies{
+	app.apiRouter, err = router.NewRouterWithDeps(&router.Dependencies{
 		Store:         app.store,
 		EntryStore:    app.store.Entry,
 		UserStore:     app.store.User,
@@ -387,7 +388,7 @@ func (app *SeedApp) Start() error {
 	httpAddr := fmt.Sprintf(":%d", app.config.Network.APIPort)
 	app.httpServer = &http.Server{
 		Addr:         httpAddr,
-		Handler:      apiHandler,
+		Handler:      app.apiRouter,
 		ReadTimeout:  15 * time.Second,
 		WriteTimeout: 15 * time.Second,
 		IdleTimeout:  60 * time.Second,
@@ -440,6 +441,11 @@ func (app *SeedApp) Stop() error {
 		if err := app.httpServer.Shutdown(ctx); err != nil {
 			app.logger.Warn("HTTP server shutdown timeout", zap.Error(err))
 		}
+	}
+
+	// 关闭路由持有的后台资源（认证中间件的重放保护清理 goroutine）
+	if app.apiRouter != nil {
+		app.apiRouter.Close()
 	}
 
 	// 停止各组件

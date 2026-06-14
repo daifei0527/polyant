@@ -56,10 +56,29 @@ type Dependencies struct {
 	CORSConfig                middleware.CORSConfig // 可选；为零值时使用 DefaultCORSConfig
 }
 
+// Router 包装已注册路由与中间件链，并暴露 Close 以便优雅停机时
+// 释放后台资源（如认证中间件的重放保护清理 goroutine）。
+type Router struct {
+	handler http.Handler
+	authMW  *middleware.AuthMiddleware
+}
+
+// ServeHTTP 让 *Router 满足 http.Handler（可直接作为 http.Server.Handler）。
+func (r *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
+	r.handler.ServeHTTP(w, req)
+}
+
+// Close 释放路由持有的后台资源。应在 HTTP 服务器 Shutdown 之后调用。
+func (r *Router) Close() {
+	if r.authMW != nil {
+		r.authMW.Close()
+	}
+}
+
 // NewRouter 创建并配置 HTTP 路由
 // 注册所有 API 端点，配置中间件链
 // 中间件执行顺序: RequestID -> Logging -> Recovery -> CORS -> [ApiKey] -> [Auth] -> Handler
-func NewRouter(store *storage.Store, cfg *config.Config) (http.Handler, error) {
+func NewRouter(store *storage.Store, cfg *config.Config) (*Router, error) {
 	return NewRouterWithDeps(&Dependencies{
 		Store:                     store,
 		EntryStore:                store.Entry,
@@ -79,7 +98,7 @@ func NewRouter(store *storage.Store, cfg *config.Config) (http.Handler, error) {
 }
 
 // NewRouterWithDeps 使用依赖容器创建路由
-func NewRouterWithDeps(deps *Dependencies) (http.Handler, error) {
+func NewRouterWithDeps(deps *Dependencies) (*Router, error) {
 	mux := http.NewServeMux()
 
 	// 创建验证码管理器
@@ -185,7 +204,10 @@ func NewRouterWithDeps(deps *Dependencies) (http.Handler, error) {
 	httpHandler = middleware.LoggingMiddleware(httpHandler)   // 请求日志
 	httpHandler = middleware.RequestIDMiddleware(httpHandler) // 请求ID
 
-	return httpHandler, nil
+	return &Router{
+		handler: httpHandler,
+		authMW:  authMW,
+	}, nil
 }
 
 // remoteQuerierAdapter 适配 RemoteQuerier 到 handler.RemoteQuerier 接口
