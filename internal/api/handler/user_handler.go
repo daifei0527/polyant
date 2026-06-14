@@ -165,10 +165,10 @@ func (h *UserHandler) SendVerificationCodeHandler(w http.ResponseWriter, r *http
 		return
 	}
 
-	// 检查邮箱是否已被其他用户使用
-	if h.emailService != nil {
-		// 遍历用户检查邮箱是否已被使用（简化实现）
-		// 生产环境应该在 UserStore 中添加 GetByEmail 方法
+	// 检查邮箱是否已被其他用户使用（防止抢占他人邮箱）
+	if existing, _ := h.userStore.GetByEmail(r.Context(), req.Email); existing != nil && existing.PublicKey != user.PublicKey {
+		writeError(w, awerrors.ErrEmailAlreadyUsed)
+		return
 	}
 
 	// 生成验证码
@@ -257,8 +257,8 @@ func (h *UserHandler) VerifyEmailHandler(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	// 检查邮箱是否已被其他用户使用
-	if existingUser, _ := h.userStore.GetByEmail(r.Context(), req.Email); existingUser != nil {
+	// 检查邮箱是否已被"其他"用户使用（本人重新验证自己的邮箱应放行）
+	if existingUser, _ := h.userStore.GetByEmail(r.Context(), req.Email); existingUser != nil && existingUser.PublicKey != user.PublicKey {
 		writeError(w, awerrors.ErrEmailAlreadyUsed)
 		return
 	}

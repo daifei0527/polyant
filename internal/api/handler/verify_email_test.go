@@ -156,3 +156,46 @@ func TestVerifyEmailHandler_EmailAlreadyUsed(t *testing.T) {
 
 	assert.Equal(t, http.StatusConflict, rec.Result().StatusCode)
 }
+
+// ---------- SendVerificationCodeHandler: email uniqueness dedup (P1.2) ----------
+
+func TestSendVerificationCodeHandler_EmailTakenByOther(t *testing.T) {
+	handler, store := newTestVerifyHandler(t)
+
+	// Another user already owns this email.
+	owner, _ := createTestUser(t, store, "owner", model.UserLevelLv1)
+	owner.Email = "taken@example.com"
+	owner.EmailVerified = true
+	store.User.Update(context.Background(), owner)
+
+	// A different user tries to claim the same email.
+	other, _ := createTestUser(t, store, "other", model.UserLevelLv0)
+	body, _ := json.Marshal(map[string]string{"email": "taken@example.com"})
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/user/send-verification", bytes.NewBuffer(body))
+	req.Header.Set("Content-Type", "application/json")
+	req = req.WithContext(setUserInContext(req.Context(), other))
+	rec := httptest.NewRecorder()
+
+	handler.SendVerificationCodeHandler(rec, req)
+
+	assert.Equal(t, http.StatusConflict, rec.Result().StatusCode)
+}
+
+func TestSendVerificationCodeHandler_OwnEmailAllowed(t *testing.T) {
+	handler, store := newTestVerifyHandler(t)
+
+	owner, _ := createTestUser(t, store, "owner", model.UserLevelLv1)
+	owner.Email = "mine@example.com"
+	owner.EmailVerified = true
+	store.User.Update(context.Background(), owner)
+
+	body, _ := json.Marshal(map[string]string{"email": "mine@example.com"})
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/user/send-verification", bytes.NewBuffer(body))
+	req.Header.Set("Content-Type", "application/json")
+	req = req.WithContext(setUserInContext(req.Context(), owner))
+	rec := httptest.NewRecorder()
+
+	handler.SendVerificationCodeHandler(rec, req)
+
+	assert.Equal(t, http.StatusOK, rec.Result().StatusCode)
+}
