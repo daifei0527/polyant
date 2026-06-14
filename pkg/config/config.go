@@ -5,8 +5,8 @@ package config
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 )
@@ -248,7 +248,7 @@ func Load(path string) (*Config, error) {
 	cfg := DefaultConfig()
 
 	// 尝试读取配置文件
-	data, err := ioutil.ReadFile(path)
+	data, err := os.ReadFile(path)
 	if err != nil {
 		if os.IsNotExist(err) {
 			// 配置文件不存在，返回默认配置
@@ -526,8 +526,8 @@ func Save(config *Config, path string) error {
 		return fmt.Errorf("配置不能为空")
 	}
 
-	// 确保目标目录存在
-	dir := path[:strings.LastIndex(path, "/")]
+	// 确保目标目录存在（跨平台：用 filepath.Dir 而非按 "/" 切分）
+	dir := filepath.Dir(path)
 	if dir != "" {
 		if err := os.MkdirAll(dir, 0755); err != nil {
 			return fmt.Errorf("创建配置目录失败: %w", err)
@@ -541,7 +541,7 @@ func Save(config *Config, path string) error {
 	}
 
 	// 写入文件
-	if err := ioutil.WriteFile(path, data, 0644); err != nil {
+	if err := os.WriteFile(path, data, 0644); err != nil {
 		return fmt.Errorf("写入配置文件失败: %w", err)
 	}
 

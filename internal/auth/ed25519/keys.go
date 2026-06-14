@@ -8,7 +8,6 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 )
@@ -102,7 +101,7 @@ func SaveKeyPair(privateKey, publicKey []byte, dir string) error {
 	}
 
 	keyPairPath := filepath.Join(dir, "keypair.json")
-	if err := ioutil.WriteFile(keyPairPath, data, 0600); err != nil {
+	if err := os.WriteFile(keyPairPath, data, 0600); err != nil {
 		return fmt.Errorf("写入密钥对文件失败: %w", err)
 	}
 
@@ -115,7 +114,7 @@ func SaveKeyPair(privateKey, publicKey []byte, dir string) error {
 	}
 
 	privPath := filepath.Join(dir, "private_key.json")
-	if err := ioutil.WriteFile(privPath, privData, 0600); err != nil {
+	if err := os.WriteFile(privPath, privData, 0600); err != nil {
 		return fmt.Errorf("写入私钥文件失败: %w", err)
 	}
 
@@ -128,7 +127,7 @@ func SaveKeyPair(privateKey, publicKey []byte, dir string) error {
 	}
 
 	pubPath := filepath.Join(dir, "public_key.json")
-	if err := ioutil.WriteFile(pubPath, pubData, 0644); err != nil {
+	if err := os.WriteFile(pubPath, pubData, 0644); err != nil {
 		return fmt.Errorf("写入公钥文件失败: %w", err)
 	}
 
@@ -140,7 +139,7 @@ func SaveKeyPair(privateKey, publicKey []byte, dir string) error {
 func LoadKeyPair(dir string) (privateKey, publicKey []byte, err error) {
 	// 优先尝试从 keypair.json 加载
 	keyPairPath := filepath.Join(dir, "keypair.json")
-	data, err := ioutil.ReadFile(keyPairPath)
+	data, err := os.ReadFile(keyPairPath)
 	if err == nil {
 		var keyPair KeyPair
 		if jsonErr := json.Unmarshal(data, &keyPair); jsonErr == nil {
@@ -158,7 +157,7 @@ func LoadKeyPair(dir string) (privateKey, publicKey []byte, err error) {
 
 	// 回退：分别加载私钥和公钥
 	privPath := filepath.Join(dir, "private_key.json")
-	privData, err := ioutil.ReadFile(privPath)
+	privData, err := os.ReadFile(privPath)
 	if err != nil {
 		return nil, nil, fmt.Errorf("读取私钥文件失败: %w", err)
 	}
@@ -174,7 +173,7 @@ func LoadKeyPair(dir string) (privateKey, publicKey []byte, err error) {
 	}
 
 	pubPath := filepath.Join(dir, "public_key.json")
-	pubData, err := ioutil.ReadFile(pubPath)
+	pubData, err := os.ReadFile(pubPath)
 	if err != nil {
 		return nil, nil, fmt.Errorf("读取公钥文件失败: %w", err)
 	}

@@ -1068,3 +1068,28 @@ func findSubstring(s, substr string) bool {
 	}
 	return false
 }
+
+// TestSave_CreatesParentDir: Save 必须创建嵌套父目录（跨平台，用 filepath.Dir）。
+func TestSave_CreatesParentDir(t *testing.T) {
+	dir := t.TempDir()
+	target := filepath.Join(dir, "nested", "deep", "config.json")
+	cfg := config.DefaultConfig()
+
+	if err := config.Save(cfg, target); err != nil {
+		t.Fatalf("Save 失败: %v", err)
+	}
+
+	// 父目录应被创建
+	if info, err := os.Stat(filepath.Dir(target)); err != nil || !info.IsDir() {
+		t.Errorf("父目录应被创建: stat err=%v", err)
+	}
+
+	// 文件应存在且能往返加载
+	loaded, err := config.Load(target)
+	if err != nil {
+		t.Fatalf("Load 失败: %v", err)
+	}
+	if loaded.Node.Name != cfg.Node.Name {
+		t.Errorf("Node.Name 往返不一致: got %q, want %q", loaded.Node.Name, cfg.Node.Name)
+	}
+}
