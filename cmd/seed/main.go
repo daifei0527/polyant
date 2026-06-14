@@ -17,6 +17,7 @@ import (
 
 	"github.com/daifei0527/polyant/internal/api/router"
 	"github.com/daifei0527/polyant/internal/core/category"
+	"github.com/daifei0527/polyant/internal/core/election"
 	"github.com/daifei0527/polyant/internal/core/seed"
 	"github.com/daifei0527/polyant/internal/core/user"
 	"github.com/daifei0527/polyant/internal/network/dht"
@@ -24,6 +25,7 @@ import (
 	"github.com/daifei0527/polyant/internal/network/protocol"
 	"github.com/daifei0527/polyant/internal/network/sync"
 	"github.com/daifei0527/polyant/internal/storage"
+	"github.com/daifei0527/polyant/internal/storage/kv"
 	"github.com/daifei0527/polyant/pkg/config"
 	"github.com/daifei0527/polyant/pkg/i18n"
 	"go.uber.org/zap"
@@ -46,19 +48,20 @@ const (
 
 // SeedApp 种子节点应用
 type SeedApp struct {
-	config       *config.Config
-	logger       *zap.Logger
-	store        *storage.Store
-	p2pHost      *host.P2PHost
-	dhtNode      *dht.DHTNode
-	syncEngine   *sync.SyncEngine
-	pushService  *sync.PushService
-	httpServer   *http.Server
-	apiRouter    *router.Router
-	levelChecker *user.LevelUpgradeChecker
-	cancel       context.CancelFunc
-	tlsCertPath  string
-	tlsKeyPath   string
+	config         *config.Config
+	logger         *zap.Logger
+	store          *storage.Store
+	p2pHost        *host.P2PHost
+	dhtNode        *dht.DHTNode
+	syncEngine     *sync.SyncEngine
+	pushService    *sync.PushService
+	httpServer     *http.Server
+	apiRouter      *router.Router
+	levelChecker   *user.LevelUpgradeChecker
+	electionCloser *election.ElectionAutoCloser
+	cancel         context.CancelFunc
+	tlsCertPath    string
+	tlsKeyPath     string
 }
 
 func main() {
@@ -267,6 +270,20 @@ func (app *SeedApp) Start() error {
 		app.logger.Warn("User level checker start failed", zap.Error(err))
 	}
 
+	// 启动选举自动关闭器：周期结算到期的 active 选举
+	kvStore := app.store.KVStore()
+	electionSvc := election.NewElectionService(
+		kv.NewElectionStore(kvStore),
+		kv.NewCandidateStore(kvStore),
+		kv.NewVoteStore(kvStore),
+	)
+	app.electionCloser = election.NewElectionAutoCloser(electionSvc, 5*time.Minute)
+	if err := app.electionCloser.Start(ctx); err != nil {
+		app.logger.Warn("Election auto-closer start failed", zap.Error(err))
+	} else {
+		app.logger.Info("Election auto-closer started")
+	}
+
 	// 构建 P2P 监听地址
 	listenAddr := fmt.Sprintf("/ip4/0.0.0.0/tcp/%d", app.config.Network.ListenPort)
 
@@ -459,6 +476,9 @@ func (app *SeedApp) Stop() error {
 	}
 	if app.levelChecker != nil {
 		app.levelChecker.Stop()
+	}
+	if app.electionCloser != nil {
+		app.electionCloser.Stop()
 	}
 	if app.dhtNode != nil {
 		if err := app.dhtNode.Close(); err != nil {
