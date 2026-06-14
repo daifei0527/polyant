@@ -78,10 +78,9 @@ func TestLevelUpgradeChecker_checkUpgrade(t *testing.T) {
 	}{
 		{"Lv0 no auto upgrade", model.UserLevelLv0, 100, 100, model.UserLevelLv0, false},
 		{"Lv1 meets requirements", model.UserLevelLv1, 10, 20, model.UserLevelLv2, true},
-		// When not enough contributions/ratings, newLevel is 0 (not assigned) and upgraded is false
-		// This is the current behavior of checkUpgrade
-		{"Lv1 not enough contributions", model.UserLevelLv1, 9, 20, 0, false},
-		{"Lv1 not enough ratings", model.UserLevelLv1, 10, 19, 0, false},
+		// 未满足升级条件时返回用户当前等级（Lv1），而非 0（旧行为是返回未赋值的 newLevel 零值）
+		{"Lv1 not enough contributions", model.UserLevelLv1, 9, 20, model.UserLevelLv1, false},
+		{"Lv1 not enough ratings", model.UserLevelLv1, 10, 19, model.UserLevelLv1, false},
 		{"Lv2 meets requirements", model.UserLevelLv2, 50, 100, model.UserLevelLv3, true},
 		{"Lv3 meets requirements", model.UserLevelLv3, 200, 500, model.UserLevelLv4, true},
 		{"Lv4 no auto upgrade", model.UserLevelLv4, 1000, 1000, model.UserLevelLv4, false},

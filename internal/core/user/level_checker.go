@@ -169,7 +169,8 @@ func (c *LevelUpgradeChecker) checkUpgrade(user *model.User) (int32, bool) {
 		}
 	}
 
-	return newLevel, upgraded
+	// 未升级时返回用户当前等级（而非 newLevel 的零值 0）；升级时 user.UserLevel 已被更新为 newLevel。
+	return user.UserLevel, upgraded
 }
 
 // CheckUserUpgrade 手动检查单个用户的升级条件（用于即时触发）
