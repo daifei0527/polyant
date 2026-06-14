@@ -74,16 +74,16 @@ func TestSearch_Success(t *testing.T) {
 			"total_count": 1,
 			"items": []map[string]interface{}{
 				{
-					"id":        "entry-1",
-					"title":     "Go Programming",
-					"content":   "Learn Go",
-					"category":  "tech",
-					"tags":      []string{"go", "programming"},
-					"score":     4.5,
+					"id":          "entry-1",
+					"title":       "Go Programming",
+					"content":     "Learn Go",
+					"category":    "tech",
+					"tags":        []string{"go", "programming"},
+					"score":       4.5,
 					"score_count": 10,
-					"created_at": time.Now().Format(time.RFC3339),
-					"updated_at": time.Now().Format(time.RFC3339),
-					"created_by": "user-1",
+					"created_at":  time.Now().Format(time.RFC3339),
+					"updated_at":  time.Now().Format(time.RFC3339),
+					"created_by":  "user-1",
 				},
 			},
 		}))
@@ -91,7 +91,7 @@ func TestSearch_Success(t *testing.T) {
 	defer server.Close()
 
 	c := NewClient(server.URL)
-	result, err := c.Search(context.Background(), "golang", "", nil, 10)
+	result, err := c.Search(context.Background(), "golang", "", nil, 10, "")
 	require.NoError(t, err)
 	require.NotNil(t, result)
 	assert.Equal(t, 1, result.TotalCount)
@@ -120,7 +120,7 @@ func TestSearch_WithCategoryAndTags(t *testing.T) {
 	defer server.Close()
 
 	c := NewClient(server.URL)
-	result, err := c.Search(context.Background(), "learning", "ai", []string{"ml", "deep-learning"}, 20)
+	result, err := c.Search(context.Background(), "learning", "ai", []string{"ml", "deep-learning"}, 20, "")
 	require.NoError(t, err)
 	require.NotNil(t, result)
 	assert.Equal(t, 2, result.TotalCount)
@@ -133,22 +133,22 @@ func TestGetEntry_Success(t *testing.T) {
 		assert.Equal(t, "/api/v1/entry/abc123", r.URL.Path)
 
 		writeJSON(w, http.StatusOK, apiSuccessResponse(map[string]interface{}{
-			"id":         "abc123",
-			"title":      "Test Entry",
-			"content":    "Test Content",
-			"category":   "tech",
-			"tags":       []string{"test"},
-			"score":      3.5,
+			"id":          "abc123",
+			"title":       "Test Entry",
+			"content":     "Test Content",
+			"category":    "tech",
+			"tags":        []string{"test"},
+			"score":       3.5,
 			"score_count": 5,
-			"created_at": time.Now().Format(time.RFC3339),
-			"updated_at": time.Now().Format(time.RFC3339),
-			"created_by": "user-1",
+			"created_at":  time.Now().Format(time.RFC3339),
+			"updated_at":  time.Now().Format(time.RFC3339),
+			"created_by":  "user-1",
 		}))
 	}))
 	defer server.Close()
 
 	c := NewClient(server.URL)
-	entry, err := c.GetEntry(context.Background(), "abc123")
+	entry, err := c.GetEntry(context.Background(), "abc123", "")
 	require.NoError(t, err)
 	require.NotNil(t, entry)
 	assert.Equal(t, "abc123", entry.ID)
@@ -172,16 +172,16 @@ func TestCreateEntry_Success(t *testing.T) {
 		assert.Equal(t, "tech", req.Category)
 
 		writeJSON(w, http.StatusCreated, apiSuccessResponse(map[string]interface{}{
-			"id":         "new-id",
-			"title":      req.Title,
-			"content":    req.Content,
-			"category":   req.Category,
-			"tags":       req.Tags,
-			"score":      0,
+			"id":          "new-id",
+			"title":       req.Title,
+			"content":     req.Content,
+			"category":    req.Category,
+			"tags":        req.Tags,
+			"score":       0,
 			"score_count": 0,
-			"created_at": time.Now().Format(time.RFC3339),
-			"updated_at": time.Now().Format(time.RFC3339),
-			"created_by": "user-1",
+			"created_at":  time.Now().Format(time.RFC3339),
+			"updated_at":  time.Now().Format(time.RFC3339),
+			"created_by":  "user-1",
 		}))
 	}))
 	defer server.Close()
@@ -230,7 +230,7 @@ func TestAPIError(t *testing.T) {
 	defer server.Close()
 
 	c := NewClient(server.URL)
-	_, err := c.GetEntry(context.Background(), "nonexistent")
+	_, err := c.GetEntry(context.Background(), "nonexistent", "")
 	require.Error(t, err)
 
 	var polyErr *Error

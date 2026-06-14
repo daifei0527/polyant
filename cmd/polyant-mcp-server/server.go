@@ -145,6 +145,10 @@ func (s *Server) handleListTools(req *jsonrpcRequest) *jsonrpcResponse {
 						"type": "integer",
 						"description": "返回结果数量限制",
 						"default": 10
+					},
+					"lang": {
+						"type": "string",
+						"description": "返回结果的本地化语言，如 zh-CN、en-US（可选，默认条目主语言）"
 					}
 				},
 				"required": ["query"]
@@ -287,6 +291,7 @@ func (s *Server) handleSearch(id interface{}, args json.RawMessage) *jsonrpcResp
 		Query    string `json:"query"`
 		Category string `json:"category,omitempty"`
 		Limit    int    `json:"limit,omitempty"`
+		Lang     string `json:"lang,omitempty"`
 	}
 	if err := json.Unmarshal(args, &params); err != nil {
 		return &jsonrpcResponse{
@@ -304,7 +309,7 @@ func (s *Server) handleSearch(id interface{}, args json.RawMessage) *jsonrpcResp
 	}
 
 	ctx := context.Background()
-	result, err := s.client.Search(ctx, params.Query, params.Category, nil, params.Limit)
+	result, err := s.client.Search(ctx, params.Query, params.Category, nil, params.Limit, params.Lang)
 	if err != nil {
 		return &jsonrpcResponse{
 			JSONRPC: "2.0",

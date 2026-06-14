@@ -55,14 +55,18 @@ func (c *Client) HasKeys() bool {
 }
 
 // Search 搜索知识条目
-// query 为搜索关键词，category 为分类过滤（可选），tags 为标签过滤（可选），limit 为返回数量限制
-func (c *Client) Search(ctx context.Context, query, category string, tags []string, limit int) (*SearchResult, error) {
+// query 为搜索关键词，category 为分类过滤（可选），tags 为标签过滤（可选），
+// limit 为返回数量限制，lang 为返回结果的本地化语言（可选，传 "" 则使用条目主语言）。
+func (c *Client) Search(ctx context.Context, query, category string, tags []string, limit int, lang string) (*SearchResult, error) {
 	path := fmt.Sprintf("/api/v1/search?q=%s&limit=%d", query, limit)
 	if category != "" {
 		path += "&cat=" + category
 	}
 	if len(tags) > 0 {
 		path += "&tag=" + strings.Join(tags, ",")
+	}
+	if lang != "" {
+		path += "&lang=" + lang
 	}
 
 	var result SearchResult
@@ -72,9 +76,12 @@ func (c *Client) Search(ctx context.Context, query, category string, tags []stri
 	return &result, nil
 }
 
-// GetEntry 获取知识条目详情
-func (c *Client) GetEntry(ctx context.Context, id string) (*Entry, error) {
+// GetEntry 获取知识条目详情。lang 为返回结果的本地化语言（可选）。
+func (c *Client) GetEntry(ctx context.Context, id, lang string) (*Entry, error) {
 	path := "/api/v1/entry/" + id
+	if lang != "" {
+		path += "?lang=" + lang
+	}
 	var result Entry
 	if err := c.doRequest(ctx, http.MethodGet, path, nil, &result); err != nil {
 		return nil, err

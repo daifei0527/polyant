@@ -32,6 +32,7 @@ type entryDocument struct {
 	ID        string   `json:"id"`
 	Title     string   `json:"title"`
 	Content   string   `json:"content"`
+	AllText   string   `json:"all_text"` // 合并主文本 + 所有语言本地化文本，供跨语言搜索命中
 	Category  string   `json:"category"`
 	Tags      []string `json:"tags"`
 	Status    string   `json:"status"`
@@ -65,6 +66,12 @@ func NewBleveEngine(indexPath string) (*BleveEngine, error) {
 	contentField.Analyzer = "standard"
 	contentField.Store = false // 内容不需要存储，只索引
 	entryMapping.AddFieldMappingsAt("content", contentField)
+
+	// 全文本字段（合并主文本 + 所有语言本地化文本），供跨语言搜索命中
+	allTextField := bleve.NewTextFieldMapping()
+	allTextField.Analyzer = "standard"
+	allTextField.Store = false
+	entryMapping.AddFieldMappingsAt("all_text", allTextField)
 
 	// 分类字段 - 使用 keyword 分析器支持精确匹配
 	categoryField := bleve.NewTextFieldMapping()
@@ -143,6 +150,7 @@ func (e *BleveEngine) IndexEntry(entry *model.KnowledgeEntry) error {
 		ID:        entry.ID,
 		Title:     entry.Title,
 		Content:   entry.Content,
+		AllText:   buildAllText(entry),
 		Category:  entry.Category,
 		Tags:      entry.Tags,
 		Status:    string(entry.Status),
@@ -152,6 +160,19 @@ func (e *BleveEngine) IndexEntry(entry *model.KnowledgeEntry) error {
 	}
 
 	return e.index.Index(entry.ID, doc)
+}
+
+// buildAllText 合并条目的主文本与所有语言的本地化文本，用于跨语言全文搜索。
+func buildAllText(entry *model.KnowledgeEntry) string {
+	parts := make([]string, 0, 2+len(entry.TitleI18n)+len(entry.ContentI18n))
+	parts = append(parts, entry.Title, entry.Content)
+	for _, v := range entry.TitleI18n {
+		parts = append(parts, v)
+	}
+	for _, v := range entry.ContentI18n {
+		parts = append(parts, v)
+	}
+	return strings.Join(parts, " ")
 }
 
 // UpdateIndex 更新条目索引
@@ -201,8 +222,13 @@ func (e *BleveEngine) Search(ctx context.Context, query SearchQuery) (*SearchRes
 		contentQuery := bleve.NewMatchQuery(kw)
 		contentQuery.SetField("content")
 
+		// 全文本（含本地化）匹配
+		allTextQuery := bleve.NewMatchQuery(kw)
+		allTextQuery.SetField("all_text")
+
 		fieldDisjunction.AddQuery(titleQuery)
 		fieldDisjunction.AddQuery(contentQuery)
+		fieldDisjunction.AddQuery(allTextQuery)
 
 		// 添加到 must 子句 - 每个关键词都必须匹配
 		boolQuery.AddMust(fieldDisjunction)

@@ -375,3 +375,39 @@ func TestBleveEngine_EmptyQuery(t *testing.T) {
 		t.Errorf("Empty query should return 0 results, got %d", result.TotalCount)
 	}
 }
+
+// TestBleveEngine_SearchI18n: 搜索应能经由本地化（i18n）字段命中条目——
+// 主文本为英文，但中文关键词仅存在于 TitleI18n/ContentI18n，通过 all_text 命中。
+func TestBleveEngine_SearchI18n(t *testing.T) {
+	dir := t.TempDir()
+	engine, err := NewBleveEngine(filepath.Join(dir, "test.bleve"))
+	if err != nil {
+		t.Fatalf("NewBleveEngine failed: %v", err)
+	}
+	defer engine.Close()
+
+	entry := &model.KnowledgeEntry{
+		ID:          "entry-i18n",
+		Title:       "Go Programming",
+		Content:     "Go is an open source programming language",
+		TitleI18n:   map[string]string{"zh-CN": "Go 语言编程"},
+		ContentI18n: map[string]string{"zh-CN": "Go 是一种开源编程语言"},
+		Category:    "tech",
+		Status:      model.EntryStatusPublished,
+	}
+	if err := engine.IndexEntry(entry); err != nil {
+		t.Fatalf("IndexEntry failed: %v", err)
+	}
+
+	// "开源" 仅出现在中文本地化内容中
+	result, err := engine.Search(context.Background(), SearchQuery{
+		Keyword: "开源",
+		Limit:   10,
+	})
+	if err != nil {
+		t.Fatalf("Search failed: %v", err)
+	}
+	if result.TotalCount == 0 {
+		t.Error("Search should hit the entry via localized content indexed in all_text")
+	}
+}
