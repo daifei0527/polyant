@@ -36,7 +36,16 @@ func (us *UserStore) CreateUser(user *model.User) error {
 		return fmt.Errorf("failed to serialize user: %w", err)
 	}
 
-	return us.store.Put(key, data)
+	if err := us.store.Put(key, data); err != nil {
+		return err
+	}
+	// 维护 email→pubkey 索引，使 GetByEmail 成为 O(1) 直查而非全表扫描
+	if user.Email != "" {
+		if err := us.store.Put([]byte(PrefixUserEmail+user.Email), []byte(user.PublicKey)); err != nil {
+			return fmt.Errorf("failed to index user email: %w", err)
+		}
+	}
+	return nil
 }
 
 // GetUser 根据公钥获取用户
@@ -63,13 +72,10 @@ func (us *UserStore) GetUser(publicKey string) (*model.User, error) {
 func (us *UserStore) UpdateUser(user *model.User) error {
 	key := []byte(PrefixUser + user.PublicKey)
 
-	// 检查用户是否存在
-	_, err := us.store.Get(key)
+	// 读旧用户（用于维护 email 索引：email 变更时删旧索引；不存在则 GetUser 已返回 not-found）
+	old, err := us.GetUser(user.PublicKey)
 	if err != nil {
-		if err == ErrKeyNotFound {
-			return fmt.Errorf("user %s not found", user.PublicKey)
-		}
-		return fmt.Errorf("failed to check user existence: %w", err)
+		return err
 	}
 
 	data, err := user.ToJSON()
@@ -77,7 +83,22 @@ func (us *UserStore) UpdateUser(user *model.User) error {
 		return fmt.Errorf("failed to serialize user: %w", err)
 	}
 
-	return us.store.Put(key, data)
+	if err := us.store.Put(key, data); err != nil {
+		return err
+	}
+
+	// 维护 email 索引：仅在 email 变更时更新
+	if old.Email != user.Email {
+		if old.Email != "" {
+			_ = us.store.Delete([]byte(PrefixUserEmail + old.Email))
+		}
+		if user.Email != "" {
+			if err := us.store.Put([]byte(PrefixUserEmail+user.Email), []byte(user.PublicKey)); err != nil {
+				return fmt.Errorf("failed to index user email: %w", err)
+			}
+		}
+	}
+	return nil
 }
 
 // ListUsers 列出用户，支持分页
@@ -125,24 +146,14 @@ func paginateUsers(users []*model.User, offset, limit int) []*model.User {
 	return users[offset:end]
 }
 
-// GetByEmail 根据邮箱获取用户
+// GetByEmail 根据邮箱获取用户（O(1) 索引直查，非全表扫描）
 func (us *UserStore) GetByEmail(ctx context.Context, email string) (*model.User, error) {
-	users, err := ScanAndParse(us.store, PrefixUser, func(data []byte) (*model.User, error) {
-		user := &model.User{}
-		if err := user.FromJSON(data); err != nil {
-			return nil, err
-		}
-		return user, nil
-	})
+	pubkey, err := us.store.Get([]byte(PrefixUserEmail + email))
 	if err != nil {
-		return nil, fmt.Errorf("failed to list users: %w", err)
-	}
-
-	for _, user := range users {
-		if user.Email == email {
-			return user, nil
+		if err == ErrKeyNotFound {
+			return nil, fmt.Errorf("user with email %s not found", email)
 		}
+		return nil, fmt.Errorf("failed to get user by email: %w", err)
 	}
-
-	return nil, fmt.Errorf("user with email %s not found", email)
+	return us.GetUser(string(pubkey))
 }
