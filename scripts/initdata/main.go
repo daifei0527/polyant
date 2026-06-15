@@ -8,7 +8,6 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"time"
@@ -91,7 +90,7 @@ func main() {
 
 	// 写入文件
 	outputPath := filepath.Join(outputDir, "seed_data.json")
-	if err := ioutil.WriteFile(outputPath, data, 0644); err != nil {
+	if err := os.WriteFile(outputPath, data, 0644); err != nil {
 		fmt.Fprintf(os.Stderr, "错误: 写入文件失败: %v\n", err)
 		os.Exit(1)
 	}
@@ -104,12 +103,12 @@ func main() {
 	// 同时分别输出分类和条目文件
 	categoriesData, _ := json.MarshalIndent(seedData.Categories, "", "  ")
 	categoriesPath := filepath.Join(outputDir, "seed_categories.json")
-	ioutil.WriteFile(categoriesPath, categoriesData, 0644)
+	os.WriteFile(categoriesPath, categoriesData, 0644)
 	fmt.Printf("  分类文件: %s\n", categoriesPath)
 
 	entriesData, _ := json.MarshalIndent(seedData.Entries, "", "  ")
 	entriesPath := filepath.Join(outputDir, "seed_entries.json")
-	ioutil.WriteFile(entriesPath, entriesData, 0644)
+	os.WriteFile(entriesPath, entriesData, 0644)
 	fmt.Printf("  条目文件: %s\n", entriesPath)
 }
 
