@@ -51,7 +51,7 @@ Polyant is a distributed P2P knowledge system for AI agents. Key architectural d
 **P2P Protocol** (`internal/network/protocol/`):
 - AWSP (Polyant Sync Protocol) over libp2p streams
 - Message types: Handshake, Query, SyncRequest, PushEntry, RatingPush
-- Codec handles serialization (currently JSON, not protobuf)
+- Wire codec is protobuf (`ProtobufCodec`); the legacy JSON codec had no production callers and was removed
 
 **Authentication** (`internal/api/middleware/auth.go`):
 - Ed25519 signature-based authentication

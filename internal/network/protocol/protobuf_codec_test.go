@@ -2,6 +2,7 @@ package protocol
 
 import (
 	"bytes"
+	"encoding/json"
 	"io"
 	"testing"
 
@@ -200,26 +201,12 @@ func TestProtobufCodec_SizeReduction(t *testing.T) {
 		t.Fatalf("Protobuf encode failed: %v", err)
 	}
 
-	// Encode with JSON codec for comparison
-	jsonCodec := NewCodec()
-	jsonMsg := &Message{
-		Header: &MessageHeader{
-			Type:      MessageTypeHandshake,
-			MessageID: "test-msg-for-size-comparison",
-			Timestamp: 1712995200000,
-		},
-		Payload: &Handshake{
-			NodeID:     "node-with-longer-name-001",
-			PeerID:     "peer-with-longer-name-001",
-			NodeType:   NodeTypeSeed,
-			Version:    "1.0.0-beta.1",
-			Categories: []string{"technology", "science", "programming", "golang", "distributed-systems"},
-			EntryCount: 10000,
-		},
-	}
-	jsonData, err := jsonCodec.Encode(jsonMsg)
+	// Encode with JSON for comparison (encoding/json on the same proto message;
+	// the legacy hand-rolled JSON codec has been removed, so compare against the
+	// standard JSON encoding of the proto message instead).
+	jsonData, err := json.Marshal(awspMsg)
 	if err != nil {
-		t.Fatalf("JSON encode failed: %v", err)
+		t.Fatalf("JSON marshal failed: %v", err)
 	}
 
 	// Protobuf should be smaller
