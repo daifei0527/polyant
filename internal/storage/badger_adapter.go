@@ -14,6 +14,7 @@ import (
 
 	"github.com/daifei0527/polyant/internal/storage/index"
 	"github.com/daifei0527/polyant/internal/storage/kv"
+	"github.com/daifei0527/polyant/internal/storage/linkparser"
 	"github.com/daifei0527/polyant/internal/storage/model"
 )
 
@@ -383,7 +384,11 @@ func (e *BadgerSearchEngine) Close() error {
 
 // ==================== 反向链接索引适配器 ====================
 
-// BadgerBacklinkIndex 基于 BadgerDB 的反向链接索引
+// BadgerBacklinkIndex 反向链接索引（内存实现，启动时从持久化条目重建）。
+//
+// 该索引本身是纯内存的（outlinks/backlinks map），不直接读写 BadgerDB；但由
+// NewBadgerStore / NewBadgerStoreWithCloser 在启动时遍历已发布条目、用 linkparser
+// 解析链接后调用 UpdateIndex 重建。因此条目间的反向链接关系在重启后不丢失。
 type BadgerBacklinkIndex struct {
 	mu        sync.RWMutex
 	outlinks  map[string]map[string]bool
@@ -525,6 +530,7 @@ func NewBadgerStore(dataDir string) (*Store, error) {
 	titleEntries := make([]index.TitleEntry, 0, len(entries))
 	for _, e := range entries {
 		titleEntries = append(titleEntries, index.TitleEntry{ID: e.ID, Title: e.Title})
+		_ = backlinkIndex.UpdateIndex(e.ID, linkparser.ParseLinks(e.Content))
 	}
 	titleIdx.Build(titleEntries)
 
@@ -563,6 +569,7 @@ func NewBadgerStoreWithCloser(dataDir string) (*BadgerStoreWrapper, error) {
 	titleEntries := make([]index.TitleEntry, 0, len(entries))
 	for _, e := range entries {
 		titleEntries = append(titleEntries, index.TitleEntry{ID: e.ID, Title: e.Title})
+		_ = backlinkIndex.UpdateIndex(e.ID, linkparser.ParseLinks(e.Content))
 	}
 	titleIdx.Build(titleEntries)
 

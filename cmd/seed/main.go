@@ -18,6 +18,7 @@ import (
 	"github.com/daifei0527/polyant/internal/api/router"
 	"github.com/daifei0527/polyant/internal/core/category"
 	"github.com/daifei0527/polyant/internal/core/election"
+	"github.com/daifei0527/polyant/internal/core/email"
 	"github.com/daifei0527/polyant/internal/core/seed"
 	"github.com/daifei0527/polyant/internal/core/user"
 	"github.com/daifei0527/polyant/internal/network/dht"
@@ -388,6 +389,7 @@ func (app *SeedApp) Start() error {
 		CategoryStore:   app.store.Category,
 		SearchEngine:    app.store.Search,
 		Backlink:        app.store.Backlink,
+		VerificationMgr: email.NewVerificationManagerWithStore(app.store.KVStore()),
 		RemoteQuerier:   remoteQueryService,
 		EntryPusher:     app.pushService,
 		SyncTrigger:     app.syncEngine,

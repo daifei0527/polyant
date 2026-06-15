@@ -11,10 +11,6 @@ func TestNewVerificationManager(t *testing.T) {
 		t.Fatal("NewVerificationManager returned nil")
 	}
 
-	if vm.codes == nil {
-		t.Error("codes map should be initialized")
-	}
-
 	if vm.codeLength != 6 {
 		t.Errorf("Default code length should be 6, got %d", vm.codeLength)
 	}
@@ -33,21 +29,9 @@ func TestVerificationManager_GenerateCode(t *testing.T) {
 		t.Errorf("Code length should be %d, got %d", vm.codeLength, len(code))
 	}
 
-	// Verify code is stored
-	vm.mu.RLock()
-	record, exists := vm.codes[code]
-	vm.mu.RUnlock()
-
-	if !exists {
-		t.Error("Code should be stored")
-	}
-
-	if record.Email != "test@example.com" {
-		t.Errorf("Expected email test@example.com, got %s", record.Email)
-	}
-
-	if record.Used {
-		t.Error("New code should not be marked as used")
+	// 生成的码应被存储且可验证、邮箱匹配
+	if !vm.Verify(code, "test@example.com") {
+		t.Error("Generated code should be stored and verifiable")
 	}
 }
 
@@ -57,18 +41,14 @@ func TestVerificationManager_Verify(t *testing.T) {
 	email := "test@example.com"
 	code := vm.GenerateCode(email)
 
-	// Verify correct code and email
+	// 正确码 + 邮箱
 	if !vm.Verify(code, email) {
 		t.Error("Verify should return true for correct code and email")
 	}
 
-	// Code should be marked as used after verification
-	vm.mu.RLock()
-	record := vm.codes[code]
-	vm.mu.RUnlock()
-
-	if !record.Used {
-		t.Error("Code should be marked as used after verification")
+	// 验证后应标记为已使用：再次验证失败
+	if vm.Verify(code, email) {
+		t.Error("Code should be marked used after first verification")
 	}
 }
 
@@ -128,13 +108,9 @@ func TestVerificationManager_Invalidate(t *testing.T) {
 
 	vm.Invalidate(code)
 
-	// Code should be deleted
-	vm.mu.RLock()
-	_, exists := vm.codes[code]
-	vm.mu.RUnlock()
-
-	if exists {
-		t.Error("Code should be deleted after Invalidate")
+	// 失效后验证应失败
+	if vm.Verify(code, "test@example.com") {
+		t.Error("Verify should fail after Invalidate")
 	}
 }
 
@@ -182,20 +158,41 @@ func TestVerificationManager_Cleanup(t *testing.T) {
 	// Run cleanup
 	vm.cleanup()
 
-	// Expired codes should be removed
-	vm.mu.RLock()
-	_, exists1 := vm.codes[code1]
-	_, exists2 := vm.codes[code2]
-	_, exists3 := vm.codes[code3]
-	vm.mu.RUnlock()
-
-	if exists1 {
+	// 过期码应被移除（验证失败），未过期码仍可验证
+	if vm.Verify(code1, "test1@example.com") {
 		t.Error("Expired code1 should be removed")
 	}
-	if exists2 {
+	if vm.Verify(code2, "test2@example.com") {
 		t.Error("Expired code2 should be removed")
 	}
-	if !exists3 {
-		t.Error("Valid code3 should still exist")
+	if !vm.Verify(code3, "test3@example.com") {
+		t.Error("Valid code3 should still verify")
+	}
+}
+
+// TestVerificationManager_PersistsAcrossRestart 验证注入后端时验证码跨"重启"持久化：
+// 两个共享同一 store 的 manager（模拟进程重启前后），后者仍能验证前者生成的码。
+func TestVerificationManager_PersistsAcrossRestart(t *testing.T) {
+	store := newMemCodeStore()
+
+	vm1 := NewVerificationManagerWithStore(store)
+	code := vm1.GenerateCode("persist@example.com")
+
+	// 模拟重启：在同一 store 上新建 manager（旧进程已退出）
+	vm2 := NewVerificationManagerWithStore(store)
+	if !vm2.Verify(code, "persist@example.com") {
+		t.Error("Code persisted via store should verify after simulated restart")
+	}
+}
+
+// TestNewVerificationManagerWithStore_Nil 验证 nil store 退化为内存后端。
+func TestNewVerificationManagerWithStore_Nil(t *testing.T) {
+	vm := NewVerificationManagerWithStore(nil)
+	if vm == nil {
+		t.Fatal("nil store should fall back to memory manager")
+	}
+	code := vm.GenerateCode("nil@example.com")
+	if !vm.Verify(code, "nil@example.com") {
+		t.Error("Fallback memory manager should verify generated code")
 	}
 }

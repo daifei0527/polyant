@@ -8,6 +8,7 @@ import (
 
 	"github.com/daifei0527/polyant/internal/storage/index"
 	"github.com/daifei0527/polyant/internal/storage/kv"
+	"github.com/daifei0527/polyant/internal/storage/linkparser"
 	"github.com/daifei0527/polyant/internal/storage/model"
 )
 
@@ -193,12 +194,16 @@ func NewPersistentStore(cfg *StoreConfig) (*Store, error) {
 	// 使用适配器组装存储
 	entryStore := NewBadgerEntryStore(kvStore)
 
-	// 创建标题索引并从已发布条目构建
+	// 创建标题索引与反向链接索引：启动时遍历已发布条目一次性构建。
+	// backlink 与 titleIdx 同为内存索引，每次启动从持久化的 entries 重建，
+	// 因此条目间的链接关系在重启后不丢失。
 	titleIdx := index.NewTitleIndex()
+	backlinkIdx := NewMemoryBacklinkIndex()
 	entries, _, _ := entryStore.List(context.Background(), EntryFilter{Status: model.EntryStatusPublished, Limit: 100000})
 	titleEntries := make([]index.TitleEntry, 0, len(entries))
 	for _, e := range entries {
 		titleEntries = append(titleEntries, index.TitleEntry{ID: e.ID, Title: e.Title})
+		_ = backlinkIdx.UpdateIndex(e.ID, linkparser.ParseLinks(e.Content))
 	}
 	titleIdx.Build(titleEntries)
 
@@ -208,7 +213,7 @@ func NewPersistentStore(cfg *StoreConfig) (*Store, error) {
 		Rating:   NewBadgerRatingStore(kvStore),
 		Category: NewBadgerCategoryStore(kvStore),
 		Search:   searchEngine,
-		Backlink: NewMemoryBacklinkIndex(),  // 反向链接仍使用内存实现
+		Backlink: backlinkIdx, // 内存索引，启动时从已发布条目重建
 		TitleIdx: titleIdx,
 		Audit:    kv.NewAuditStore(kvStore), // 共享 KV 存储
 		kvStore:  kvStore,                   // Store reference for cleanup
