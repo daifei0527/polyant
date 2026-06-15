@@ -573,8 +573,11 @@ func (se *SyncEngine) resolveConflictAndMerge(ctx context.Context, remoteEntry *
 	}
 
 	// 情况2：本地版本比远端旧，且本地内容未修改（即只有远端修改）-> 直接接受远端
-	// 比较内容哈希，如果相同说明内容一致，直接更新版本即可
-	if localEntry.ContentHash == remoteEntry.ContentHash {
+	// 比较内容哈希，如果相同说明内容一致，直接更新版本即可。
+	// 注意：必须比对【重算】的远端哈希，而非远端提供的 ContentHash 字段值——
+	// 该字段在传输中可被伪造。直接比字段会让攻击者把 ContentHash 伪造成本地值，
+	// 伪装"内容未变"以绕过冲突检测。重算比对确保只有内容真正一致才走快捷路径。
+	if localEntry.ContentHash == remoteEntry.ComputeContentHash() {
 		// 内容相同，只需要更新版本号
 		remoteEntry.Version = max(remoteEntry.Version, localEntry.Version)
 		return se.store.Entry.Update(ctx, remoteEntry)

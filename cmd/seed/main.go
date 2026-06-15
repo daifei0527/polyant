@@ -16,9 +16,11 @@ import (
 	"time"
 
 	"github.com/daifei0527/polyant/internal/api/router"
+	"github.com/daifei0527/polyant/internal/core/audit"
 	"github.com/daifei0527/polyant/internal/core/category"
 	"github.com/daifei0527/polyant/internal/core/election"
 	"github.com/daifei0527/polyant/internal/core/email"
+	"github.com/daifei0527/polyant/internal/core/integrity"
 	"github.com/daifei0527/polyant/internal/core/seed"
 	"github.com/daifei0527/polyant/internal/core/user"
 	"github.com/daifei0527/polyant/internal/network/dht"
@@ -49,20 +51,21 @@ const (
 
 // SeedApp 种子节点应用
 type SeedApp struct {
-	config         *config.Config
-	logger         *zap.Logger
-	store          *storage.Store
-	p2pHost        *host.P2PHost
-	dhtNode        *dht.DHTNode
-	syncEngine     *sync.SyncEngine
-	pushService    *sync.PushService
-	httpServer     *http.Server
-	apiRouter      *router.Router
-	levelChecker   *user.LevelUpgradeChecker
-	electionCloser *election.ElectionAutoCloser
-	cancel         context.CancelFunc
-	tlsCertPath    string
-	tlsKeyPath     string
+	config           *config.Config
+	logger           *zap.Logger
+	store            *storage.Store
+	p2pHost          *host.P2PHost
+	dhtNode          *dht.DHTNode
+	syncEngine       *sync.SyncEngine
+	pushService      *sync.PushService
+	httpServer       *http.Server
+	apiRouter        *router.Router
+	levelChecker     *user.LevelUpgradeChecker
+	electionCloser   *election.ElectionAutoCloser
+	integrityChecker *integrity.IntegrityChecker
+	cancel           context.CancelFunc
+	tlsCertPath      string
+	tlsKeyPath       string
 }
 
 func main() {
@@ -285,6 +288,14 @@ func (app *SeedApp) Start() error {
 		app.logger.Info("Election auto-closer started")
 	}
 
+	// 启动知识完整性守护进程：周期校验已发布条目的 ContentHash，发现篡改/损坏入审计
+	app.integrityChecker = integrity.NewIntegrityChecker(app.store, audit.NewService(app.store.Audit), 15*time.Minute, 0)
+	if err := app.integrityChecker.Start(ctx); err != nil {
+		app.logger.Warn("Integrity checker start failed", zap.Error(err))
+	} else {
+		app.logger.Info("Integrity checker started")
+	}
+
 	// 构建 P2P 监听地址
 	listenAddr := fmt.Sprintf("/ip4/0.0.0.0/tcp/%d", app.config.Network.ListenPort)
 
@@ -481,6 +492,9 @@ func (app *SeedApp) Stop() error {
 	}
 	if app.electionCloser != nil {
 		app.electionCloser.Stop()
+	}
+	if app.integrityChecker != nil {
+		app.integrityChecker.Stop()
 	}
 	if app.dhtNode != nil {
 		if err := app.dhtNode.Close(); err != nil {
