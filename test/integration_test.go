@@ -5,6 +5,7 @@ package test
 import (
 	"bytes"
 	"crypto/ed25519"
+	"crypto/rand"
 	"crypto/sha256"
 	"encoding/base64"
 	"encoding/hex"
@@ -51,6 +52,9 @@ func NewTestServer(t *testing.T) *TestServer {
 		NodeID:        "test-node-1",
 		NodeType:      "local",
 		Version:       "test-0.1.0",
+		// 测试环境：让 send-verification 在响应中回传验证码，供 VerifyEmail 取用
+		// （生产默认 false，见 P1.1 验证码泄露修复）。
+		DevReturnVerificationCode: true,
 	})
 	if err != nil {
 		t.Fatalf("创建路由失败: %v", err)
@@ -62,10 +66,22 @@ func NewTestServer(t *testing.T) *TestServer {
 	}
 }
 
-// Register 注册用户并获取密钥对
+// Register 注册用户：本地生成 Ed25519 密钥对并在注册请求中提交公钥。
+//
+// v2.2.0 起注册响应只返回 public_key（不再返回 private_key），因此测试必须自行
+// 生成密钥对、随注册请求提交 publicKey（走 RegisterHandler 的客户端提交公钥分支），
+// 并在本地保存私钥供后续请求签名。旧实现依赖服务端回传 private_key，解码空字符串
+// 得到空私钥，导致后续 ed25519.Sign 在 index-out-of-range 处 panic。
 func (s *TestServer) Register(t *testing.T, agentName string) {
+	pub, priv, err := ed25519.GenerateKey(rand.Reader)
+	if err != nil {
+		t.Fatalf("生成密钥对失败: %v", err)
+	}
+	pubB64 := base64.StdEncoding.EncodeToString(pub)
+
 	resp, err := s.DoRequestNoAuth("POST", "/api/v1/user/register", map[string]string{
 		"agent_name": agentName,
+		"public_key": pubB64,
 	})
 	if err != nil {
 		t.Fatalf("注册失败: %v", err)
@@ -75,28 +91,9 @@ func (s *TestServer) Register(t *testing.T, agentName string) {
 		t.Fatalf("注册失败: code=%d, message=%s", resp.Code, resp.Message)
 	}
 
-	var data struct {
-		PublicKey  string `json:"public_key"`
-		PrivateKey string `json:"private_key"`
-		AgentName  string `json:"agent_name"`
-	}
-	if err := json.Unmarshal(resp.Data, &data); err != nil {
-		t.Fatalf("解析注册响应失败: %v", err)
-	}
-
-	// 解码密钥
-	privKeyBytes, err := base64.StdEncoding.DecodeString(data.PrivateKey)
-	if err != nil {
-		t.Fatalf("解码私钥失败: %v", err)
-	}
-	pubKeyBytes, err := base64.StdEncoding.DecodeString(data.PublicKey)
-	if err != nil {
-		t.Fatalf("解码公钥失败: %v", err)
-	}
-
-	s.privKey = ed25519.PrivateKey(privKeyBytes)
-	s.pubKey = ed25519.PublicKey(pubKeyBytes)
-	s.pubKeyB64 = data.PublicKey
+	s.privKey = priv
+	s.pubKey = pub
+	s.pubKeyB64 = pubB64
 	s.registered = true
 }
 
