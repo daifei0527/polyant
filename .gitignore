@@ -6,6 +6,9 @@
 *.dylib
 /polyant
 /awctl
+/pactl
+/seed
+/user
 /bin/
 
 # Test binary
@@ -47,4 +50,3 @@ polyant_deploy.pub
 
 # Web
 web/admin/node_modules/
-/pactl
