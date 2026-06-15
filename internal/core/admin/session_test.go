@@ -69,3 +69,31 @@ func TestSessionManager_DeleteSession(t *testing.T) {
 		t.Fatal("deleted session should not be valid")
 	}
 }
+
+// TestSessionManager_PersistentAcrossRestart: 持久化后端的 session 应在"重启"（新 manager，同 store）后仍有效。
+func TestSessionManager_PersistentAcrossRestart(t *testing.T) {
+	store := &memSessionStore{data: make(map[string][]byte)}
+	sm1 := NewSessionManagerWithStore(time.Hour, store)
+	token, err := sm1.CreateSession("pk-restart")
+	if err != nil {
+		t.Fatalf("CreateSession: %v", err)
+	}
+
+	// 模拟重启：用同一 store 创建新 manager
+	sm2 := NewSessionManagerWithStore(time.Hour, store)
+	pubkey, ok := sm2.ValidateSession(token)
+	if !ok {
+		t.Fatal("session should survive restart via persistent store")
+	}
+	if pubkey != "pk-restart" {
+		t.Errorf("got %s, want pk-restart", pubkey)
+	}
+
+	// 内存后端（默认）的 session 不应在重启后存活
+	sm3 := NewSessionManager(time.Hour)
+	tk, _ := sm3.CreateSession("pk-mem")
+	sm4 := NewSessionManager(time.Hour)
+	if _, ok := sm4.ValidateSession(tk); ok {
+		t.Error("memory-backed session should NOT survive restart")
+	}
+}

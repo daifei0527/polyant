@@ -182,10 +182,12 @@ func NewRouterWithDeps(deps *Dependencies) (*Router, error) {
 	// 创建速率限制中间件
 	rateLimitMW := middleware.NewRateLimitMiddleware(middleware.DefaultRateLimitConfig())
 
-	// 创建 Session Manager
+	// 创建 Session Manager（有 KV 后端时持久化，重启不丢 admin session）
 	var sessionMgr *coreadmin.SessionManager
 	if deps.SessionManager != nil {
 		sessionMgr = deps.SessionManager
+	} else if deps.KVStore != nil {
+		sessionMgr = coreadmin.NewSessionManagerWithStore(24*time.Hour, deps.KVStore)
 	} else {
 		sessionMgr = coreadmin.NewSessionManager(24 * time.Hour)
 	}
