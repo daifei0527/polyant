@@ -75,6 +75,8 @@ type RatingStore interface {
 	GetByRater(ctx context.Context, entryID, raterPubkeyHash string) (*model.Rating, error)
 	// ListRatedAfter 获取指定时间戳之后创建的所有评分（用于增量同步）
 	ListRatedAfter(ctx context.Context, after int64) ([]*model.Rating, error)
+	// ListByRater 获取评分者（公钥哈希）的所有评分；经 by-rater 索引，O(该评分者的评分数)
+	ListByRater(ctx context.Context, raterPubkeyHash string) ([]*model.Rating, error)
 }
 
 // CategoryStore 分类存储接口

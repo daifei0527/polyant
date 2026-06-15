@@ -2,6 +2,7 @@ package kv
 
 import (
 	"fmt"
+	"sort"
 	"time"
 
 	"github.com/daifei0527/polyant/internal/storage/model"
@@ -152,13 +153,9 @@ func (es *EntryStore) ListByCategory(category string) ([]*model.KnowledgeEntry, 
 
 // sortEntriesByUpdated 按更新时间倒序排列条目
 func sortEntriesByUpdated(entries []*model.KnowledgeEntry) {
-	for i := 0; i < len(entries)-1; i++ {
-		for j := i + 1; j < len(entries); j++ {
-			if entries[j].UpdatedAt > entries[i].UpdatedAt {
-				entries[i], entries[j] = entries[j], entries[i]
-			}
-		}
-	}
+	sort.Slice(entries, func(i, j int) bool {
+		return entries[i].UpdatedAt > entries[j].UpdatedAt
+	})
 }
 
 // paginateEntries 对条目列表进行分页

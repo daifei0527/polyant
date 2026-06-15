@@ -385,6 +385,21 @@ func (s *MemoryRatingStore) GetByRater(ctx context.Context, entryID, raterPubkey
 	return nil, fmt.Errorf("rating not found")
 }
 
+// ListByRater 获取评分者的所有评分（内存实现：线性过滤，测试规模下足够）。
+func (s *MemoryRatingStore) ListByRater(ctx context.Context, raterPubkeyHash string) ([]*model.Rating, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	var results []*model.Rating
+	for _, rating := range s.ratings {
+		if rating.RaterPubkey == raterPubkeyHash {
+			cp := *rating
+			results = append(results, &cp)
+		}
+	}
+	return results, nil
+}
+
 // ListRatedAfter 获取指定时间戳之后创建的所有评分
 func (s *MemoryRatingStore) ListRatedAfter(ctx context.Context, after int64) ([]*model.Rating, error) {
 	s.mu.RLock()

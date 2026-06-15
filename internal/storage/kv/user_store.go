@@ -3,6 +3,7 @@ package kv
 import (
 	"context"
 	"fmt"
+	"sort"
 
 	"github.com/daifei0527/polyant/internal/storage/model"
 )
@@ -123,13 +124,9 @@ func (us *UserStore) ListUsers(offset, limit int) ([]*model.User, error) {
 
 // sortUsersByRegistered 按注册时间倒序排列用户
 func sortUsersByRegistered(users []*model.User) {
-	for i := 0; i < len(users)-1; i++ {
-		for j := i + 1; j < len(users); j++ {
-			if users[j].RegisteredAt > users[i].RegisteredAt {
-				users[i], users[j] = users[j], users[i]
-			}
-		}
-	}
+	sort.Slice(users, func(i, j int) bool {
+		return users[i].RegisteredAt > users[j].RegisteredAt
+	})
 }
 
 // paginateUsers 对用户列表进行分页

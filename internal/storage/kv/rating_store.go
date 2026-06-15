@@ -49,7 +49,37 @@ func (rs *RatingStore) CreateRating(rating *model.Rating) error {
 		return fmt.Errorf("failed to serialize rating: %w", err)
 	}
 
-	return rs.store.Put(key, data)
+	if err := rs.store.Put(key, data); err != nil {
+		return err
+	}
+	// 维护 by-rater 索引：rating-by-rater:{rater}:{entryId} → 主键，
+	// 让 ListByRater 成为 O(评分者评分数) 而非遍历所有条目×各自评分（N+1）。
+	return rs.store.Put([]byte(PrefixRatingByRater+rating.RaterPubkey+":"+rating.EntryId), key)
+}
+
+// ListByRater 获取指定评分者（按其公钥哈希）的所有评分。
+// 经 by-rater 索引直查，复杂度 O(该评分者的评分数)；原实现需遍历全部条目再逐条
+// ListByEntry 过滤（calculator.GetUserRatings 的 N+1）。
+func (rs *RatingStore) ListByRater(raterPubkey string) ([]*model.Rating, error) {
+	prefix := PrefixRatingByRater + raterPubkey + ":"
+	items, err := rs.store.Scan([]byte(prefix))
+	if err != nil {
+		return nil, fmt.Errorf("failed to scan ratings by rater %s: %w", raterPubkey, err)
+	}
+
+	ratings := make([]*model.Rating, 0, len(items))
+	for _, primaryKey := range items {
+		data, err := rs.store.Get(primaryKey)
+		if err != nil {
+			continue
+		}
+		rating := &model.Rating{}
+		if err := rating.FromJSON(data); err != nil {
+			continue
+		}
+		ratings = append(ratings, rating)
+	}
+	return ratings, nil
 }
 
 // GetRatingsByEntry 获取指定条目的所有评分

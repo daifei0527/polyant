@@ -121,26 +121,9 @@ func (rc *RatingCalculator) RecalculateEntryScore(ctx context.Context, entryID s
 
 func (rc *RatingCalculator) GetUserRatings(ctx context.Context, publicKey string) ([]*model.Rating, error) {
 	raterHash := user.HashPublicKey(publicKey)
-	allRatings := make([]*model.Rating, 0)
-
-	entries, _, err := rc.store.Entry.List(ctx, storage.EntryFilter{Limit: 10000})
-	if err != nil {
-		return nil, err
-	}
-
-	for _, entry := range entries {
-		ratings, err := rc.store.Rating.ListByEntry(ctx, entry.ID)
-		if err != nil {
-			continue
-		}
-		for _, r := range ratings {
-			if r.RaterPubkey == raterHash {
-				allRatings = append(allRatings, r)
-			}
-		}
-	}
-
-	return allRatings, nil
+	// 经 by-rater 索引直查（O(该评分者的评分数)），取代原先遍历全部条目再逐条
+	// ListByEntry 过滤的 N+1 全扫描。
+	return rc.store.Rating.ListByRater(ctx, raterHash)
 }
 
 func (rc *RatingCalculator) GetEntryRatings(ctx context.Context, entryID string) ([]*model.Rating, error) {

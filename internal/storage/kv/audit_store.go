@@ -13,6 +13,12 @@ import (
 
 const auditPrefix = "audit:"
 
+// auditByIDPrefix 是 audit log 的 ID→主键 索引前缀。
+// 主键格式为 audit:{invertedTs}:{id}，ID 嵌在键中且无法仅凭 ID 直查，
+// 故额外维护 audit:by-id:{id} → 主键 的索引，让 Get(id) 成为 O(1)。
+// 不以 "audit:" 的 invertedTs 段冲突（前缀不同）。
+const auditByIDPrefix = "audit:by-id:"
+
 // AuditStore 审计日志存储接口
 type AuditStore interface {
 	Create(ctx context.Context, log *model.AuditLog) error
@@ -41,11 +47,25 @@ func (s *KVAuditStore) Create(ctx context.Context, log *model.AuditLog) error {
 	// 键格式: audit:{timestamp}:{id}
 	// 使用时间戳倒序（用一个大数减去时间戳）便于按时间倒序查询
 	key := []byte(fmt.Sprintf("%s%019d:%s", auditPrefix, maxTimestamp-log.Timestamp, log.ID))
-	return s.kv.Put(key, data)
+	if err := s.kv.Put(key, data); err != nil {
+		return err
+	}
+	// 维护 by-id 索引：audit:by-id:{id} → 主键，让 Get 成为 O(1)
+	return s.kv.Put([]byte(auditByIDPrefix+log.ID), key)
 }
 
 func (s *KVAuditStore) Get(ctx context.Context, id string) (*model.AuditLog, error) {
-	// 需要扫描查找，因为 ID 嵌入在键中
+	// O(1) 路径：audit:by-id:{id} → 主键 → 直查
+	if primaryKey, err := s.kv.Get([]byte(auditByIDPrefix + id)); err == nil {
+		if data, gerr := s.kv.Get(primaryKey); gerr == nil {
+			var log model.AuditLog
+			if json.Unmarshal(data, &log) == nil {
+				return &log, nil
+			}
+		}
+	}
+
+	// 兜底：索引缺失（升级前写入的旧数据未建 by-id 索引）→ 回退扫描
 	prefix := []byte(auditPrefix)
 	items, err := s.kv.Scan(prefix)
 	if err != nil {
@@ -171,6 +191,8 @@ func (s *KVAuditStore) DeleteBefore(ctx context.Context, timestamp int64) (int64
 			if err := s.kv.Delete([]byte(key)); err != nil {
 				continue
 			}
+			// 同步删除 by-id 索引，避免悬挂
+			_ = s.kv.Delete([]byte(auditByIDPrefix + log.ID))
 			deleted++
 		}
 	}

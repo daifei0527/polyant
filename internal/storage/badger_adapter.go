@@ -97,24 +97,26 @@ func (s *BadgerEntryStore) Count(ctx context.Context) (int64, error) {
 // BadgerUserStore 适配 kv.UserStore 到 storage.UserStore 接口
 type BadgerUserStore struct {
 	store *kv.UserStore
+	kv    kv.Store // 维护 hash→pubkey 索引，让按公钥哈希查找成为 O(1)
 }
 
 // NewBadgerUserStore 创建 BadgerDB 用户存储
 func NewBadgerUserStore(s kv.Store) *BadgerUserStore {
-	return &BadgerUserStore{store: kv.NewUserStore(s)}
+	return &BadgerUserStore{store: kv.NewUserStore(s), kv: s}
 }
 
 func (s *BadgerUserStore) Create(ctx context.Context, user *model.User) (*model.User, error) {
 	if err := s.store.CreateUser(user); err != nil {
 		return nil, err
 	}
+	// 维护 hash→pubkey 索引：API 主路径（/user/{id}、rating、admin 等）按公钥哈希查找，
+	// 建索引后 Get(hash) 为 O(1) 而非全表扫描。索引写失败不阻塞主流程（Get 有扫描兜底）。
+	_ = s.kv.Put([]byte(kv.PrefixUserHash+hashPublicKey(user.PublicKey)), []byte(user.PublicKey))
 	return user, nil
 }
 
 func (s *BadgerUserStore) Get(ctx context.Context, pubkeyHash string) (*model.User, error) {
-	// 检查是否为 base64 编码的公钥（原始格式）
-	// 原始公钥通常以 base64 编码，包含 + / = 等字符
-	// 公钥哈希是 hex 编码，只包含 0-9 a-f
+	// 判断传入的是原始公钥（base64，含 + / = 等）还是公钥哈希（hex，仅 0-9 a-f -）
 	isRawPublicKey := false
 	for _, c := range pubkeyHash {
 		if (c < '0' || c > '9') && (c < 'a' || c > 'f') && c != '-' {
@@ -123,18 +125,30 @@ func (s *BadgerUserStore) Get(ctx context.Context, pubkeyHash string) (*model.Us
 		}
 	}
 
+	// O(1) 路径：原始公钥直查；哈希经 user-hash: 索引取得公钥再直查
+	if isRawPublicKey {
+		if u, err := s.store.GetUser(pubkeyHash); err == nil {
+			return u, nil
+		}
+	} else {
+		if pub, err := s.kv.Get([]byte(kv.PrefixUserHash + pubkeyHash)); err == nil {
+			if u, gerr := s.store.GetUser(string(pub)); gerr == nil {
+				return u, nil
+			}
+		}
+	}
+
+	// 兜底：索引缺失（升级前写入的旧用户未建 hash 索引）→ 回退全表扫描，保证向后兼容
 	users, err := s.store.ListUsers(0, 100000)
 	if err != nil {
 		return nil, err
 	}
 	for _, u := range users {
 		if isRawPublicKey {
-			// 直接比较公钥
 			if u.PublicKey == pubkeyHash {
 				return u, nil
 			}
 		} else {
-			// 比较公钥哈希
 			if hashPublicKey(u.PublicKey) == pubkeyHash {
 				return u, nil
 			}
@@ -210,6 +224,11 @@ func (s *BadgerRatingStore) Get(ctx context.Context, id string) (*model.Rating, 
 
 func (s *BadgerRatingStore) ListByEntry(ctx context.Context, entryID string) ([]*model.Rating, error) {
 	return s.store.GetRatingsByEntry(entryID)
+}
+
+// ListByRater 获取评分者的所有评分（经 by-rater 索引，O(评分者评分数)，修 N+1）。
+func (s *BadgerRatingStore) ListByRater(ctx context.Context, raterPubkeyHash string) ([]*model.Rating, error) {
+	return s.store.ListByRater(raterPubkeyHash)
 }
 
 func (s *BadgerRatingStore) GetByRater(ctx context.Context, entryID, raterPubkeyHash string) (*model.Rating, error) {
