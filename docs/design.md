@@ -1755,18 +1755,18 @@ rate_limit:
 
 | 环境变量 | 配置项 | 默认值 |
 |----------|--------|--------|
-| `AW_NODE_TYPE` | `node.type` | `local` |
-| `AW_NODE_NAME` | `node.name` | `polyant-node` |
-| `AW_NODE_DATA_DIR` | `node.data_dir` | `~/.polyant/data` |
-| `AW_NODE_LOG_LEVEL` | `node.log_level` | `info` |
-| `AW_NETWORK_LISTEN_PORT` | `network.listen_port` | `18530` |
-| `AW_NETWORK_API_PORT` | `network.api_port` | `18531` |
-| `AW_NETWORK_SEED_NODES` | `network.seed_nodes` | `[]` |
-| `AW_SYNC_AUTO_SYNC` | `sync.auto_sync` | `true` |
-| `AW_SYNC_INTERVAL_SECONDS` | `sync.interval_seconds` | `300` |
-| `AW_SEED_ENABLED` | `seed.enabled` | `false` |
-| `AW_SEED_SMTP_HOST` | `seed.smtp.host` | `""` |
-| `AW_SEED_SMTP_PORT` | `seed.smtp.port` | `587` |
+| `POLYANT_NODE_TYPE` | `node.type` | `local` |
+| `POLYANT_NODE_NAME` | `node.name` | `polyant-node` |
+| `POLYANT_NODE_DATA_DIR` | `node.data_dir` | `~/.polyant/data` |
+| `POLYANT_NODE_LOG_LEVEL` | `node.log_level` | `info` |
+| `POLYANT_NETWORK_LISTEN_PORT` | `network.listen_port` | `18530` |
+| `POLYANT_NETWORK_API_PORT` | `network.api_port` | `18531` |
+| `POLYANT_NETWORK_SEED_NODES` | `network.seed_nodes` | `[]` |
+| `POLYANT_SYNC_AUTO_SYNC` | `sync.auto_sync` | `true` |
+| `POLYANT_SYNC_INTERVAL_SECONDS` | `sync.interval_seconds` | `300` |
+| `POLYANT_SEED_ENABLED` | `seed.enabled` | `false` |
+| `POLYANT_SEED_SMTP_HOST` | `seed.smtp.host` | `""` |
+| `POLYANT_SEED_SMTP_PORT` | `seed.smtp.port` | `587` |
 
 ```go
 // pkg/config/loader.go
@@ -2224,9 +2224,9 @@ services:
       - seed1-data:/var/lib/polyant/data
       - seed1-keys:/var/lib/polyant/keys
     environment:
-      - AW_NODE_TYPE=seed
-      - AW_SEED_ENABLED=true
-      - AW_NETWORK_SEED_NODES=
+      - POLYANT_NODE_TYPE=seed
+      - POLYANT_SEED_ENABLED=true
+      - POLYANT_NETWORK_SEED_NODES=
     restart: unless-stopped
     deploy:
       resources:
@@ -2246,9 +2246,9 @@ services:
       - seed2-data:/var/lib/polyant/data
       - seed2-keys:/var/lib/polyant/keys
     environment:
-      - AW_NODE_TYPE=seed
-      - AW_SEED_ENABLED=true
-      - AW_NETWORK_SEED_NODES=/dns4/seed-node-1/tcp/18530/p2p/QmSeedNode1...
+      - POLYANT_NODE_TYPE=seed
+      - POLYANT_SEED_ENABLED=true
+      - POLYANT_NETWORK_SEED_NODES=/dns4/seed-node-1/tcp/18530/p2p/QmSeedNode1...
     restart: unless-stopped
     deploy:
       resources:
