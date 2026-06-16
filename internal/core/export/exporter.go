@@ -9,9 +9,13 @@ import (
 	"time"
 
 	"github.com/daifei0527/polyant/internal/storage"
-	"github.com/daifei0527/polyant/internal/storage/model"
-	"github.com/daifei0527/polyant/pkg/logger"
 )
+
+// exportAllLimit 用于"导出全部"场景的 List limit。kv 层的 List 经 ScanAndParse 全量
+// 载入，limit 仅控制最终切片（paginateEntries 会把 end 钳制到 len）；取一个远超实际
+// 数据量的值以避免静默截断——原先的 Limit:100000 会在条目/用户超过 10 万时静默丢失。
+const exportAllLimit = 1 << 30
+
 
 // Manifest 导出文件元数据
 type Manifest struct {
@@ -67,7 +71,7 @@ func (e *Exporter) Export(opts ExportOptions) ([]byte, error) {
 
 	// 导出条目
 	if opts.IncludeEntries {
-		entries, _, err := e.store.Entry.List(nil, storage.EntryFilter{Limit: 100000})
+		entries, _, err := e.store.Entry.List(nil, storage.EntryFilter{Limit: exportAllLimit})
 		if err != nil {
 			zipWriter.Close()
 			return nil, fmt.Errorf("failed to list entries: %w", err)
@@ -95,7 +99,7 @@ func (e *Exporter) Export(opts ExportOptions) ([]byte, error) {
 
 	// 导出用户
 	if opts.IncludeUsers {
-		users, _, err := e.store.User.List(nil, storage.UserFilter{Limit: 100000})
+		users, _, err := e.store.User.List(nil, storage.UserFilter{Limit: exportAllLimit})
 		if err != nil {
 			zipWriter.Close()
 			return nil, fmt.Errorf("failed to list users: %w", err)
@@ -118,27 +122,19 @@ func (e *Exporter) Export(opts ExportOptions) ([]byte, error) {
 		manifest.Counts["users"] = len(users)
 	}
 
-	// 导出评分
+	// 导出评分（直接取全部评分，取代原先 entries×ListByEntry 的笛卡尔积——后者既
+	// 是 O(条目数×每条目评分) 又受 100k 条目上限截断，会漏掉超出上限条目的评分）
 	if opts.IncludeRatings {
-		entries, _, err := e.store.Entry.List(nil, storage.EntryFilter{Limit: 100000})
+		ratings, err := e.store.Rating.ListAll(nil)
 		if err != nil {
 			zipWriter.Close()
-			return nil, fmt.Errorf("failed to list entries for ratings: %w", err)
+			return nil, fmt.Errorf("failed to list ratings: %w", err)
 		}
-		var allRatings []*model.Rating
-		for _, entry := range entries {
-			ratings, err := e.store.Rating.ListByEntry(nil, entry.ID)
-			if err != nil {
-				logger.Warn("failed to list ratings for entry %s: %v", entry.ID, err)
-				continue
-			}
-			allRatings = append(allRatings, ratings...)
-		}
-		if err := e.writeJSONToZip(zipWriter, "ratings.json", allRatings); err != nil {
+		if err := e.writeJSONToZip(zipWriter, "ratings.json", ratings); err != nil {
 			zipWriter.Close()
 			return nil, err
 		}
-		manifest.Counts["ratings"] = len(allRatings)
+		manifest.Counts["ratings"] = len(ratings)
 	}
 
 	// 写入 manifest

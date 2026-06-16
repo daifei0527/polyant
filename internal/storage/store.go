@@ -77,6 +77,8 @@ type RatingStore interface {
 	ListRatedAfter(ctx context.Context, after int64) ([]*model.Rating, error)
 	// ListByRater 获取评分者（公钥哈希）的所有评分；经 by-rater 索引，O(该评分者的评分数)
 	ListByRater(ctx context.Context, raterPubkeyHash string) ([]*model.Rating, error)
+	// ListAll 获取全部评分（导出等需要全量数据的场景）
+	ListAll(ctx context.Context) ([]*model.Rating, error)
 }
 
 // CategoryStore 分类存储接口

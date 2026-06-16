@@ -400,6 +400,19 @@ func (s *MemoryRatingStore) ListByRater(ctx context.Context, raterPubkeyHash str
 	return results, nil
 }
 
+// ListAll 获取全部评分（导出用）。
+func (s *MemoryRatingStore) ListAll(ctx context.Context) ([]*model.Rating, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	results := make([]*model.Rating, 0, len(s.ratings))
+	for _, rating := range s.ratings {
+		cp := *rating
+		results = append(results, &cp)
+	}
+	return results, nil
+}
+
 // ListRatedAfter 获取指定时间戳之后创建的所有评分
 func (s *MemoryRatingStore) ListRatedAfter(ctx context.Context, after int64) ([]*model.Rating, error) {
 	s.mu.RLock()

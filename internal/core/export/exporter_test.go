@@ -4,6 +4,7 @@ import (
 	"archive/zip"
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"testing"
 
 	"github.com/daifei0527/polyant/internal/storage"
@@ -108,6 +109,73 @@ func TestExporter_Export(t *testing.T) {
 			}
 			if manifest.NodeID != "test-node" {
 				t.Errorf("Expected nodeID test-node, got %s", manifest.NodeID)
+			}
+		}
+	}
+}
+
+// TestExporter_ExportAllRecordsNoTruncation 验证导出不截断：创建多条目 + 多评分，
+// 导出后断言 manifest 计数与实际记录数一致（评分经 ListAll 取全量，取代笛卡尔积；
+// 条目/用户经无截断 limit）。锁定原先 Limit:100000 静默截断 bug 已修复。
+func TestExporter_ExportAllRecordsNoTruncation(t *testing.T) {
+	store := newTestStore(t)
+
+	const numEntries = 5
+	const ratingsPerEntry = 2
+	wantRatings := numEntries * ratingsPerEntry
+
+	for i := 0; i < numEntries; i++ {
+		eid := fmt.Sprintf("entry-%d", i)
+		if _, err := store.Entry.Create(nil, &model.KnowledgeEntry{
+			ID: eid, Title: "t", Content: "c", Category: "cat",
+			Status: model.EntryStatusPublished, CreatedBy: "u",
+		}); err != nil {
+			t.Fatalf("create entry: %v", err)
+		}
+		for j := 0; j < ratingsPerEntry; j++ {
+			if _, err := store.Rating.Create(nil, &model.Rating{
+				ID: fmt.Sprintf("r-%d-%d", i, j), EntryId: eid,
+				RaterPubkey: fmt.Sprintf("rater-%d", j), Score: float64(j + 1), Weight: 1,
+			}); err != nil {
+				t.Fatalf("create rating: %v", err)
+			}
+		}
+	}
+
+	zipData, err := NewExporter(store, "node").Export(ExportOptions{IncludeEntries: true, IncludeRatings: true})
+	if err != nil {
+		t.Fatalf("Export: %v", err)
+	}
+	reader, err := zip.NewReader(bytes.NewReader(zipData), int64(len(zipData)))
+	if err != nil {
+		t.Fatalf("zip reader: %v", err)
+	}
+
+	// manifest 计数
+	var manifest Manifest
+	for _, f := range reader.File {
+		if f.Name == "manifest.json" {
+			rc, _ := f.Open()
+			json.NewDecoder(rc).Decode(&manifest)
+			rc.Close()
+		}
+	}
+	if manifest.Counts["entries"] != numEntries {
+		t.Errorf("manifest entries = %d, want %d", manifest.Counts["entries"], numEntries)
+	}
+	if manifest.Counts["ratings"] != wantRatings {
+		t.Errorf("manifest ratings = %d, want %d", manifest.Counts["ratings"], wantRatings)
+	}
+
+	// ratings.json 实际记录数
+	for _, f := range reader.File {
+		if f.Name == "ratings.json" {
+			rc, _ := f.Open()
+			var ratings []*model.Rating
+			json.NewDecoder(rc).Decode(&ratings)
+			rc.Close()
+			if len(ratings) != wantRatings {
+				t.Errorf("ratings.json has %d ratings, want %d (no truncation/drop)", len(ratings), wantRatings)
 			}
 		}
 	}

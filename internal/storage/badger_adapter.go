@@ -223,6 +223,11 @@ func (s *BadgerRatingStore) ListByRater(ctx context.Context, raterPubkeyHash str
 	return s.store.ListByRater(raterPubkeyHash)
 }
 
+// ListAll 获取全部评分（导出用；取代原先 entries×ListByEntry 的笛卡尔积 + 100k 截断）。
+func (s *BadgerRatingStore) ListAll(ctx context.Context) ([]*model.Rating, error) {
+	return s.store.ListAllRatings()
+}
+
 func (s *BadgerRatingStore) GetByRater(ctx context.Context, entryID, raterPubkeyHash string) (*model.Rating, error) {
 	// We need to find rating by entryId and raterPubkey
 	// The kv store uses raterPubkey directly, not hash
