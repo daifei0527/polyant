@@ -208,6 +208,8 @@ func NewPersistentStore(cfg *StoreConfig) (*Store, error) {
 		_ = backlinkIdx.UpdateIndex(e.ID, linkparser.ParseLinks(e.Content))
 	}
 	titleIdx.Build(titleEntries)
+	// 重建 published 条目计数器（Create/Update/Delete 增量维护，Count 经它 O(1) 取值）
+	_ = kv.SetEntryPublishedCount(kvStore, int64(len(entries)))
 
 	return &Store{
 		Entry:    entryStore,

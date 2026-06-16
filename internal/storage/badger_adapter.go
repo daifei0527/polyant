@@ -81,17 +81,9 @@ func (s *BadgerEntryStore) List(ctx context.Context, filter EntryFilter) ([]*mod
 }
 
 func (s *BadgerEntryStore) Count(ctx context.Context) (int64, error) {
-	entries, err := s.store.ListEntries(0, 1000000)
-	if err != nil {
-		return 0, err
-	}
-	var count int64
-	for _, e := range entries {
-		if e.Status == model.EntryStatusPublished {
-			count++
-		}
-	}
-	return count, nil
+	// 经维护的 published 计数器 O(1) 取值（启动重建 + Create/Update/Delete 增量维护；
+	// 计数器缺失时 PublishedCount 回退扫描）。取代原先 ListEntries(0,1000000) 全量反序列化。
+	return s.store.PublishedCount()
 }
 
 // BadgerUserStore 适配 kv.UserStore 到 storage.UserStore 接口
@@ -552,6 +544,9 @@ func NewBadgerStore(dataDir string) (*Store, error) {
 		_ = backlinkIndex.UpdateIndex(e.ID, linkparser.ParseLinks(e.Content))
 	}
 	titleIdx.Build(titleEntries)
+	// 重建 published 条目计数器（Create/Update/Delete 增量维护，Count 经它 O(1) 取值，
+	// 取代原先 ListEntries(0,1000000) 全量反序列化）
+	_ = kv.SetEntryPublishedCount(kvStore, int64(len(entries)))
 
 	log.Printf("[Storage] BadgerDB initialized at %s", dataDir)
 
@@ -591,6 +586,8 @@ func NewBadgerStoreWithCloser(dataDir string) (*BadgerStoreWrapper, error) {
 		_ = backlinkIndex.UpdateIndex(e.ID, linkparser.ParseLinks(e.Content))
 	}
 	titleIdx.Build(titleEntries)
+	// 重建 published 条目计数器（详见 NewBadgerStore）
+	_ = kv.SetEntryPublishedCount(kvStore, int64(len(entries)))
 
 	log.Printf("[Storage] BadgerDB initialized at %s", dataDir)
 
