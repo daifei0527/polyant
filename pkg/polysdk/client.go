@@ -13,6 +13,8 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -58,16 +60,21 @@ func (c *Client) HasKeys() bool {
 // query 为搜索关键词，category 为分类过滤（可选），tags 为标签过滤（可选），
 // limit 为返回数量限制，lang 为返回结果的本地化语言（可选，传 "" 则使用条目主语言）。
 func (c *Client) Search(ctx context.Context, query, category string, tags []string, limit int, lang string) (*SearchResult, error) {
-	path := fmt.Sprintf("/api/v1/search?q=%s&limit=%d", query, limit)
+	// 用 url.Values 构造查询串以正确转义 query/cat/tag/lang——原先 fmt.Sprintf+拼接
+	// 不会转义，含空格 / & / = / 中文等字符的查询会破坏 URL（服务端解析出错）。
+	v := url.Values{}
+	v.Set("q", query)
+	v.Set("limit", strconv.Itoa(limit))
 	if category != "" {
-		path += "&cat=" + category
+		v.Set("cat", category)
 	}
 	if len(tags) > 0 {
-		path += "&tag=" + strings.Join(tags, ",")
+		v.Set("tag", strings.Join(tags, ","))
 	}
 	if lang != "" {
-		path += "&lang=" + lang
+		v.Set("lang", lang)
 	}
+	path := "/api/v1/search?" + v.Encode()
 
 	var result SearchResult
 	if err := c.doRequest(ctx, http.MethodGet, path, nil, &result); err != nil {
@@ -80,7 +87,7 @@ func (c *Client) Search(ctx context.Context, query, category string, tags []stri
 func (c *Client) GetEntry(ctx context.Context, id, lang string) (*Entry, error) {
 	path := "/api/v1/entry/" + id
 	if lang != "" {
-		path += "?lang=" + lang
+		path += "?lang=" + url.QueryEscape(lang)
 	}
 	var result Entry
 	if err := c.doRequest(ctx, http.MethodGet, path, nil, &result); err != nil {

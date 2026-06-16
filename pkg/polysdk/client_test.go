@@ -2,7 +2,14 @@ package polysdk
 
 import (
 	"context"
+	"crypto/ed25519"
+	"crypto/rand"
+	"crypto/sha256"
+	"encoding/base64"
+	"encoding/hex"
 	"encoding/json"
+	"fmt"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -238,4 +245,74 @@ func TestAPIError(t *testing.T) {
 	assert.Equal(t, 404, polyErr.Code)
 	assert.Equal(t, "entry not found", polyErr.Message)
 	assert.True(t, IsNotFoundError(err))
+}
+
+// TestClient_SearchQueryEscaping 验证查询参数经 url.Values 正确转义：含空格 / &
+// / CJK 的 query、cat、tag、lang 在服务端能原样取回。原先 fmt.Sprintf 拼接不转义，
+// 这类查询会破坏 URL（& 被当成参数分隔符）。
+func TestClient_SearchQueryEscaping(t *testing.T) {
+	var gotQ, gotCat, gotTag, gotLang string
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		gotQ = r.URL.Query().Get("q")
+		gotCat = r.URL.Query().Get("cat")
+		gotTag = r.URL.Query().Get("tag")
+		gotLang = r.URL.Query().Get("lang")
+		writeJSON(w, http.StatusOK, apiSuccessResponse(map[string]interface{}{
+			"total_count": 0, "items": []interface{}{},
+		}))
+	}))
+	defer server.Close()
+
+	c := NewClient(server.URL)
+	_, err := c.Search(context.Background(), "go 语言 & more", "cat/a b", []string{"t1", "t2"}, 5, "zh")
+	require.NoError(t, err)
+
+	assert.Equal(t, "go 语言 & more", gotQ, "query with spaces/&/CJK must survive escaping")
+	assert.Equal(t, "cat/a b", gotCat)
+	assert.Equal(t, "t1,t2", gotTag)
+	assert.Equal(t, "zh", gotLang)
+}
+
+// TestClient_SignatureRoundtrip 验证 Ed25519 请求签名往返：客户端 setAuthHeaders 签名，
+// 服务端用公钥按相同 signContent 重建并验签。覆盖此前零测试的 setAuthHeaders 路径。
+func TestClient_SignatureRoundtrip(t *testing.T) {
+	pub, priv, err := ed25519.GenerateKey(rand.Reader)
+	require.NoError(t, err)
+
+	var gotPub, gotTS, gotSig string
+	var verified bool
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		body, _ := io.ReadAll(r.Body)
+		gotPub = r.Header.Get("X-Polyant-PublicKey")
+		gotTS = r.Header.Get("X-Polyant-Timestamp")
+		gotSig = r.Header.Get("X-Polyant-Signature")
+
+		// 服务端验签：重建 signContent（须与客户端 setAuthHeaders 完全一致）
+		sig, _ := base64.StdEncoding.DecodeString(gotSig)
+		bodyHash := sha256.Sum256(body)
+		signContent := fmt.Sprintf("%s\n%s\n%s\n%s", r.Method, r.URL.Path, gotTS, hex.EncodeToString(bodyHash[:]))
+		verified = ed25519.Verify(pub, []byte(signContent), sig)
+
+		writeJSON(w, http.StatusCreated, apiSuccessResponse(map[string]interface{}{
+			"id": "new-id", "title": "t", "content": "c", "category": "cat",
+			"score": 0, "score_count": 0,
+			"created_at": time.Now().Format(time.RFC3339),
+			"updated_at": time.Now().Format(time.RFC3339),
+			"created_by": "user-1",
+		}))
+	}))
+	defer server.Close()
+
+	c := NewClient(server.URL)
+	c.SetKeys(pub, priv)
+	_, err = c.CreateEntry(context.Background(), &CreateEntryRequest{
+		Title: "Signed", Content: "body-content", Category: "cat",
+	})
+	require.NoError(t, err)
+
+	require.NotEmpty(t, gotPub, "X-Polyant-PublicKey header missing")
+	require.NotEmpty(t, gotTS, "X-Polyant-Timestamp header missing")
+	require.NotEmpty(t, gotSig, "X-Polyant-Signature header missing")
+	assert.Equal(t, base64.StdEncoding.EncodeToString(pub), gotPub, "PublicKey header should be base64(pubkey)")
+	assert.True(t, verified, "server-side signature verification failed (signing roundtrip broken)")
 }
