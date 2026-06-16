@@ -17,11 +17,12 @@ var (
 // AdminService 管理员服务
 type AdminService struct {
 	store *storage.Store
+	stats *StatsService // GetUserStats 委托给它（去重 + 共享 StatsService 的缓存）
 }
 
 // NewAdminService 创建管理员服务
 func NewAdminService(store *storage.Store) *AdminService {
-	return &AdminService{store: store}
+	return &AdminService{store: store, stats: NewStatsService(store)}
 }
 
 // ListUsers 列出用户
@@ -107,50 +108,8 @@ func (s *AdminService) SetUserLevel(ctx context.Context, targetPublicKey string,
 }
 
 // GetUserStats 获取用户统计
+// GetUserStats 委托给 StatsService（去重：原为 StatsService.GetUserStats 的完整拷贝，
+// 现二者共享同一实现与 TTL 缓存）。
 func (s *AdminService) GetUserStats(ctx context.Context) (*model.UserStats, error) {
-	users, total, err := s.store.User.List(ctx, storage.UserFilter{Limit: 100000})
-	if err != nil {
-		return nil, fmt.Errorf("list users: %w", err)
-	}
-
-	stats := &model.UserStats{
-		TotalUsers: total,
-	}
-
-	now := time.Now().UnixMilli()
-	thirtyDaysAgo := now - 30*24*60*60*1000
-
-	for _, u := range users {
-		// 统计各级别用户数
-		switch u.UserLevel {
-		case model.UserLevelLv0:
-			stats.Lv0Count++
-		case model.UserLevelLv1:
-			stats.Lv1Count++
-		case model.UserLevelLv2:
-			stats.Lv2Count++
-		case model.UserLevelLv3:
-			stats.Lv3Count++
-		case model.UserLevelLv4:
-			stats.Lv4Count++
-		case model.UserLevelLv5:
-			stats.Lv5Count++
-		}
-
-		// 统计活跃用户
-		if u.LastActive > thirtyDaysAgo {
-			stats.ActiveUsers++
-		}
-
-		// 统计被封禁用户
-		if u.Status == model.UserStatusBanned {
-			stats.BannedCount++
-		}
-
-		// 统计总贡献和评分
-		stats.TotalContribs += int64(u.ContributionCnt)
-		stats.TotalRatings += int64(u.RatingCnt)
-	}
-
-	return stats, nil
+	return s.stats.GetUserStats(ctx)
 }

@@ -323,3 +323,62 @@ func TestStatsService_GetRegistrationTrend_EmptyStore(t *testing.T) {
 		}
 	}
 }
+
+// TestStatsService_CacheTTL 验证 TTL 缓存：TTL 内命中陈旧快照，过期后重算。
+func TestStatsService_CacheTTL(t *testing.T) {
+	store := newTestStore(t)
+	service := NewStatsService(store)
+	service.SetCacheTTL(100 * time.Millisecond) // 短 TTL 便于测试
+	ctx := context.Background()
+
+	if _, err := store.User.Create(ctx, &model.User{PublicKey: "pk1", AgentName: "U1", UserLevel: model.UserLevelLv0}); err != nil {
+		t.Fatal(err)
+	}
+	stats1, err := service.GetUserStats(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if stats1.TotalUsers != 1 {
+		t.Fatalf("initial TotalUsers = %d, want 1", stats1.TotalUsers)
+	}
+
+	// TTL 内再创建用户：缓存命中，应仍返回陈旧的 1（证明未重算）
+	if _, err := store.User.Create(ctx, &model.User{PublicKey: "pk2", AgentName: "U2", UserLevel: model.UserLevelLv0}); err != nil {
+		t.Fatal(err)
+	}
+	stats2, err := service.GetUserStats(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if stats2.TotalUsers != 1 {
+		t.Errorf("within TTL cache should serve stale 1, got %d", stats2.TotalUsers)
+	}
+
+	// TTL 过期后应重算为 2
+	time.Sleep(120 * time.Millisecond)
+	stats3, err := service.GetUserStats(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if stats3.TotalUsers != 2 {
+		t.Errorf("after TTL expiry should recompute to 2, got %d", stats3.TotalUsers)
+	}
+}
+
+// TestStatsService_CacheDisabled 验证 TTL<=0 禁用缓存（每次重算）。
+func TestStatsService_CacheDisabled(t *testing.T) {
+	store := newTestStore(t)
+	service := NewStatsService(store)
+	service.SetCacheTTL(0) // 禁用
+	ctx := context.Background()
+
+	store.User.Create(ctx, &model.User{PublicKey: "pk1", AgentName: "U1", UserLevel: model.UserLevelLv0})
+	if s, _ := service.GetUserStats(ctx); s.TotalUsers != 1 {
+		t.Fatal("first call")
+	}
+	// 禁用缓存 → 立即反映新用户
+	store.User.Create(ctx, &model.User{PublicKey: "pk2", AgentName: "U2", UserLevel: model.UserLevelLv0})
+	if s, _ := service.GetUserStats(ctx); s.TotalUsers != 2 {
+		t.Errorf("cache disabled: expected immediate 2, got %d", s.TotalUsers)
+	}
+}

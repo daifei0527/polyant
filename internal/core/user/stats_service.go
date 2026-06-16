@@ -3,24 +3,95 @@ package user
 import (
 	"context"
 	"sort"
+	"sync"
 	"time"
 
 	"github.com/daifei0527/polyant/internal/storage"
 	"github.com/daifei0527/polyant/internal/storage/model"
 )
 
-// StatsService 统计服务
+const defaultStatsCacheTTL = 60 * time.Second
+
+// StatsService 统计服务。
+//
+// 这些都是管理员仪表盘端点（非用户热路径，约分钟级轮询），原本每次请求都
+// List(100000) 全量用户并在内存聚合/排序/分页。改为按 TTL 缓存计算结果：
+// 缓存命中 O(1)，过期才重算。
+//
+// 不采用"维护式计数器/直方图"方案的原因：active-users(30天) 是时间衰减维度，
+// 而 LastActive 在每次认证请求时都会更新（高写频率）。为它维护计数器或按日
+// 直方图会在热路径引入写放大与非原子 RMW 漂移，得不偿失；对非实时的管理员
+// 统计，~60s 的陈旧完全可以接受。
 type StatsService struct {
 	store *storage.Store
+	ttl   time.Duration
+
+	mu sync.RWMutex
+
+	userStats   *model.UserStats
+	userStatsAt time.Time
+
+	contrib   map[string]*cachedContrib // sortBy -> 排序后的全量列表
+	contribAt map[string]time.Time
+
+	activityTrend     map[int][]ActivityTrend // days -> 趋势
+	activityTrendAt   map[int]time.Time
+	registrationTrend   map[int][]RegistrationTrend
+	registrationTrendAt map[int]time.Time
 }
 
-// NewStatsService 创建统计服务
+type cachedContrib struct {
+	list  []UserContribution
+	total int64
+}
+
+// NewStatsService 创建统计服务（默认 60s 缓存）。
 func NewStatsService(store *storage.Store) *StatsService {
-	return &StatsService{store: store}
+	return &StatsService{
+		store:               store,
+		ttl:                 defaultStatsCacheTTL,
+		contrib:             make(map[string]*cachedContrib),
+		contribAt:           make(map[string]time.Time),
+		activityTrend:       make(map[int][]ActivityTrend),
+		activityTrendAt:     make(map[int]time.Time),
+		registrationTrend:   make(map[int][]RegistrationTrend),
+		registrationTrendAt: make(map[int]time.Time),
+	}
+}
+
+// SetCacheTTL 设置缓存 TTL；<=0 禁用缓存（每次重算，测试用）。变更时清空缓存。
+func (s *StatsService) SetCacheTTL(d time.Duration) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.ttl = d
+	s.invalidateLocked()
+}
+
+func (s *StatsService) invalidateLocked() {
+	s.userStats = nil
+	s.contrib = make(map[string]*cachedContrib)
+	s.contribAt = make(map[string]time.Time)
+	s.activityTrend = make(map[int][]ActivityTrend)
+	s.activityTrendAt = make(map[int]time.Time)
+	s.registrationTrend = make(map[int][]RegistrationTrend)
+	s.registrationTrendAt = make(map[int]time.Time)
+}
+
+// fresh 报告给定时间戳是否仍在 TTL 内（ttl<=0 时永远返回 false，即禁用缓存）。
+func (s *StatsService) fresh(at time.Time) bool {
+	return s.ttl > 0 && time.Since(at) < s.ttl
 }
 
 // GetUserStats 获取用户统计概览
 func (s *StatsService) GetUserStats(ctx context.Context) (*model.UserStats, error) {
+	s.mu.RLock()
+	if s.userStats != nil && s.fresh(s.userStatsAt) {
+		out := *s.userStats
+		s.mu.RUnlock()
+		return &out, nil
+	}
+	s.mu.RUnlock()
+
 	users, total, err := s.store.User.List(ctx, storage.UserFilter{Limit: 100000})
 	if err != nil {
 		return nil, err
@@ -58,6 +129,11 @@ func (s *StatsService) GetUserStats(ctx context.Context) (*model.UserStats, erro
 		stats.TotalRatings += int64(u.RatingCnt)
 	}
 
+	s.mu.Lock()
+	s.userStats = stats
+	s.userStatsAt = time.Now()
+	s.mu.Unlock()
+
 	return stats, nil
 }
 
@@ -72,44 +148,55 @@ type UserContribution struct {
 	AvgRatingRecv    float64 `json:"avgRatingRecv"`
 }
 
-// GetContributionStats 获取贡献明细统计
+// GetContributionStats 获取贡献明细统计。全量排序结果按 sortBy 缓存，分页仅切片。
 func (s *StatsService) GetContributionStats(ctx context.Context, offset, limit int, sortBy string) ([]UserContribution, int64, error) {
-	users, total, err := s.store.User.List(ctx, storage.UserFilter{Limit: 100000})
-	if err != nil {
-		return nil, 0, err
-	}
+	s.mu.RLock()
+	cc, ok := s.contrib[sortBy]
+	fresh := ok && s.fresh(s.contribAt[sortBy])
+	s.mu.RUnlock()
 
-	var contribs []UserContribution
-	for _, u := range users {
-		contribs = append(contribs, UserContribution{
-			UserID:           u.PublicKey,
-			UserName:         u.AgentName,
-			EntryCount:       int64(u.ContributionCnt),
-			RatingGivenCount: int64(u.RatingCnt),
-		})
-	}
-
-	// 排序
-	sort.Slice(contribs, func(i, j int) bool {
-		switch sortBy {
-		case "entry_count":
-			return contribs[i].EntryCount > contribs[j].EntryCount
-		case "rating_given_count":
-			return contribs[i].RatingGivenCount > contribs[j].RatingGivenCount
-		default:
-			return contribs[i].EntryCount > contribs[j].EntryCount
+	if !fresh {
+		users, total, err := s.store.User.List(ctx, storage.UserFilter{Limit: 100000})
+		if err != nil {
+			return nil, 0, err
 		}
-	})
 
-	// 分页
-	if offset >= len(contribs) {
-		return []UserContribution{}, total, nil
+		contribs := make([]UserContribution, 0, len(users))
+		for _, u := range users {
+			contribs = append(contribs, UserContribution{
+				UserID:           u.PublicKey,
+				UserName:         u.AgentName,
+				EntryCount:       int64(u.ContributionCnt),
+				RatingGivenCount: int64(u.RatingCnt),
+			})
+		}
+
+		sort.Slice(contribs, func(i, j int) bool {
+			switch sortBy {
+			case "rating_given_count":
+				return contribs[i].RatingGivenCount > contribs[j].RatingGivenCount
+			default: // "entry_count" 及默认
+				return contribs[i].EntryCount > contribs[j].EntryCount
+			}
+		})
+
+		cc = &cachedContrib{list: contribs, total: total}
+		s.mu.Lock()
+		s.contrib[sortBy] = cc
+		s.contribAt[sortBy] = time.Now()
+		s.mu.Unlock()
+	}
+
+	if offset >= len(cc.list) {
+		return []UserContribution{}, cc.total, nil
 	}
 	end := offset + limit
-	if end > len(contribs) {
-		end = len(contribs)
+	if end > len(cc.list) {
+		end = len(cc.list)
 	}
-	return contribs[offset:end], total, nil
+	out := make([]UserContribution, end-offset)
+	copy(out, cc.list[offset:end])
+	return out, cc.total, nil
 }
 
 // ActivityTrend 活跃度趋势
@@ -120,8 +207,16 @@ type ActivityTrend struct {
 	ActionCount int64  `json:"actionCount"`
 }
 
-// GetActivityTrend 获取活跃度趋势
+// GetActivityTrend 获取活跃度趋势（按 days 缓存）
 func (s *StatsService) GetActivityTrend(ctx context.Context, days int) ([]ActivityTrend, error) {
+	s.mu.RLock()
+	cached, ok := s.activityTrend[days]
+	fresh := ok && s.fresh(s.activityTrendAt[days])
+	s.mu.RUnlock()
+	if fresh {
+		return copyActivityTrend(cached), nil
+	}
+
 	users, _, err := s.store.User.List(ctx, storage.UserFilter{Limit: 100000})
 	if err != nil {
 		return nil, err
@@ -138,11 +233,9 @@ func (s *StatsService) GetActivityTrend(ctx context.Context, days int) ([]Activi
 
 		var dau, newUsers int64
 		for _, u := range users {
-			// 检查是否在该天活跃
 			if u.LastActive >= dayStart && u.LastActive < dayEnd {
 				dau++
 			}
-			// 检查是否在该天注册
 			if u.RegisteredAt >= dayStart && u.RegisteredAt < dayEnd {
 				newUsers++
 			}
@@ -155,7 +248,11 @@ func (s *StatsService) GetActivityTrend(ctx context.Context, days int) ([]Activi
 		}
 	}
 
-	return trend, nil
+	s.mu.Lock()
+	s.activityTrend[days] = trend
+	s.activityTrendAt[days] = time.Now()
+	s.mu.Unlock()
+	return copyActivityTrend(trend), nil
 }
 
 // RegistrationTrend 注册趋势
@@ -165,8 +262,16 @@ type RegistrationTrend struct {
 	Total int64  `json:"total"`
 }
 
-// GetRegistrationTrend 获取注册趋势
+// GetRegistrationTrend 获取注册趋势（按 days 缓存）
 func (s *StatsService) GetRegistrationTrend(ctx context.Context, days int) ([]RegistrationTrend, error) {
+	s.mu.RLock()
+	cached, ok := s.registrationTrend[days]
+	fresh := ok && s.fresh(s.registrationTrendAt[days])
+	s.mu.RUnlock()
+	if fresh {
+		return copyRegistrationTrend(cached), nil
+	}
+
 	users, total, err := s.store.User.List(ctx, storage.UserFilter{Limit: 100000})
 	if err != nil {
 		return nil, err
@@ -197,5 +302,21 @@ func (s *StatsService) GetRegistrationTrend(ctx context.Context, days int) ([]Re
 		cumulative -= count
 	}
 
-	return trend, nil
+	s.mu.Lock()
+	s.registrationTrend[days] = trend
+	s.registrationTrendAt[days] = time.Now()
+	s.mu.Unlock()
+	return copyRegistrationTrend(trend), nil
+}
+
+func copyActivityTrend(in []ActivityTrend) []ActivityTrend {
+	out := make([]ActivityTrend, len(in))
+	copy(out, in)
+	return out
+}
+
+func copyRegistrationTrend(in []RegistrationTrend) []RegistrationTrend {
+	out := make([]RegistrationTrend, len(in))
+	copy(out, in)
+	return out
 }
