@@ -24,11 +24,11 @@ import (
 
 // TestServer 测试服务器
 type TestServer struct {
-	server    *httptest.Server
-	client    *http.Client
-	privKey   ed25519.PrivateKey
-	pubKey    ed25519.PublicKey
-	pubKeyB64 string
+	server     *httptest.Server
+	client     *http.Client
+	privKey    ed25519.PrivateKey
+	pubKey     ed25519.PublicKey
+	pubKeyB64  string
 	registered bool
 }
 

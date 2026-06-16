@@ -1175,7 +1175,7 @@ func (c *Client) UnbanUser(ctx context.Context, publicKey string) error {
 
 // UserStats 用户统计信息
 type UserStats struct {
-	Total            int                  `json:"total"`
+	Total             int                 `json:"total"`
 	LevelDistribution []LevelDistribution `json:"level_distribution"`
 }
 

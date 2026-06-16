@@ -10,7 +10,9 @@ GOCMD := go
 GOBUILD := $(GOCMD) build
 GOTEST := $(GOCMD) test
 GOCLEAN := $(GOCMD) clean
-GOFMT := $(GOCMD) fmt
+# GOFMT 直接用 gofmt 工具（而非 `go fmt` 包装器）：fmt target 需要 -s（简化）flag，
+# 而 `go fmt` 子命令不接受 -s（只有 gofmt 工具接受），否则报 "flag provided but not defined: -s"。
+GOFMT := gofmt
 GOVET := $(GOCMD) vet
 
 # 目录

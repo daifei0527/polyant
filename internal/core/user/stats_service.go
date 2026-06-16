@@ -34,8 +34,8 @@ type StatsService struct {
 	contrib   map[string]*cachedContrib // sortBy -> 排序后的全量列表
 	contribAt map[string]time.Time
 
-	activityTrend     map[int][]ActivityTrend // days -> 趋势
-	activityTrendAt   map[int]time.Time
+	activityTrend       map[int][]ActivityTrend // days -> 趋势
+	activityTrendAt     map[int]time.Time
 	registrationTrend   map[int][]RegistrationTrend
 	registrationTrendAt map[int]time.Time
 }

@@ -12,15 +12,15 @@ import (
 // ==================== 键前缀常量 ====================
 
 const (
-	PrefixEntry    = "entry:"    // 知识条目键前缀
-	PrefixUser     = "user:"     // 用户键前缀
-	PrefixUserEmail = "user-email:" // 用户邮箱→公钥 索引前缀（注意：不以 "user:" 开头，避免被 ListUsers 扫描）
-	PrefixUserHash = "user-hash:" // 用户公钥哈希→公钥 索引前缀（同上，不以 "user:" 开头；让 BadgerUserStore.Get(hash) O(1) 而非全表扫描）
-	PrefixRating       = "rating:"            // 评分键前缀
+	PrefixEntry         = "entry:"           // 知识条目键前缀
+	PrefixUser          = "user:"            // 用户键前缀
+	PrefixUserEmail     = "user-email:"      // 用户邮箱→公钥 索引前缀（注意：不以 "user:" 开头，避免被 ListUsers 扫描）
+	PrefixUserHash      = "user-hash:"       // 用户公钥哈希→公钥 索引前缀（同上，不以 "user:" 开头；让 BadgerUserStore.Get(hash) O(1) 而非全表扫描）
+	PrefixRating        = "rating:"          // 评分键前缀
 	PrefixRatingByRater = "rating-by-rater:" // 评分 按评分者→主键 索引前缀（修 GetUserRatings 的 N+1：原为遍历所有条目×各自评分）
-	PrefixCategory = "category:" // 分类键前缀
-	PrefixNode      = "node:"       // 节点键前缀
-	PrefixMeta      = "meta:"       // 元数据键前缀
+	PrefixCategory      = "category:"        // 分类键前缀
+	PrefixNode          = "node:"            // 节点键前缀
+	PrefixMeta          = "meta:"            // 元数据键前缀
 )
 
 // ==================== Store接口 ====================

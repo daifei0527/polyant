@@ -44,11 +44,11 @@ func BenchmarkEntryGet(b *testing.B) {
 	// 准备测试数据
 	for i := 0; i < 1000; i++ {
 		entry := &model.KnowledgeEntry{
-			ID:        fmt.Sprintf("entry-%d", i),
-			Title:     "测试条目",
-			Content:   "测试内容",
-			Category:  "test",
-			Status:    model.EntryStatusPublished,
+			ID:       fmt.Sprintf("entry-%d", i),
+			Title:    "测试条目",
+			Content:  "测试内容",
+			Category: "test",
+			Status:   model.EntryStatusPublished,
 		}
 		store.Entry.Create(ctx, entry)
 	}
@@ -67,12 +67,12 @@ func BenchmarkEntryUpdate(b *testing.B) {
 	// 准备测试数据
 	for i := 0; i < 100; i++ {
 		entry := &model.KnowledgeEntry{
-			ID:        fmt.Sprintf("entry-%d", i),
-			Title:     "原始标题",
-			Content:   "原始内容",
-			Category:  "test",
-			Version:   1,
-			Status:    model.EntryStatusPublished,
+			ID:       fmt.Sprintf("entry-%d", i),
+			Title:    "原始标题",
+			Content:  "原始内容",
+			Category: "test",
+			Version:  1,
+			Status:   model.EntryStatusPublished,
 		}
 		store.Entry.Create(ctx, entry)
 	}
@@ -123,12 +123,12 @@ func BenchmarkSearch(b *testing.B) {
 	// 准备测试数据
 	for i := 0; i < 1000; i++ {
 		entry := &model.KnowledgeEntry{
-			ID:        fmt.Sprintf("entry-%d", i),
-			Title:     fmt.Sprintf("条目 %d 编程语言测试", i),
-			Content:   fmt.Sprintf("这是第 %d 个条目的内容，包含编程、算法和数据结构相关信息。", i),
-			Category:  "tech",
-			Status:    model.EntryStatusPublished,
-			Score:     float64(i % 5) + 1,
+			ID:       fmt.Sprintf("entry-%d", i),
+			Title:    fmt.Sprintf("条目 %d 编程语言测试", i),
+			Content:  fmt.Sprintf("这是第 %d 个条目的内容，包含编程、算法和数据结构相关信息。", i),
+			Category: "tech",
+			Status:   model.EntryStatusPublished,
+			Score:    float64(i%5) + 1,
 		}
 		store.Entry.Create(ctx, entry)
 		store.Search.IndexEntry(entry)
@@ -151,12 +151,12 @@ func BenchmarkSearchWithFilter(b *testing.B) {
 	// 准备测试数据
 	for i := 0; i < 1000; i++ {
 		entry := &model.KnowledgeEntry{
-			ID:        fmt.Sprintf("entry-%d", i),
-			Title:     fmt.Sprintf("条目 %d", i),
-			Content:   fmt.Sprintf("内容 %d", i),
-			Category:  fmt.Sprintf("cat-%d", i%5),
-			Status:    model.EntryStatusPublished,
-			Score:     float64(i%5) + 1,
+			ID:       fmt.Sprintf("entry-%d", i),
+			Title:    fmt.Sprintf("条目 %d", i),
+			Content:  fmt.Sprintf("内容 %d", i),
+			Category: fmt.Sprintf("cat-%d", i%5),
+			Status:   model.EntryStatusPublished,
+			Score:    float64(i%5) + 1,
 		}
 		store.Entry.Create(ctx, entry)
 		store.Search.IndexEntry(entry)
@@ -360,11 +360,11 @@ func BenchmarkEntryCreateParallel(b *testing.B) {
 		i := 0
 		for pb.Next() {
 			entry := &model.KnowledgeEntry{
-				ID:        fmt.Sprintf("entry-parallel-%d", i),
-				Title:     "并发测试条目",
-				Content:   "测试内容",
-				Category:  "test",
-				Status:    model.EntryStatusPublished,
+				ID:       fmt.Sprintf("entry-parallel-%d", i),
+				Title:    "并发测试条目",
+				Content:  "测试内容",
+				Category: "test",
+				Status:   model.EntryStatusPublished,
 			}
 			store.Entry.Create(ctx, entry)
 			i++
@@ -380,11 +380,11 @@ func BenchmarkSearchParallel(b *testing.B) {
 	// 准备测试数据
 	for i := 0; i < 500; i++ {
 		entry := &model.KnowledgeEntry{
-			ID:        fmt.Sprintf("entry-%d", i),
-			Title:     fmt.Sprintf("条目 %d", i),
-			Content:   "测试内容",
-			Category:  "test",
-			Status:    model.EntryStatusPublished,
+			ID:       fmt.Sprintf("entry-%d", i),
+			Title:    fmt.Sprintf("条目 %d", i),
+			Content:  "测试内容",
+			Category: "test",
+			Status:   model.EntryStatusPublished,
 		}
 		store.Entry.Create(ctx, entry)
 		store.Search.IndexEntry(entry)

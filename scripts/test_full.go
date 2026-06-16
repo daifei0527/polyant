@@ -26,12 +26,12 @@ type APIResponse struct {
 }
 
 type TestContext struct {
-	BaseURL       string
-	Client        *http.Client
-	AdminPubKey   string
-	AdminPrivKey  string
-	TestUserKey   string // 普通测试用户公钥
-	TestUserPriv  string // 普通测试用户私钥
+	BaseURL      string
+	Client       *http.Client
+	AdminPubKey  string
+	AdminPrivKey string
+	TestUserKey  string // 普通测试用户公钥
+	TestUserPriv string // 普通测试用户私钥
 }
 
 func signRequest(method, path, timestamp, body, privateKey string) string {
@@ -343,7 +343,7 @@ func main() {
 		updateReq.Header.Set("X-Polyant-Timestamp", updateTimestamp)
 		updateReq.Header.Set("X-Polyant-Signature", updateSignature)
 		updateResp, err := tc.Client.Do(updateReq)
-		
+
 		if err == nil && updateResp.StatusCode >= 200 && updateResp.StatusCode < 300 {
 			updateResp.Body.Close()
 			fmt.Printf("✅ 批量更新成功\n\n")
@@ -373,7 +373,7 @@ func main() {
 		deleteReq.Header.Set("X-Polyant-Timestamp", deleteTimestamp)
 		deleteReq.Header.Set("X-Polyant-Signature", deleteSignature)
 		deleteResp, err := tc.Client.Do(deleteReq)
-		
+
 		if err == nil && deleteResp.StatusCode >= 200 && deleteResp.StatusCode < 300 {
 			deleteResp.Body.Close()
 			fmt.Printf("✅ 批量删除成功\n\n")

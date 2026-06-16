@@ -22,8 +22,8 @@ func TestBadgerUserStore_GetByHashIndex(t *testing.T) {
 
 	pub := base64.StdEncoding.EncodeToString(make([]byte, 32)) // 合法的 base64 公钥
 	u := &model.User{
-		PublicKey:   pub,
-		AgentName:   "hash-index-test",
+		PublicKey:    pub,
+		AgentName:    "hash-index-test",
 		RegisteredAt: 1,
 	}
 	if _, err := w.User.Create(ctx, u); err != nil {

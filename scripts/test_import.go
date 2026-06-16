@@ -129,10 +129,10 @@ func main() {
 		Data    struct {
 			Success bool `json:"success"`
 			Summary struct {
-				EntriesImported   int `json:"entries_imported"`
+				EntriesImported    int `json:"entries_imported"`
 				CategoriesImported int `json:"categories_imported"`
-				UsersImported     int `json:"users_imported"`
-				RatingsImported   int `json:"ratings_imported"`
+				UsersImported      int `json:"users_imported"`
+				RatingsImported    int `json:"ratings_imported"`
 			} `json:"summary"`
 		} `json:"data"`
 	}

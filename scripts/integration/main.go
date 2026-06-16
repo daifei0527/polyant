@@ -33,11 +33,11 @@ type APIResponse struct {
 
 // 注册响应
 type RegisterData struct {
-	AgentName   string `json:"agent_name"`
-	PrivateKey  string `json:"private_key"`
-	PublicKey   string `json:"public_key"`
+	AgentName     string `json:"agent_name"`
+	PrivateKey    string `json:"private_key"`
+	PublicKey     string `json:"public_key"`
 	PublicKeyHash string `json:"public_key_hash"`
-	UserLevel   int    `json:"user_level"`
+	UserLevel     int    `json:"user_level"`
 }
 
 var (

@@ -208,7 +208,7 @@ func findInlineCode(b []byte, start int) (int, bool) {
 }
 
 // isSingleBacktick returns true if the byte at position i is a backtick that is
-// not adjacent to another backtick (i.e., it's not part of `` or ```).
+// not adjacent to another backtick (i.e., it's not part of “ or ```).
 func isSingleBacktick(b []byte, i int) bool {
 	if i >= len(b) || b[i] != '`' {
 		return false

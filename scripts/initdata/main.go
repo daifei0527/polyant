@@ -18,44 +18,44 @@ var version = "v0.1.0-dev"
 
 // KnowledgeEntry 知识条目数据结构
 type KnowledgeEntry struct {
-	ID          string                 `json:"id"`
-	Title       string                 `json:"title"`
-	Content     string                 `json:"content"`
+	ID          string                   `json:"id"`
+	Title       string                   `json:"title"`
+	Content     string                   `json:"content"`
 	JsonData    []map[string]interface{} `json:"json_data,omitempty"`
-	Category    string                 `json:"category"`
-	Tags        []string               `json:"tags,omitempty"`
-	Version     int64                  `json:"version"`
-	CreatedAt   int64                  `json:"created_at"`
-	UpdatedAt   int64                  `json:"updated_at"`
-	CreatedBy   string                 `json:"created_by"`
-	Score       float64                `json:"score"`
-	ScoreCount  int32                  `json:"score_count"`
-	ContentHash string                 `json:"content_hash"`
-	Status      int                    `json:"status"`
-	License     string                 `json:"license"`
-	SourceRef   string                 `json:"source_ref,omitempty"`
+	Category    string                   `json:"category"`
+	Tags        []string                 `json:"tags,omitempty"`
+	Version     int64                    `json:"version"`
+	CreatedAt   int64                    `json:"created_at"`
+	UpdatedAt   int64                    `json:"updated_at"`
+	CreatedBy   string                   `json:"created_by"`
+	Score       float64                  `json:"score"`
+	ScoreCount  int32                    `json:"score_count"`
+	ContentHash string                   `json:"content_hash"`
+	Status      int                      `json:"status"`
+	License     string                   `json:"license"`
+	SourceRef   string                   `json:"source_ref,omitempty"`
 }
 
 // Category 分类数据结构
 type Category struct {
-	ID          string `json:"id"`
-	Path        string `json:"path"`
-	Name        string `json:"name"`
-	ParentID    string `json:"parent_id,omitempty"`
-	Level       int32  `json:"level"`
-	SortOrder   int32  `json:"sort_order"`
-	IsBuiltin   bool   `json:"is_builtin"`
+	ID           string `json:"id"`
+	Path         string `json:"path"`
+	Name         string `json:"name"`
+	ParentID     string `json:"parent_id,omitempty"`
+	Level        int32  `json:"level"`
+	SortOrder    int32  `json:"sort_order"`
+	IsBuiltin    bool   `json:"is_builtin"`
 	MaintainedBy string `json:"maintained_by,omitempty"`
-	CreatedAt   int64  `json:"created_at"`
+	CreatedAt    int64  `json:"created_at"`
 }
 
 // SeedData 种子数据集合
 type SeedData struct {
-	Version    string            `json:"version"`
+	Version     string           `json:"version"`
 	GeneratedAt string           `json:"generated_at"`
-	Categories []Category        `json:"categories"`
-	Entries    []KnowledgeEntry  `json:"entries"`
-	Checksum   string            `json:"checksum"`
+	Categories  []Category       `json:"categories"`
+	Entries     []KnowledgeEntry `json:"entries"`
+	Checksum    string           `json:"checksum"`
 }
 
 func main() {
@@ -177,9 +177,9 @@ func generateEntries(now int64) []KnowledgeEntry {
 	entries := []KnowledgeEntry{
 		// 系统说明条目
 		{
-			ID:        "sys-001",
-			Title:     "Polyant 使用指南",
-			Content:   "# Polyant 使用指南\n\nPolyant 是一个分布式百科知识库系统，为 AI 智能体提供知识和技能。\n\n## 快速开始\n\n1. 启动 Polyant 节点\n2. 通过 REST API 访问知识库\n3. 搜索、创建和管理知识条目\n\n## API 端点\n\n- `GET /api/v1/search` - 搜索知识\n- `GET /api/v1/entry/{id}` - 获取条目\n- `POST /api/v1/entry` - 创建条目\n- `GET /api/v1/categories` - 获取分类\n\n## 认证\n\n所有写操作需要 Ed25519 签名认证。\n",
+			ID:      "sys-001",
+			Title:   "Polyant 使用指南",
+			Content: "# Polyant 使用指南\n\nPolyant 是一个分布式百科知识库系统，为 AI 智能体提供知识和技能。\n\n## 快速开始\n\n1. 启动 Polyant 节点\n2. 通过 REST API 访问知识库\n3. 搜索、创建和管理知识条目\n\n## API 端点\n\n- `GET /api/v1/search` - 搜索知识\n- `GET /api/v1/entry/{id}` - 获取条目\n- `POST /api/v1/entry` - 创建条目\n- `GET /api/v1/categories` - 获取分类\n\n## 认证\n\n所有写操作需要 Ed25519 签名认证。\n",
 			JsonData: []map[string]interface{}{
 				{
 					"type":        "skill_definition",
@@ -202,9 +202,9 @@ func generateEntries(now int64) []KnowledgeEntry {
 
 		// Go 并发编程
 		{
-			ID:        "entry-go-001",
-			Title:     "Go 并发编程指南",
-			Content:   "# Go 并发编程指南\n\nGo 语言通过 goroutine 和 channel 提供了强大的并发编程能力。\n\n## Goroutine\n\nGoroutine 是 Go 的轻量级线程，由 Go 运行时管理。\n\n```go\nfunc sayHello() {\n    fmt.Println(\"Hello\")\n}\n\nfunc main() {\n    go sayHello()\n    time.Sleep(time.Second)\n}\n```\n\n## Channel\n\nChannel 是 goroutine 之间的通信机制。\n\n```go\nch := make(chan string)\ngo func() { ch <- \"hello\" }()\nmsg := <-ch\n```\n\n## Select\n\nSelect 允许等待多个 channel 操作。\n\n```go\nselect {\ncase msg := <-ch1:\n    fmt.Println(msg)\ncase msg := <-ch2:\n    fmt.Println(msg)\ncase <-time.After(time.Second):\n    fmt.Println(\"timeout\")\n}\n```\n",
+			ID:      "entry-go-001",
+			Title:   "Go 并发编程指南",
+			Content: "# Go 并发编程指南\n\nGo 语言通过 goroutine 和 channel 提供了强大的并发编程能力。\n\n## Goroutine\n\nGoroutine 是 Go 的轻量级线程，由 Go 运行时管理。\n\n```go\nfunc sayHello() {\n    fmt.Println(\"Hello\")\n}\n\nfunc main() {\n    go sayHello()\n    time.Sleep(time.Second)\n}\n```\n\n## Channel\n\nChannel 是 goroutine 之间的通信机制。\n\n```go\nch := make(chan string)\ngo func() { ch <- \"hello\" }()\nmsg := <-ch\n```\n\n## Select\n\nSelect 允许等待多个 channel 操作。\n\n```go\nselect {\ncase msg := <-ch1:\n    fmt.Println(msg)\ncase msg := <-ch2:\n    fmt.Println(msg)\ncase <-time.After(time.Second):\n    fmt.Println(\"timeout\")\n}\n```\n",
 			JsonData: []map[string]interface{}{
 				{
 					"type":        "skill_definition",
@@ -234,9 +234,9 @@ func generateEntries(now int64) []KnowledgeEntry {
 
 		// 提示工程
 		{
-			ID:        "entry-pe-001",
-			Title:     "提示工程基础",
-			Content:   "# 提示工程基础\n\n提示工程（Prompt Engineering）是与大语言模型有效交互的关键技能。\n\n## 基本原则\n\n1. **清晰明确**: 避免模糊的指令\n2. **提供上下文**: 给出足够的背景信息\n3. **分步思考**: 复杂问题拆解为步骤\n4. **示例引导**: 通过示例说明期望的输出格式\n\n## 常用技巧\n\n### Few-Shot Prompting\n\n提供少量示例帮助模型理解任务。\n\n### Chain-of-Thought\n\n引导模型逐步推理。\n\n### Role Playing\n\n让模型扮演特定角色来获得更专业的回答。\n",
+			ID:      "entry-pe-001",
+			Title:   "提示工程基础",
+			Content: "# 提示工程基础\n\n提示工程（Prompt Engineering）是与大语言模型有效交互的关键技能。\n\n## 基本原则\n\n1. **清晰明确**: 避免模糊的指令\n2. **提供上下文**: 给出足够的背景信息\n3. **分步思考**: 复杂问题拆解为步骤\n4. **示例引导**: 通过示例说明期望的输出格式\n\n## 常用技巧\n\n### Few-Shot Prompting\n\n提供少量示例帮助模型理解任务。\n\n### Chain-of-Thought\n\n引导模型逐步推理。\n\n### Role Playing\n\n让模型扮演特定角色来获得更专业的回答。\n",
 			JsonData: []map[string]interface{}{
 				{
 					"type":        "skill_definition",
@@ -259,9 +259,9 @@ func generateEntries(now int64) []KnowledgeEntry {
 
 		// 数据结构
 		{
-			ID:        "entry-algo-001",
-			Title:     "常用数据结构概览",
-			Content:   "# 常用数据结构概览\n\n## 数组 (Array)\n\n连续内存存储，O(1) 随机访问。\n\n## 链表 (Linked List)\n\n非连续存储，O(1) 插入删除。\n\n## 栈 (Stack)\n\n后进先出 (LIFO) 结构。\n\n## 队列 (Queue)\n\n先进先出 (FIFO) 结构。\n\n## 哈希表 (Hash Table)\n\nO(1) 平均查找时间。\n\n## 二叉树 (Binary Tree)\n\n层次化数据结构，支持 O(log n) 查找。\n\n## 图 (Graph)\n\n节点和边的集合，用于表示复杂关系。\n",
+			ID:      "entry-algo-001",
+			Title:   "常用数据结构概览",
+			Content: "# 常用数据结构概览\n\n## 数组 (Array)\n\n连续内存存储，O(1) 随机访问。\n\n## 链表 (Linked List)\n\n非连续存储，O(1) 插入删除。\n\n## 栈 (Stack)\n\n后进先出 (LIFO) 结构。\n\n## 队列 (Queue)\n\n先进先出 (FIFO) 结构。\n\n## 哈希表 (Hash Table)\n\nO(1) 平均查找时间。\n\n## 二叉树 (Binary Tree)\n\n层次化数据结构，支持 O(log n) 查找。\n\n## 图 (Graph)\n\n节点和边的集合，用于表示复杂关系。\n",
 			JsonData: []map[string]interface{}{
 				{
 					"type":        "skill_definition",
@@ -284,9 +284,9 @@ func generateEntries(now int64) []KnowledgeEntry {
 
 		// Git 使用指南
 		{
-			ID:        "entry-tools-001",
-			Title:     "Git 版本控制常用命令",
-			Content:   "# Git 版本控制常用命令\n\n## 基础操作\n\n```bash\ngit init                  # 初始化仓库\ngit clone <url>           # 克隆仓库\ngit add .                 # 添加所有更改\ngit commit -m \"message\"   # 提交更改\ngit push                  # 推送到远程\ngit pull                  # 拉取远程更新\n```\n\n## 分支操作\n\n```bash\ngit branch <name>         # 创建分支\ngit checkout <name>       # 切换分支\ngit merge <name>          # 合并分支\ngit branch -d <name>      # 删除分支\n```\n\n## 查看历史\n\n```bash\ngit log --oneline         # 查看提交历史\ngit diff                  # 查看更改\ngit status                # 查看状态\n```\n",
+			ID:      "entry-tools-001",
+			Title:   "Git 版本控制常用命令",
+			Content: "# Git 版本控制常用命令\n\n## 基础操作\n\n```bash\ngit init                  # 初始化仓库\ngit clone <url>           # 克隆仓库\ngit add .                 # 添加所有更改\ngit commit -m \"message\"   # 提交更改\ngit push                  # 推送到远程\ngit pull                  # 拉取远程更新\n```\n\n## 分支操作\n\n```bash\ngit branch <name>         # 创建分支\ngit checkout <name>       # 切换分支\ngit merge <name>          # 合并分支\ngit branch -d <name>      # 删除分支\n```\n\n## 查看历史\n\n```bash\ngit log --oneline         # 查看提交历史\ngit diff                  # 查看更改\ngit status                # 查看状态\n```\n",
 			JsonData: []map[string]interface{}{
 				{
 					"type":        "skill_definition",

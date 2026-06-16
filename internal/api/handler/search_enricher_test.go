@@ -132,10 +132,10 @@ func TestEnricher_InsertLinks_SkipCodeBlock(t *testing.T) {
 
 	// Content with "神经网络" inside a code block AND outside
 	entry := &model.KnowledgeEntry{
-		ID:    "e99",
-		Title: "测试",
+		ID:      "e99",
+		Title:   "测试",
 		Content: "```\n神经网络在被保护的代码块中\n```\n\n但这里的神经网络应该被链接。",
-		Status: model.EntryStatusPublished,
+		Status:  model.EntryStatusPublished,
 	}
 
 	_, err := enricher.Enrich([]*model.KnowledgeEntry{entry})

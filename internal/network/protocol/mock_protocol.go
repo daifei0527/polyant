@@ -13,7 +13,7 @@ type MockProtocol struct {
 	mu sync.RWMutex
 
 	// 可编程的响应
-	handshakeAck  *HandshakeAck
+	handshakeAck   *HandshakeAck
 	handshakeError error
 	syncResponse   *SyncResponse
 	syncError      error
