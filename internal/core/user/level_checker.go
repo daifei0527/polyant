@@ -93,8 +93,10 @@ func (c *LevelUpgradeChecker) checkLoop(ctx context.Context) {
 
 // checkAllUsers 检查所有用户的升级条件
 func (c *LevelUpgradeChecker) checkAllUsers(ctx context.Context) {
-	// 获取所有用户
-	users, _, err := c.store.User.List(ctx, storage.UserFilter{Limit: 10000})
+	// 获取所有用户。kv 层 List 经 ScanAndParse 本就全量载入，limit 仅控制切片——
+	// 此前 Limit:100000 只返回最新 1 万用户，超过的最老用户永远不被升级检查（静默截断 bug）。
+	// 这里取无截断 limit 确保检查全部用户（每小时一次，开销可忽略）。
+	users, _, err := c.store.User.List(ctx, storage.UserFilter{Limit: 1 << 30})
 	if err != nil {
 		log.Printf("[LevelUpgradeChecker] Failed to list users: %v", err)
 		return
