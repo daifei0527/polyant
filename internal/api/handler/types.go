@@ -41,11 +41,12 @@ type CreateEntryRequest struct {
 
 // UpdateEntryRequest 更新条目请求体
 type UpdateEntryRequest struct {
-	Title    *string                  `json:"title,omitempty"`
-	Content  *string                  `json:"content,omitempty"`
-	JsonData []map[string]interface{} `json:"json_data,omitempty"`
-	Category *string                  `json:"category,omitempty"`
-	Tags     *[]string                `json:"tags,omitempty"`
+	Title            *string                  `json:"title,omitempty"`
+	Content          *string                  `json:"content,omitempty"`
+	JsonData         []map[string]interface{} `json:"json_data,omitempty"`
+	Category         *string                  `json:"category,omitempty"`
+	Tags             *[]string                `json:"tags,omitempty"`
+	CreatorSignature string                   `json:"creator_signature,omitempty"` // 新内容签名（title/content/category 任一变更时必填）
 }
 
 // RegisterRequest 用户注册请求体
@@ -121,23 +122,25 @@ type BatchDeleteRequest struct {
 
 // BatchEntry 批量创建条目
 type BatchEntry struct {
-	Title     string                   `json:"title"`
-	Content   string                   `json:"content"`
-	JsonData  []map[string]interface{} `json:"json_data,omitempty"`
-	Category  string                   `json:"category"`
-	Tags      []string                 `json:"tags,omitempty"`
-	License   string                   `json:"license,omitempty"`
-	SourceRef string                   `json:"source_ref,omitempty"`
+	Title            string                   `json:"title"`
+	Content          string                   `json:"content"`
+	JsonData         []map[string]interface{} `json:"json_data,omitempty"`
+	Category         string                   `json:"category"`
+	Tags             []string                 `json:"tags,omitempty"`
+	License          string                   `json:"license,omitempty"`
+	SourceRef        string                   `json:"source_ref,omitempty"`
+	CreatorSignature string                   `json:"creator_signature,omitempty"` // 创建者内容签名(base64)，R1-B3
 }
 
 // BatchUpdateEntry 批量更新条目
 type BatchUpdateEntry struct {
-	ID       string                   `json:"id"`
-	Title    *string                  `json:"title,omitempty"`
-	Content  *string                  `json:"content,omitempty"`
-	JsonData []map[string]interface{} `json:"json_data,omitempty"`
-	Category *string                  `json:"category,omitempty"`
-	Tags     *[]string                `json:"tags,omitempty"`
+	ID               string                   `json:"id"`
+	Title            *string                  `json:"title,omitempty"`
+	Content          *string                  `json:"content,omitempty"`
+	JsonData         []map[string]interface{} `json:"json_data,omitempty"`
+	Category         *string                  `json:"category,omitempty"`
+	Tags             *[]string                `json:"tags,omitempty"`
+	CreatorSignature string                   `json:"creator_signature,omitempty"` // 新内容签名(base64)，title/content/category 任一变更时必填，R1-B3
 }
 
 // BatchOptions 批量操作选项

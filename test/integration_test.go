@@ -20,7 +20,19 @@ import (
 
 	"github.com/daifei0527/polyant/internal/api/router"
 	"github.com/daifei0527/polyant/internal/storage"
+	"github.com/daifei0527/polyant/pkg/crypto"
 )
+
+// contentSig 用测试用户的私钥对条目内容(title,content,category)签名，返回 base64。
+// R1-B3：create/update 条目必须携带 creator_signature。
+func (s *TestServer) contentSig(t *testing.T, title, content, category string) string {
+	t.Helper()
+	sig, err := crypto.SignContent(s.privKey, title, content, category)
+	if err != nil {
+		t.Fatalf("sign content: %v", err)
+	}
+	return base64.StdEncoding.EncodeToString(sig)
+}
 
 // TestServer 测试服务器
 type TestServer struct {
@@ -316,10 +328,11 @@ func TestIntegration_CreateEntry(t *testing.T) {
 
 	// 创建条目
 	resp, err := s.DoRequest("POST", "/api/v1/entry/create", map[string]interface{}{
-		"title":    "集成测试条目",
-		"content":  "# 测试\n\n这是一个集成测试创建的知识条目。",
-		"category": "tech/programming",
-		"tags":     []string{"test", "integration"},
+		"title":            "集成测试条目",
+		"content":          "# 测试\n\n这是一个集成测试创建的知识条目。",
+		"category":         "tech/programming",
+		"tags":             []string{"test", "integration"},
+		"creator_signature": s.contentSig(t, "集成测试条目", "# 测试\n\n这是一个集成测试创建的知识条目。", "tech/programming"),
 	}, true)
 	if err != nil {
 		t.Fatalf("请求失败: %v", err)
@@ -349,10 +362,11 @@ func TestIntegration_EntryLifecycle(t *testing.T) {
 
 	// 创建条目
 	createResp, err := s.DoRequest("POST", "/api/v1/entry/create", map[string]interface{}{
-		"title":    "生命周期测试条目",
-		"content":  "初始内容",
-		"category": "tech/programming",
-		"tags":     []string{"lifecycle"},
+		"title":            "生命周期测试条目",
+		"content":          "初始内容",
+		"category":         "tech/programming",
+		"tags":             []string{"lifecycle"},
+		"creator_signature": s.contentSig(t, "生命周期测试条目", "初始内容", "tech/programming"),
 	}, true)
 	if err != nil {
 		t.Fatalf("创建条目失败: %v", err)
@@ -389,10 +403,11 @@ func TestIntegration_EntryLifecycle(t *testing.T) {
 		t.Errorf("标题不匹配: %v", getData["title"])
 	}
 
-	// 更新条目
+	// 更新条目（R1-B3：内容变更须带新签名，签的是更新后的 title/content/category）
 	updateResp, err := s.DoRequest("PUT", "/api/v1/entry/update/"+entryID, map[string]interface{}{
-		"title":   "更新后的标题",
-		"content": "更新后的内容",
+		"title":            "更新后的标题",
+		"content":          "更新后的内容",
+		"creator_signature": s.contentSig(t, "更新后的标题", "更新后的内容", "tech/programming"),
 	}, true)
 	if err != nil {
 		t.Fatalf("更新条目失败: %v", err)
@@ -428,10 +443,11 @@ func TestIntegration_SearchAfterCreate(t *testing.T) {
 
 	// 创建条目
 	_, err := s.DoRequest("POST", "/api/v1/entry/create", map[string]interface{}{
-		"title":    "Go语言并发编程",
-		"content":  "Go语言通过goroutine实现并发编程",
-		"category": "tech/programming",
-		"tags":     []string{"go", "concurrency"},
+		"title":            "Go语言并发编程",
+		"content":          "Go语言通过goroutine实现并发编程",
+		"category":         "tech/programming",
+		"tags":             []string{"go", "concurrency"},
+		"creator_signature": s.contentSig(t, "Go语言并发编程", "Go语言通过goroutine实现并发编程", "tech/programming"),
 	}, true)
 	if err != nil {
 		t.Fatalf("创建条目失败: %v", err)
@@ -468,9 +484,10 @@ func TestIntegration_RatingFlow(t *testing.T) {
 
 	// 创建条目
 	createResp, err := s.DoRequest("POST", "/api/v1/entry/create", map[string]interface{}{
-		"title":    "评分测试条目",
-		"content":  "用于测试评分功能",
-		"category": "tech/programming",
+		"title":            "评分测试条目",
+		"content":          "用于测试评分功能",
+		"category":         "tech/programming",
+		"creator_signature": s.contentSig(t, "评分测试条目", "用于测试评分功能", "tech/programming"),
 	}, true)
 	if err != nil {
 		t.Fatalf("创建条目失败: %v", err)

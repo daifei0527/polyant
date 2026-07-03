@@ -25,18 +25,20 @@ type SearchResult struct {
 
 // CreateEntryRequest 创建条目请求
 type CreateEntryRequest struct {
-	Title    string   `json:"title"`
-	Content  string   `json:"content"`
-	Category string   `json:"category"`
-	Tags     []string `json:"tags,omitempty"`
+	Title            string   `json:"title"`
+	Content          string   `json:"content"`
+	Category         string   `json:"category"`
+	Tags             []string `json:"tags,omitempty"`
+	CreatorSignature string   `json:"creator_signature,omitempty"` // 创建者对 (title,content,category) 的 Ed25519 签名(base64)，由 Client.CreateEntry 自动填充
 }
 
 // UpdateEntryRequest 更新条目请求
 type UpdateEntryRequest struct {
-	Title    string   `json:"title,omitempty"`
-	Content  string   `json:"content,omitempty"`
-	Category string   `json:"category,omitempty"`
-	Tags     []string `json:"tags,omitempty"`
+	Title            string   `json:"title,omitempty"`
+	Content          string   `json:"content,omitempty"`
+	Category         string   `json:"category,omitempty"`
+	Tags             []string `json:"tags,omitempty"`
+	CreatorSignature string   `json:"creator_signature,omitempty"` // 更新后完整内容的签名(base64)，由 Client.UpdateEntry 自动填充
 }
 
 // RatingRequest 评分请求

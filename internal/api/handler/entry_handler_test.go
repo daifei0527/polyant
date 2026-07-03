@@ -154,8 +154,9 @@ func TestCreateEntryHandler_PushesToSeed(t *testing.T) {
 	pusher := &fakeEntryPusher{pushed: make(chan *model.KnowledgeEntry, 1)}
 	h.SetEntryPusher(pusher)
 
-	user, _ := createTestUser(t, memStore, "author", model.UserLevelLv1)
-	body := `{"title":"T","content":"C","category":"cat"}`
+	user, priv := createTestUserWithKey(t, memStore, "author", model.UserLevelLv1)
+	sig := signContentB64(t, priv, "T", "C", "cat")
+	body := `{"title":"T","content":"C","category":"cat","creator_signature":"` + sig + `"}`
 	req := httptest.NewRequest(http.MethodPost, "/api/v1/entry/create", bytes.NewBufferString(body))
 	req.Header.Set("Content-Type", "application/json")
 	req = req.WithContext(setUserInContext(req.Context(), user))

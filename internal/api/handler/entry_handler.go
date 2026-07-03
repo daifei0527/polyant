@@ -2,7 +2,10 @@ package handler
 
 import (
 	"context"
+	"crypto/ed25519"
+	"encoding/base64"
 	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
 	"strconv"
@@ -12,8 +15,32 @@ import (
 	"github.com/daifei0527/polyant/internal/storage/index"
 	"github.com/daifei0527/polyant/internal/storage/linkparser"
 	"github.com/daifei0527/polyant/internal/storage/model"
+	"github.com/daifei0527/polyant/pkg/crypto"
 	awerrors "github.com/daifei0527/polyant/pkg/errors"
 )
+
+// verifyEntrySignature 解码并校验创建者对条目内容(title\ncontent\ncategory)的 Ed25519 签名。
+// creatorPubKeyB64 为创建者公钥(base64)，sigB64 为签名(base64)。
+// 返回解码后的原始签名字节；任一输入非法或校验失败均返回错误（调用方统一回 401）。
+func verifyEntrySignature(creatorPubKeyB64, sigB64, title, content, category string) ([]byte, error) {
+	sig, err := base64.StdEncoding.DecodeString(sigB64)
+	if err != nil {
+		return nil, fmt.Errorf("invalid signature encoding")
+	}
+	pub, err := base64.StdEncoding.DecodeString(creatorPubKeyB64)
+	if err != nil {
+		return nil, fmt.Errorf("invalid creator public key encoding")
+	}
+	if !crypto.VerifyContent(ed25519.PublicKey(pub), sig, title, content, category) {
+		return nil, fmt.Errorf("content signature verification failed")
+	}
+	return sig, nil
+}
+
+// contentSignatureError 统一返回“无效或缺失内容签名”401，不回显内部差异。
+func contentSignatureError() *awerrors.AWError {
+	return awerrors.New(401, awerrors.CategoryAPI, "invalid or missing content signature", http.StatusUnauthorized)
+}
 
 // RemoteQuerier 远程查询接口
 type RemoteQuerier interface {
@@ -232,6 +259,13 @@ func (h *EntryHandler) CreateEntryHandler(w http.ResponseWriter, r *http.Request
 		return
 	}
 
+	// 校验创建者内容签名（R1-B3）：条目内容必须由请求者私钥签名，防 P2P 写入伪造。
+	sigBytes, err := verifyEntrySignature(user.PublicKey, req.CreatorSignature, req.Title, req.Content, req.Category)
+	if err != nil {
+		writeError(w, contentSignatureError())
+		return
+	}
+
 	// 生成UUID作为条目ID
 	entryID := generateUUID()
 
@@ -253,6 +287,9 @@ func (h *EntryHandler) CreateEntryHandler(w http.ResponseWriter, r *http.Request
 		Status:     model.EntryStatusPublished,
 		License:    req.License,
 		SourceRef:  req.SourceRef,
+
+		Signature:     sigBytes,  // 创建者内容签名（R1-B3）
+		SignAlgorithm: "ed25519",
 	}
 	if entry.License == "" {
 		entry.License = "CC-BY-SA-4.0"
@@ -287,7 +324,7 @@ func (h *EntryHandler) CreateEntryHandler(w http.ResponseWriter, r *http.Request
 	// 异步推送到种子节点（失败仅记日志，不阻塞主流程）
 	if h.entryPusher != nil {
 		go func(e *model.KnowledgeEntry) {
-			if err := h.entryPusher.PushEntry(e, nil); err != nil {
+			if err := h.entryPusher.PushEntry(e, e.Signature); err != nil {
 				log.Printf("[EntryHandler] push entry %s to seed failed: %v", e.ID, err)
 			}
 		}(created)
@@ -375,6 +412,18 @@ func (h *EntryHandler) UpdateEntryHandler(w http.ResponseWriter, r *http.Request
 	// 重新计算内容哈希
 	existing.ContentHash = existing.ComputeContentHash()
 
+	// 校验内容签名（R1-B3）：title/content/category 任一变更都需 CreatedBy 私钥的新签名。
+	// 仅改 tags/jsondata 等非内容字段时原签名仍有效，无需重签（moderator 元数据编辑不受影响）。
+	if req.Title != nil || req.Content != nil || req.Category != nil {
+		sigBytes, vErr := verifyEntrySignature(existing.CreatedBy, req.CreatorSignature, existing.Title, existing.Content, existing.Category)
+		if vErr != nil {
+			writeError(w, contentSignatureError())
+			return
+		}
+		existing.Signature = sigBytes
+		existing.SignAlgorithm = "ed25519"
+	}
+
 	// 执行更新
 	updated, err := h.entryStore.Update(r.Context(), existing)
 	if err != nil {
@@ -405,7 +454,7 @@ func (h *EntryHandler) UpdateEntryHandler(w http.ResponseWriter, r *http.Request
 	// 异步推送更新到种子节点（失败仅记日志，不阻塞主流程）
 	if h.entryPusher != nil {
 		go func(e *model.KnowledgeEntry) {
-			if err := h.entryPusher.PushEntry(e, nil); err != nil {
+			if err := h.entryPusher.PushEntry(e, e.Signature); err != nil {
 				log.Printf("[EntryHandler] push entry %s to seed failed: %v", e.ID, err)
 			}
 		}(updated)

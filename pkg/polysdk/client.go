@@ -17,6 +17,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/daifei0527/polyant/pkg/crypto"
 )
 
 // Client Polyant API 客户端
@@ -98,6 +100,14 @@ func (c *Client) GetEntry(ctx context.Context, id, lang string) (*Entry, error) 
 
 // CreateEntry 创建知识条目（需要 Lv1+ 认证）
 func (c *Client) CreateEntry(ctx context.Context, req *CreateEntryRequest) (*Entry, error) {
+	// R1-B3：用创建者私钥对内容(title,content,category)签名，服务端强制验签。
+	if c.HasKeys() {
+		sig, err := crypto.SignContent(c.privateKey, req.Title, req.Content, req.Category)
+		if err != nil {
+			return nil, fmt.Errorf("sign entry content: %w", err)
+		}
+		req.CreatorSignature = base64.StdEncoding.EncodeToString(sig)
+	}
 	var result Entry
 	if err := c.doRequest(ctx, http.MethodPost, "/api/v1/entry/create", req, &result); err != nil {
 		return nil, err
@@ -107,6 +117,30 @@ func (c *Client) CreateEntry(ctx context.Context, req *CreateEntryRequest) (*Ent
 
 // UpdateEntry 更新知识条目（需要认证）
 func (c *Client) UpdateEntry(ctx context.Context, id string, req *UpdateEntryRequest) (*Entry, error) {
+	// R1-B3：服务端按"合并后的最终 (title,content,category)"验签，故客户端需先取当前条目，
+	// 合并待改字段，对完整三元组签名后发送全量内容更新（未改字段回填原值，等同 no-op）。
+	if c.HasKeys() {
+		cur, err := c.GetEntry(ctx, id, "")
+		if err != nil {
+			return nil, fmt.Errorf("fetch current entry for signing: %w", err)
+		}
+		title, content, category := cur.Title, cur.Content, cur.Category
+		if req.Title != "" {
+			title = req.Title
+		}
+		if req.Content != "" {
+			content = req.Content
+		}
+		if req.Category != "" {
+			category = req.Category
+		}
+		sig, err := crypto.SignContent(c.privateKey, title, content, category)
+		if err != nil {
+			return nil, fmt.Errorf("sign entry content: %w", err)
+		}
+		req.Title, req.Content, req.Category = title, content, category
+		req.CreatorSignature = base64.StdEncoding.EncodeToString(sig)
+	}
 	path := "/api/v1/entry/update/" + id
 	var result Entry
 	if err := c.doRequest(ctx, http.MethodPut, path, req, &result); err != nil {

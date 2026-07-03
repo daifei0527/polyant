@@ -343,6 +343,20 @@ func (h *BatchHandler) executeBatchCreate(r *http.Request, entries []BatchEntry,
 	}
 
 	for i, entry := range entries {
+		// R1-B3：校验创建者内容签名，防止批量接口绕过单条 create 的验签。
+		sigBytes, vErr := verifyEntrySignature(user.PublicKey, entry.CreatorSignature, entry.Title, entry.Content, entry.Category)
+		if vErr != nil {
+			response.Success = false
+			response.Summary.Failed++
+			response.Results = append(response.Results, BatchResult{
+				Index:  i,
+				ID:     "",
+				Status: "failed",
+				Reason: "invalid or missing content signature",
+			})
+			continue
+		}
+
 		// 生成UUID作为条目ID
 		entryID := generateUUID()
 
@@ -364,6 +378,9 @@ func (h *BatchHandler) executeBatchCreate(r *http.Request, entries []BatchEntry,
 			Status:     model.EntryStatusPublished,
 			License:    entry.License,
 			SourceRef:  entry.SourceRef,
+
+			Signature:     sigBytes,
+			SignAlgorithm: "ed25519",
 		}
 		if newEntry.License == "" {
 			newEntry.License = "CC-BY-SA-4.0"
@@ -466,6 +483,24 @@ func (h *BatchHandler) executeBatchUpdate(r *http.Request, entries []BatchUpdate
 
 		// 重新计算内容哈希
 		existing.ContentHash = existing.ComputeContentHash()
+
+		// R1-B3：title/content/category 任一变更需 CreatedBy 私钥的新签名；仅改元数据则原签名保留。
+		if entry.Title != nil || entry.Content != nil || entry.Category != nil {
+			sigBytes, vErr := verifyEntrySignature(existing.CreatedBy, entry.CreatorSignature, existing.Title, existing.Content, existing.Category)
+			if vErr != nil {
+				response.Success = false
+				response.Summary.Failed++
+				response.Results = append(response.Results, BatchResult{
+					Index:  i,
+					ID:     entry.ID,
+					Status: "failed",
+					Reason: "invalid or missing content signature",
+				})
+				continue
+			}
+			existing.Signature = sigBytes
+			existing.SignAlgorithm = "ed25519"
+		}
 
 		// 执行更新
 		updated, err := h.entryStore.Update(r.Context(), existing)

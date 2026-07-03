@@ -28,18 +28,13 @@ func newTestBatchHandler(t *testing.T) (*BatchHandler, *storage.Store) {
 func TestBatchCreateHandler_Success(t *testing.T) {
 	handler, store := newTestBatchHandler(t)
 
-	// Create test user
-	user := &model.User{
-		PublicKey: "test-pk",
-		UserLevel: model.UserLevelLv1,
-		Status:    model.UserStatusActive,
-	}
-	store.User.Create(context.Background(), user)
+	// Create test user（R1-B3：需真实密钥以便对每条内容签名）
+	user, priv := createTestUserWithKey(t, store, "batch-author", model.UserLevelLv1)
 
-	// Create request with 2 entries
+	// Create request with 2 entries（每条都带创建者签名）
 	entries := []BatchEntry{
-		{Title: "Entry 1", Content: "Content 1", Category: "test"},
-		{Title: "Entry 2", Content: "Content 2", Category: "test"},
+		{Title: "Entry 1", Content: "Content 1", Category: "test", CreatorSignature: signContentB64(t, priv, "Entry 1", "Content 1", "test")},
+		{Title: "Entry 2", Content: "Content 2", Category: "test", CreatorSignature: signContentB64(t, priv, "Entry 2", "Content 2", "test")},
 	}
 	reqBody := BatchCreateRequest{Entries: entries}
 	body, _ := json.Marshal(reqBody)
@@ -174,20 +169,21 @@ func TestBatchCreateHandler_InsufficientPermission(t *testing.T) {
 func TestBatchUpdateHandler_Success(t *testing.T) {
 	handler, store := newTestBatchHandler(t)
 
-	user := &model.User{PublicKey: "test-pk", UserLevel: model.UserLevelLv1, Status: model.UserStatusActive}
-	store.User.Create(context.Background(), user)
+	user, priv := createTestUserWithKey(t, store, "batch-author", model.UserLevelLv1)
+	pk := user.PublicKey
 
 	// Create entries owned by user
-	entry1 := &model.KnowledgeEntry{ID: "id1", Title: "Old 1", Content: "Content", Category: "test", CreatedBy: "test-pk", Version: 1}
-	entry2 := &model.KnowledgeEntry{ID: "id2", Title: "Old 2", Content: "Content", Category: "test", CreatedBy: "test-pk", Version: 1}
+	entry1 := &model.KnowledgeEntry{ID: "id1", Title: "Old 1", Content: "Content", Category: "test", CreatedBy: pk, Version: 1}
+	entry2 := &model.KnowledgeEntry{ID: "id2", Title: "Old 2", Content: "Content", Category: "test", CreatedBy: pk, Version: 1}
 	store.Entry.Create(context.Background(), entry1)
 	store.Entry.Create(context.Background(), entry2)
 
-	// Update request
+	// Update request（R1-B3：内容变更须带 CreatedBy 私钥的新签名；两条最终内容相同，共用一签）
 	newTitle := "Updated Title"
+	sig := signContentB64(t, priv, newTitle, "Content", "test")
 	entries := []BatchUpdateEntry{
-		{ID: "id1", Title: &newTitle},
-		{ID: "id2", Title: &newTitle},
+		{ID: "id1", Title: &newTitle, CreatorSignature: sig},
+		{ID: "id2", Title: &newTitle, CreatorSignature: sig},
 	}
 	reqBody := BatchUpdateRequest{Entries: entries}
 	body, _ := json.Marshal(reqBody)
@@ -250,8 +246,10 @@ func TestBatchUpdateHandler_Lv3CanUpdateAny(t *testing.T) {
 	entry := &model.KnowledgeEntry{ID: "id1", Title: "Test", Content: "Content", Category: "test", CreatedBy: "other-user"}
 	store.Entry.Create(context.Background(), entry)
 
-	newTitle := "Updated by Lv3"
-	entries := []BatchUpdateEntry{{ID: "id1", Title: &newTitle}}
+	// R1-B3：Lv3 仍可更新他人条目的元数据（tags）；但改 title/content/category 需 CreatedBy 私钥，
+	// moderator 无此密钥。这里改为元数据更新以保留“Lv3 可更新任意条目”的能力。
+	newTags := []string{"mod-edited"}
+	entries := []BatchUpdateEntry{{ID: "id1", Tags: &newTags}}
 	reqBody := BatchUpdateRequest{Entries: entries}
 	body, _ := json.Marshal(reqBody)
 

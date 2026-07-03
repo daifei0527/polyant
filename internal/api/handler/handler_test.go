@@ -168,7 +168,7 @@ func TestEntryHandler_CreateEntryHandler(t *testing.T) {
 	handler := NewEntryHandler(store.Entry, store.Search, store.Backlink, store.User, store.TitleIdx)
 
 	// Create test user
-	pubKey, _, _ := ed25519.GenerateKey(rand.Reader)
+	pubKey, priv, _ := ed25519.GenerateKey(rand.Reader)
 	pubKeyB64 := base64.StdEncoding.EncodeToString(pubKey)
 
 	user := &model.User{
@@ -179,12 +179,14 @@ func TestEntryHandler_CreateEntryHandler(t *testing.T) {
 		Status:        model.UserStatusActive,
 	}
 
-	// Test create entry
+	// Test create entry（R1-B3：必须携带创建者内容签名）
+	sig := signContentB64(t, priv, "Test Entry", "This is test content for the entry.", "test")
 	body := `{
 		"title": "Test Entry",
 		"content": "This is test content for the entry.",
 		"category": "test",
-		"tags": ["test", "example"]
+		"tags": ["test", "example"],
+		"creator_signature": "` + sig + `"
 	}`
 	req := httptest.NewRequest(http.MethodPost, "/api/v1/entry", bytes.NewBufferString(body))
 	req.Header.Set("Content-Type", "application/json")
@@ -720,7 +722,7 @@ func TestEntryHandler_UpdateEntryHandler(t *testing.T) {
 	handler := NewEntryHandler(store.Entry, store.Search, store.Backlink, store.User, store.TitleIdx)
 
 	// Create test user
-	pubKey, _, _ := ed25519.GenerateKey(rand.Reader)
+	pubKey, priv, _ := ed25519.GenerateKey(rand.Reader)
 	pubKeyB64 := base64.StdEncoding.EncodeToString(pubKey)
 
 	user := &model.User{
@@ -742,7 +744,9 @@ func TestEntryHandler_UpdateEntryHandler(t *testing.T) {
 	}
 	store.Entry.Create(context.Background(), entry)
 
-	body := `{"title": "New Title", "content": "New Content"}`
+	// R1-B3：内容变更须带新签名（签的是更新后的 title/content/category）
+	sig := signContentB64(t, priv, "New Title", "New Content", "test")
+	body := `{"title": "New Title", "content": "New Content", "creator_signature": "` + sig + `"}`
 	req := httptest.NewRequest(http.MethodPut, "/api/v1/entry/test-entry-1", bytes.NewBufferString(body))
 	req.Header.Set("Content-Type", "application/json")
 	req.SetPathValue("id", "test-entry-1")
@@ -826,7 +830,9 @@ func TestEntryHandler_UpdateEntryHandler_Lv3CanUpdateAny(t *testing.T) {
 	}
 	store.Entry.Create(context.Background(), entry)
 
-	body := `{"title": "Updated by Lv3"}`
+	// R1-B3：Lv3 仍可更新任意条目的元数据（tags 等非内容字段，无需签名）；
+	// 但修改他人条目的 title/content/category 需 CreatedBy 私钥签名，moderator 无此密钥故不可改内容。
+	body := `{"tags": ["mod-edited"]}`
 	req := httptest.NewRequest(http.MethodPut, "/api/v1/entry/test-entry-1", bytes.NewBufferString(body))
 	req.Header.Set("Content-Type", "application/json")
 	req.SetPathValue("id", "test-entry-1")
@@ -837,7 +843,7 @@ func TestEntryHandler_UpdateEntryHandler_Lv3CanUpdateAny(t *testing.T) {
 	handler.UpdateEntryHandler(rec, req)
 
 	if rec.Code != http.StatusOK {
-		t.Errorf("Expected status %d for Lv3 update, got %d", http.StatusOK, rec.Code)
+		t.Errorf("Expected status %d for Lv3 meta update, got %d", http.StatusOK, rec.Code)
 	}
 }
 
