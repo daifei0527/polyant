@@ -13,6 +13,10 @@ import (
 
 // ==================== 配置结构体定义 ====================
 
+// PlaceholderApiKey 是 configs/*.json 中占位的 API key。仓库公开，任何人可见，
+// 因此绝不能在生产使用。Validate() 会拒绝它，启动 fail-fast。
+const PlaceholderApiKey = "sk_live_YOUR_API_KEY_HERE"
+
 // NodeConfig 节点配置
 type NodeConfig struct {
 	Type     string `json:"type"`      // 节点类型: "local" 或 "seed"
@@ -364,6 +368,9 @@ func LoadWithEnv(config *Config) *Config {
 	if v := os.Getenv("POLYANT_NETWORK_MDNS_ENABLED"); v != "" {
 		config.Network.MDNSEnabled = parseBool(v)
 	}
+	if v := os.Getenv("POLYANT_NETWORK_API_KEY"); v != "" {
+		config.Network.ApiKey = v
+	}
 
 	// 同步配置环境变量
 	if v := os.Getenv("POLYANT_SYNC_AUTO_SYNC"); v != "" {
@@ -481,6 +488,11 @@ func Validate(config *Config) error {
 	}
 	if config.Network.ListenPort == config.Network.APIPort {
 		return fmt.Errorf("监听端口和 API 端口不能相同: %d", config.Network.ListenPort)
+	}
+
+	// 拒绝占位 API key（仓库公开值）。空值允许（=禁用 ApiKeyMiddleware）。
+	if config.Network.ApiKey == PlaceholderApiKey {
+		return fmt.Errorf("Network.ApiKey 仍是占位符 %q：请设置环境变量 POLYANT_NETWORK_API_KEY 或修改 configs/*.json 里的 api_key 字段", PlaceholderApiKey)
 	}
 
 	// 验证同步配置

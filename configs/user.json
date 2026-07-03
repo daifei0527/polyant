@@ -18,7 +18,7 @@
     "seed_nodes": ["/dns4/seed.polyant.top/tcp/9000/p2p/12D3Koo..."],
     "dht_enabled": false,
     "mdns_enabled": true,
-    "api_key": "sk_live_YOUR_API_KEY_HERE"
+    "api_key": ""
   },
   "account": {
     "private_key_path": "./data/keys",

@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"crypto/subtle"
 	"encoding/json"
 	"net/http"
 )
@@ -22,7 +23,8 @@ func ApiKeyMiddleware(validKey string) func(http.Handler) http.Handler {
 			}
 
 			apiKey := r.Header.Get(headerApiKey)
-			if apiKey == "" || apiKey != validKey {
+			// 恒定时间比较，抗时序侧信道。空请求 key 直接拒（避免与空 validKey 混淆）。
+			if apiKey == "" || subtle.ConstantTimeCompare([]byte(apiKey), []byte(validKey)) != 1 {
 				writeJSONError(w, http.StatusUnauthorized, "Missing or invalid API key")
 				return
 			}

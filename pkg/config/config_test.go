@@ -1093,3 +1093,28 @@ func TestSave_CreatesParentDir(t *testing.T) {
 		t.Errorf("Node.Name 往返不一致: got %q, want %q", loaded.Node.Name, cfg.Node.Name)
 	}
 }
+
+func TestLoadWithEnv_NetworkApiKey(t *testing.T) {
+	os.Setenv("POLYANT_NETWORK_API_KEY", "sk_live_real_key")
+	defer os.Unsetenv("POLYANT_NETWORK_API_KEY")
+	cfg := config.LoadWithEnv(config.DefaultConfig())
+	if cfg.Network.ApiKey != "sk_live_real_key" {
+		t.Fatalf("env POLYANT_NETWORK_API_KEY not applied: got %q", cfg.Network.ApiKey)
+	}
+}
+
+func TestValidate_RejectsPlaceholderApiKey(t *testing.T) {
+	cfg := config.DefaultConfig() // Node.Type = "local"
+	cfg.Network.ApiKey = config.PlaceholderApiKey
+	if err := config.Validate(cfg); err == nil {
+		t.Fatal("Validate must reject placeholder API key")
+	}
+	cfg.Network.ApiKey = "sk_live_real"
+	if err := config.Validate(cfg); err != nil {
+		t.Fatalf("Validate must accept a real key: %v", err)
+	}
+	cfg.Network.ApiKey = "" // 空 = 禁用 ApiKeyMiddleware，应接受
+	if err := config.Validate(cfg); err != nil {
+		t.Fatalf("Validate must accept empty key (disables middleware): %v", err)
+	}
+}
