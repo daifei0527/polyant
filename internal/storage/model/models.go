@@ -159,6 +159,7 @@ type User struct {
 	RatingCnt       int32  `json:"ratingCnt"`       // 评分数量
 	NodeId          string `json:"nodeId"`          // 所属节点ID
 	Status          string `json:"status"`          // 用户状态
+	PasswordHash    string `json:"passwordHash,omitempty"` // bcrypt 哈希（Web admin 登录用，零值=未设密码）
 	// 管理员相关字段
 	BanType           BanType `json:"banType,omitempty"`           // 封禁类型
 	BanReason         string  `json:"banReason,omitempty"`         // 封禁原因
