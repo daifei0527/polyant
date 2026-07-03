@@ -277,6 +277,9 @@ func TestIsValidEmail(t *testing.T) {
 		{name: "only at sign", email: "@", expected: false},
 		{name: "only dot", email: ".", expected: false},
 		{name: "at and dot reversed", email: ".user@com", expected: true}, // simple check: has @ and .
+		{name: "CRLF injection attempt", email: "x@y.com\r\nBcc: z@evil.com", expected: false},
+		{name: "LF in domain", email: "user@ex\nample.com", expected: false},
+		{name: "CR only", email: "user@ex\rample.com", expected: false},
 	}
 
 	for _, tt := range tests {

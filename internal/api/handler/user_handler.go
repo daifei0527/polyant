@@ -475,8 +475,12 @@ func (h *UserHandler) RateEntryHandler(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// isValidEmail 简单验证邮箱格式
+// isValidEmail 简单验证邮箱格式。R1-C1：含 CR/LF 一律拒绝，防 SMTP 头注入。
+// （深度防御：email/service.go 仍会在写头时二次消毒。）
 func isValidEmail(email string) bool {
+	if strings.ContainsAny(email, "\r\n") {
+		return false
+	}
 	return strings.Contains(email, "@") && strings.Contains(email, ".")
 }
 

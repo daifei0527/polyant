@@ -4,8 +4,10 @@ package email
 import (
 	"bytes"
 	"crypto/tls"
+	"encoding/base64"
 	"fmt"
 	"html/template"
+	"mime"
 	"net/smtp"
 	"strings"
 	"time"
@@ -60,25 +62,51 @@ type Email struct {
 
 // Send 发送邮件
 func (s *Service) Send(email *Email) error {
-	if len(email.To) == 0 {
-		return fmt.Errorf("收件人地址为空")
+	msg, err := s.buildMessage(email)
+	if err != nil {
+		return err
 	}
 
-	// 构建邮件头
+	// 发送邮件
+	addr := fmt.Sprintf("%s:%d", s.config.Host, s.config.Port)
+
+	if s.config.UseTLS {
+		return s.sendWithTLS(addr, email.To, msg)
+	}
+
+	return smtp.SendMail(addr, s.auth, s.config.From, email.To, msg)
+}
+
+// sanitizeHeader 剥离头值中的 CR/LF，防止 SMTP 头注入（如收件人/主题里夹带 Bcc）。
+func sanitizeHeader(v string) string {
+	return strings.NewReplacer("\r", "", "\n", "").Replace(v)
+}
+
+// buildMessage 构建符合 SMTP 的原始邮件字节（头消毒 + 正文 base64 编码）。
+// 抽出独立方法便于单测：头注入防御与正文编码均可在不连真实 SMTP 的情况下验证。
+func (s *Service) buildMessage(email *Email) ([]byte, error) {
+	if len(email.To) == 0 {
+		return nil, fmt.Errorf("收件人地址为空")
+	}
+
 	var msg bytes.Buffer
 
-	// 发件人
+	// 发件人：FromName 用 mime.QEncoding 编码（支持非 ASCII 且消除头注入），From 地址消毒
 	fromAddr := s.config.From
 	if s.config.FromName != "" {
-		fromAddr = fmt.Sprintf("%s <%s>", s.config.FromName, s.config.From)
+		fromAddr = fmt.Sprintf("%s <%s>", mime.QEncoding.Encode("utf-8", s.config.FromName), s.config.From)
 	}
-	msg.WriteString(fmt.Sprintf("From: %s\r\n", fromAddr))
+	msg.WriteString(fmt.Sprintf("From: %s\r\n", sanitizeHeader(fromAddr)))
 
-	// 收件人
-	msg.WriteString(fmt.Sprintf("To: %s\r\n", strings.Join(email.To, ", ")))
+	// 收件人：逐个消毒
+	tos := make([]string, len(email.To))
+	for i, t := range email.To {
+		tos[i] = sanitizeHeader(t)
+	}
+	msg.WriteString(fmt.Sprintf("To: %s\r\n", strings.Join(tos, ", ")))
 
-	// 主题
-	msg.WriteString(fmt.Sprintf("Subject: %s\r\n", email.Subject))
+	// 主题：消毒
+	msg.WriteString(fmt.Sprintf("Subject: %s\r\n", sanitizeHeader(email.Subject)))
 
 	// 日期
 	msg.WriteString(fmt.Sprintf("Date: %s\r\n", time.Now().Format(time.RFC1123Z)))
@@ -93,37 +121,30 @@ func (s *Service) Send(email *Email) error {
 		msg.WriteString(fmt.Sprintf("Content-Type: multipart/alternative; boundary=\"%s\"\r\n", boundary))
 		msg.WriteString("\r\n")
 
-		// 纯文本部分
+		// 纯文本部分（base64 编码）
 		msg.WriteString(fmt.Sprintf("--%s\r\n", boundary))
 		msg.WriteString("Content-Type: text/plain; charset=\"UTF-8\"\r\n")
 		msg.WriteString("Content-Transfer-Encoding: base64\r\n\r\n")
-		msg.WriteString(email.TextBody)
+		msg.WriteString(base64.StdEncoding.EncodeToString([]byte(email.TextBody)))
 		msg.WriteString("\r\n\r\n")
 
-		// HTML部分
+		// HTML部分（base64 编码）
 		msg.WriteString(fmt.Sprintf("--%s\r\n", boundary))
 		msg.WriteString("Content-Type: text/html; charset=\"UTF-8\"\r\n")
 		msg.WriteString("Content-Transfer-Encoding: base64\r\n\r\n")
-		msg.WriteString(email.HTMLBody)
+		msg.WriteString(base64.StdEncoding.EncodeToString([]byte(email.HTMLBody)))
 		msg.WriteString("\r\n\r\n")
 
 		// 结束边界
 		msg.WriteString(fmt.Sprintf("--%s--\r\n", boundary))
 	} else {
-		// 仅纯文本
+		// 仅纯文本（base64 编码）
 		msg.WriteString("Content-Type: text/plain; charset=\"UTF-8\"\r\n")
 		msg.WriteString("Content-Transfer-Encoding: base64\r\n\r\n")
-		msg.WriteString(email.TextBody)
+		msg.WriteString(base64.StdEncoding.EncodeToString([]byte(email.TextBody)))
 	}
 
-	// 发送邮件
-	addr := fmt.Sprintf("%s:%d", s.config.Host, s.config.Port)
-
-	if s.config.UseTLS {
-		return s.sendWithTLS(addr, email.To, msg.Bytes())
-	}
-
-	return smtp.SendMail(addr, s.auth, s.config.From, email.To, msg.Bytes())
+	return msg.Bytes(), nil
 }
 
 // sendWithTLS 使用TLS发送邮件
