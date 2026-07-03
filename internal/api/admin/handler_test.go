@@ -67,7 +67,7 @@ func TestCreateSession_Valid(t *testing.T) {
 	testUser := &model.User{
 		PublicKey: "test-public-key-local",
 		AgentName: "local-agent",
-		UserLevel: 1,
+		UserLevel: model.UserLevelLv4, // 安全修复：admin 会话需 Lv4+
 		Status:    model.UserStatusActive,
 	}
 	_, err := store.User.Create(context.Background(), testUser)
@@ -80,7 +80,7 @@ func TestCreateSession_Valid(t *testing.T) {
 	jsonBody, _ := json.Marshal(body)
 	req := httptest.NewRequest(http.MethodPost, "/api/v1/admin/session/create", bytes.NewReader(jsonBody))
 	req.Header.Set("Content-Type", "application/json")
-	req.Host = "127.0.0.1:18531" // Simulate local request
+	req.RemoteAddr = "127.0.0.1:12345" // 安全修复：本地判定仅认 loopback RemoteAddr
 	w := httptest.NewRecorder()
 
 	handler.CreateSessionHandler(w, req)
@@ -116,7 +116,7 @@ func TestCreateSession_UserNotFound(t *testing.T) {
 	jsonBody, _ := json.Marshal(body)
 	req := httptest.NewRequest(http.MethodPost, "/api/v1/admin/session/create", bytes.NewReader(jsonBody))
 	req.Header.Set("Content-Type", "application/json")
-	req.Host = "127.0.0.1:18531" // Simulate local request
+	req.RemoteAddr = "127.0.0.1:12345" // loopback 以便到达用户查询
 	w := httptest.NewRecorder()
 
 	handler.CreateSessionHandler(w, req)
@@ -137,7 +137,7 @@ func TestCreateSession_MissingPublicKey(t *testing.T) {
 	jsonBody, _ := json.Marshal(body)
 	req := httptest.NewRequest(http.MethodPost, "/api/v1/admin/session/create", bytes.NewReader(jsonBody))
 	req.Header.Set("Content-Type", "application/json")
-	req.Host = "127.0.0.1:18531"
+	req.RemoteAddr = "127.0.0.1:12345" // loopback 以便到达参数校验
 	w := httptest.NewRecorder()
 
 	handler.CreateSessionHandler(w, req)
@@ -292,9 +292,9 @@ func TestLocalOnlyMiddleware(t *testing.T) {
 
 // TestLocalOnlyMiddleware_LocalRequest tests local requests pass through
 func TestLocalOnlyMiddleware_LocalRequest(t *testing.T) {
-	// Test local request (using localhost Host)
+	// Test local request (loopback RemoteAddr)
 	req := httptest.NewRequest(http.MethodGet, "/api/v1/admin/session/create", nil)
-	req.Host = "localhost:18531"
+	req.RemoteAddr = "127.0.0.1:12345"
 	w := httptest.NewRecorder()
 
 	called := false

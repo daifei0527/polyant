@@ -9,6 +9,7 @@ import (
 
 	"github.com/daifei0527/polyant/internal/core/admin"
 	"github.com/daifei0527/polyant/internal/storage"
+	"github.com/daifei0527/polyant/internal/storage/model"
 	awerrors "github.com/daifei0527/polyant/pkg/errors"
 )
 
@@ -63,6 +64,12 @@ func (h *SessionHandler) CreateSessionHandler(w http.ResponseWriter, r *http.Req
 		return
 	}
 
+	// 等级门控：仅 Lv4+ 可签发 admin 会话（即便来自 localhost）
+	if user.UserLevel < model.UserLevelLv4 {
+		writeAdminError(w, awerrors.ErrPermissionDenied)
+		return
+	}
+
 	// 创建 Session Token
 	token, err := h.sessionMgr.CreateSession(user.PublicKey)
 	if err != nil {
@@ -85,28 +92,16 @@ func (h *SessionHandler) CreateSessionHandler(w http.ResponseWriter, r *http.Req
 	})
 }
 
-// isLocalRequest 检查是否为本地请求。
-// localHost 为配置的本地监听地址（如 "127.0.0.1:18531"）。
-// 主判断用连接级 RemoteAddr（难以伪造）；Host 头作为辅助，按 localHost 的端口比对。
-// 注意：不支持反向代理（X-Forwarded-For 等不被信任）。
+// isLocalRequest 检查是否为本地请求，仅信任连接级 RemoteAddr（loopback）。
+// 永不信任客户端可控的 Host 头（可被远程攻击者伪造以绕过本地判定），
+// 也不信任 X-Forwarded-For（不支持反向代理）。
 func isLocalRequest(r *http.Request, localHost string) bool {
-	// 连接级判断（主）：RemoteAddr 形如 "127.0.0.1:54321"
 	if host, _, err := net.SplitHostPort(r.RemoteAddr); err == nil {
 		if host == "127.0.0.1" || host == "::1" {
 			return true
 		}
 	} else if r.RemoteAddr == "127.0.0.1" || r.RemoteAddr == "::1" {
 		return true // 无端口的回退
-	}
-
-	// Host 头辅助判断（与配置的本地监听地址比对，端口可配置）
-	if r.Host == localHost {
-		return true
-	}
-	if _, port, err := net.SplitHostPort(localHost); err == nil && port != "" {
-		if r.Host == "localhost:"+port || r.Host == "127.0.0.1:"+port || r.Host == "[::1]:"+port {
-			return true
-		}
 	}
 	return false
 }
