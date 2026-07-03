@@ -344,11 +344,12 @@ func (app *SeedApp) Start() error {
 
 	// 创建同步引擎 - 种子节点支持全量镜像
 	syncCfg := &sync.SyncConfig{
-		AutoSync:         app.config.Sync.AutoSync,
-		IntervalSeconds:  app.config.Sync.IntervalSeconds,
-		MirrorCategories: []string{"*"}, // 种子节点镜像所有分类
-		MaxLocalSizeMB:   0,             // 种子节点无大小限制
-		BatchSize:        100,
+		AutoSync:               app.config.Sync.AutoSync,
+		IntervalSeconds:        app.config.Sync.IntervalSeconds,
+		MirrorCategories:       []string{"*"}, // 种子节点镜像所有分类
+		MaxLocalSizeMB:         0,             // 种子节点无大小限制
+		BatchSize:              100,
+		RequireEntrySignatures: app.config.Network.RequireEntrySignatures, // R1-B4
 	}
 	app.syncEngine = sync.NewSyncEngine(app.p2pHost, nil, app.store, syncCfg)
 

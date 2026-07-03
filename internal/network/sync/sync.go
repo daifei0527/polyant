@@ -2,6 +2,8 @@ package sync
 
 import (
 	"context"
+	"crypto/ed25519"
+	"encoding/base64"
 	"fmt"
 	"log"
 	"sync"
@@ -12,6 +14,7 @@ import (
 	"github.com/daifei0527/polyant/internal/storage"
 	"github.com/daifei0527/polyant/internal/storage/index"
 	"github.com/daifei0527/polyant/internal/storage/model"
+	"github.com/daifei0527/polyant/pkg/crypto"
 	"github.com/libp2p/go-libp2p/core/peer"
 )
 
@@ -25,11 +28,12 @@ const (
 )
 
 type SyncConfig struct {
-	AutoSync         bool
-	IntervalSeconds  int
-	MirrorCategories []string
-	MaxLocalSizeMB   int
-	BatchSize        int
+	AutoSync                bool
+	IntervalSeconds         int
+	MirrorCategories        []string
+	MaxLocalSizeMB          int
+	BatchSize               int
+	RequireEntrySignatures  bool // R1-B4: 为 true 时拒绝未签名的 P2P 推送条目/评分
 }
 
 type VersionVector map[string]int64
@@ -646,6 +650,54 @@ func (se *SyncEngine) HandleQuery(ctx context.Context, q *protocolpkg.Query) (*p
 	}, nil
 }
 
+// verifyPushedEntrySignature 校验 P2P 推送条目的内容签名。
+// 返回非 nil PushAck 表示拒绝（调用方直接返回）；nil 表示放行。
+// 软上线策略：有签名则必须验过；无签名时仅当 RequireEntrySignatures=true 才拒绝，否则记日志放行（兼容历史数据）。
+func (se *SyncEngine) verifyPushedEntrySignature(entry *model.KnowledgeEntry, wireSig []byte) *protocolpkg.PushAck {
+	sig := entry.Signature
+	if len(sig) == 0 {
+		sig = wireSig // 兼容仅在线段携带签名、entry JSON 未带的旧客户端
+	}
+	requireSigs := se.config != nil && se.config.RequireEntrySignatures
+	if len(sig) == 0 {
+		if requireSigs {
+			log.Printf("[security] rejected unsigned entry (require_entry_signatures=true): entryId=%s createdBy=%s", entry.ID, entry.CreatedBy)
+			return &protocolpkg.PushAck{EntryID: entry.ID, Accepted: false, RejectReason: "unsigned entry rejected (require_entry_signatures)"}
+		}
+		log.Printf("[security] accepted unsigned entry: entryId=%s createdBy=%s", entry.ID, entry.CreatedBy)
+		return nil
+	}
+	pub, err := base64.StdEncoding.DecodeString(entry.CreatedBy)
+	if err != nil || !crypto.VerifyContent(ed25519.PublicKey(pub), sig, entry.Title, entry.Content, entry.Category) {
+		log.Printf("[security] rejected forged entry signature: entryId=%s createdBy=%s", entry.ID, entry.CreatedBy)
+		return &protocolpkg.PushAck{EntryID: entry.ID, Accepted: false, RejectReason: "forged entry signature"}
+	}
+	return nil
+}
+
+// verifyPushedRatingSignature 校验 P2P 推送评分的签名。语义同 verifyPushedEntrySignature。
+func (se *SyncEngine) verifyPushedRatingSignature(rating *model.Rating, wireSig []byte) *protocolpkg.RatingAck {
+	sig := rating.Signature
+	if len(sig) == 0 {
+		sig = wireSig
+	}
+	requireSigs := se.config != nil && se.config.RequireEntrySignatures
+	if len(sig) == 0 {
+		if requireSigs {
+			log.Printf("[security] rejected unsigned rating (require_entry_signatures=true): ratingId=%s rater=%s", rating.ID, rating.RaterPubkey)
+			return &protocolpkg.RatingAck{Accepted: false, RejectReason: "unsigned rating rejected (require_entry_signatures)"}
+		}
+		log.Printf("[security] accepted unsigned rating: ratingId=%s rater=%s", rating.ID, rating.RaterPubkey)
+		return nil
+	}
+	pub, err := base64.StdEncoding.DecodeString(rating.RaterPubkey)
+	if err != nil || !crypto.VerifyRating(ed25519.PublicKey(pub), sig, rating.EntryId, rating.RaterPubkey, rating.Score) {
+		log.Printf("[security] rejected forged rating signature: ratingId=%s rater=%s", rating.ID, rating.RaterPubkey)
+		return &protocolpkg.RatingAck{Accepted: false, RejectReason: "forged rating signature"}
+	}
+	return nil
+}
+
 // HandlePushEntry 处理条目推送
 func (se *SyncEngine) HandlePushEntry(ctx context.Context, e *protocolpkg.PushEntry) (*protocolpkg.PushAck, error) {
 	var entry model.KnowledgeEntry
@@ -655,6 +707,11 @@ func (se *SyncEngine) HandlePushEntry(ctx context.Context, e *protocolpkg.PushEn
 			Accepted:     false,
 			RejectReason: "invalid entry data",
 		}, nil
+	}
+
+	// R1-B4：校验内容签名（软上线 + RequireEntrySignatures 开关），防 peer 伪造条目。
+	if ack := se.verifyPushedEntrySignature(&entry, e.CreatorSignature); ack != nil {
+		return ack, nil
 	}
 
 	// 检查条目是否已存在
@@ -708,6 +765,11 @@ func (se *SyncEngine) HandleRatingPush(ctx context.Context, r *protocolpkg.Ratin
 			Accepted:     false,
 			RejectReason: "invalid rating data",
 		}, nil
+	}
+
+	// R1-B4：校验评分签名（软上线 + RequireEntrySignatures 开关），防 peer 冒充评分者。
+	if ack := se.verifyPushedRatingSignature(&rating, r.RaterSignature); ack != nil {
+		return ack, nil
 	}
 
 	created, err := se.store.Rating.Create(ctx, &rating)

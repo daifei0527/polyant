@@ -341,11 +341,12 @@ func (app *UserApp) Start() error {
 
 	// 创建同步引擎配置
 	syncCfg := &networksync.SyncConfig{
-		AutoSync:         app.config.Sync.AutoSync,
-		IntervalSeconds:  app.config.Sync.IntervalSeconds,
-		MirrorCategories: []string{}, // 用户节点默认不镜像
-		MaxLocalSizeMB:   100,        // 用户节点限制本地存储大小
-		BatchSize:        50,
+		AutoSync:               app.config.Sync.AutoSync,
+		IntervalSeconds:        app.config.Sync.IntervalSeconds,
+		MirrorCategories:       []string{}, // 用户节点默认不镜像
+		MaxLocalSizeMB:         100,        // 用户节点限制本地存储大小
+		BatchSize:              50,
+		RequireEntrySignatures: app.config.Network.RequireEntrySignatures, // R1-B4
 	}
 
 	// 如果启用镜像模式
