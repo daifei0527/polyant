@@ -82,7 +82,10 @@
 - `VerifyContent(pubKey ed25519.PublicKey, sig []byte, title, content, category string) bool`。
 - Rating 同理：签名内容 = `SHA256(entryID + "\n" + rater + "\n" + score)`（具体以 `RatingCalculator` 现有约定为准，实现时核实）。
 
-**条目模型**：`KnowledgeEntry.Signature`/`SignatureAlgorithm` 字段已存在（CLAUDE.md 已述），无需改模型。
+**条目模型**（`internal/storage/model/models.go`）：当前 `KnowledgeEntry` 与 `Rating` **均无签名字段**（仅有 `ContentHash`）。R1.2 需新增：
+- `KnowledgeEntry` 加 `Signature []byte` (base64) + `SignAlgorithm string`（如 `"ed25519"`）。
+- `Rating` 加 `Signature []byte` + `SignAlgorithm string`。
+- 字段 `omitempty`，向后兼容（历史数据无签名 = 空字段，走软上线"无签收"路径）。
 
 **生成端（客户端）**：
 - `pkg/polysdk`：`CreateEntry` / `UpdateEntry` 用客户端私钥计算 `SignContent`，随请求体提交。
@@ -157,6 +160,8 @@
 
 **模型**（`internal/storage/model/models.go`）：
 - `User.PasswordHash string`（新增，零值兼容）。
+- `KnowledgeEntry` 加 `Signature []byte` + `SignAlgorithm string`（均 `omitempty`，新增）。
+- `Rating` 加 `Signature []byte` + `SignAlgorithm string`（均 `omitempty`，新增）。
 
 **config**（`pkg/config`，对应 JSON/YAML + env）：
 - `Network.ApiKey` + env `POLYANT_NETWORK_API_KEY`
