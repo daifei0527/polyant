@@ -12,6 +12,7 @@ import (
 	coreadmin "github.com/daifei0527/polyant/internal/core/admin"
 	"github.com/daifei0527/polyant/internal/storage"
 	"github.com/daifei0527/polyant/internal/storage/model"
+	"github.com/daifei0527/polyant/pkg/crypto"
 )
 
 // fakeUserStore 最小 UserStore，按 pubkey 哈希槽位返回预设用户，便于隔离测试 handler。
@@ -95,5 +96,118 @@ func TestCreateSession_acceptsLv4FromLocalhost(t *testing.T) {
 	}
 	if resp.Data.Token == "" {
 		t.Fatal("expected non-empty token")
+	}
+}
+
+// ---- R1-A3: password login + session self-check ----
+
+func mustHash(t *testing.T, pw string) string {
+	t.Helper()
+	h, err := crypto.HashPassword(pw)
+	if err != nil {
+		t.Fatalf("HashPassword: %v", err)
+	}
+	return h
+}
+
+func TestLoginHandler_success(t *testing.T) {
+	u := &model.User{
+		PublicKey:    "admin-pk",
+		Email:        "admin@example.com",
+		UserLevel:    model.UserLevelLv5,
+		Status:       model.UserStatusActive,
+		AgentName:    "the-admin",
+		PasswordHash: mustHash(t, "correct-horse"),
+	}
+	h := newHandler(t, u)
+	body, _ := json.Marshal(map[string]string{"identifier": "admin@example.com", "password": "correct-horse"})
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/admin/session/login", bytes.NewReader(body))
+	w := httptest.NewRecorder()
+	h.LoginHandler(w, req)
+	if w.Code != http.StatusOK {
+		t.Fatalf("valid login must be 200, got %d body=%s", w.Code, w.Body.String())
+	}
+	var resp struct {
+		Data struct {
+			Token string `json:"token"`
+			User  struct {
+				Level int32 `json:"user_level"`
+			} `json:"user"`
+		} `json:"data"`
+	}
+	json.Unmarshal(w.Body.Bytes(), &resp)
+	if resp.Data.Token == "" {
+		t.Fatal("expected token")
+	}
+	if resp.Data.User.Level != 5 {
+		t.Fatalf("expected level 5, got %d", resp.Data.User.Level)
+	}
+}
+
+func TestLoginHandler_wrongPassword(t *testing.T) {
+	u := &model.User{PublicKey: "admin-pk", Email: "a@x.com", UserLevel: model.UserLevelLv5, Status: model.UserStatusActive, PasswordHash: mustHash(t, "right")}
+	h := newHandler(t, u)
+	body, _ := json.Marshal(map[string]string{"identifier": "a@x.com", "password": "wrong"})
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/admin/session/login", bytes.NewReader(body))
+	w := httptest.NewRecorder()
+	h.LoginHandler(w, req)
+	if w.Code != http.StatusUnauthorized {
+		t.Fatalf("wrong password must be 401, got %d", w.Code)
+	}
+}
+
+func TestLoginHandler_unknownUser_noEnumeration(t *testing.T) {
+	h := newHandler(t) // 空存储
+	body, _ := json.Marshal(map[string]string{"identifier": "ghost@x.com", "password": "whatever"})
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/admin/session/login", bytes.NewReader(body))
+	w := httptest.NewRecorder()
+	h.LoginHandler(w, req)
+	if w.Code != http.StatusUnauthorized {
+		t.Fatalf("unknown user must be 401 (no enumeration), got %d", w.Code)
+	}
+}
+
+func TestLoginHandler_lowLevel(t *testing.T) {
+	u := &model.User{PublicKey: "lv1-pk", Email: "u@x.com", UserLevel: model.UserLevelLv1, Status: model.UserStatusActive, PasswordHash: mustHash(t, "pw")}
+	h := newHandler(t, u)
+	body, _ := json.Marshal(map[string]string{"identifier": "u@x.com", "password": "pw"})
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/admin/session/login", bytes.NewReader(body))
+	w := httptest.NewRecorder()
+	h.LoginHandler(w, req)
+	if w.Code != http.StatusForbidden {
+		t.Fatalf("Lv1 login must be 403, got %d", w.Code)
+	}
+}
+
+func TestGetSessionHandler_valid(t *testing.T) {
+	u := &model.User{PublicKey: "admin-pk", Email: "a@x.com", UserLevel: model.UserLevelLv5, Status: model.UserStatusActive, AgentName: "ad"}
+	h := newHandler(t, u)
+	token, _ := h.sessionMgr.CreateSession("admin-pk")
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/admin/session", nil)
+	req.Header.Set("Authorization", "Bearer "+token)
+	w := httptest.NewRecorder()
+	h.GetSessionHandler(w, req)
+	if w.Code != http.StatusOK {
+		t.Fatalf("valid token must be 200, got %d", w.Code)
+	}
+	var resp struct {
+		Data struct {
+			Level int32 `json:"user_level"`
+		} `json:"data"`
+	}
+	json.Unmarshal(w.Body.Bytes(), &resp)
+	if resp.Data.Level != 5 {
+		t.Fatalf("expected level 5, got %d", resp.Data.Level)
+	}
+}
+
+func TestGetSessionHandler_invalidToken(t *testing.T) {
+	h := newHandler(t)
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/admin/session", nil)
+	req.Header.Set("Authorization", "Bearer not-a-real-token")
+	w := httptest.NewRecorder()
+	h.GetSessionHandler(w, req)
+	if w.Code != http.StatusUnauthorized {
+		t.Fatalf("invalid token must be 401, got %d", w.Code)
 	}
 }

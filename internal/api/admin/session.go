@@ -5,11 +5,13 @@ import (
 	"encoding/json"
 	"net"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/daifei0527/polyant/internal/core/admin"
 	"github.com/daifei0527/polyant/internal/storage"
 	"github.com/daifei0527/polyant/internal/storage/model"
+	"github.com/daifei0527/polyant/pkg/crypto"
 	awerrors "github.com/daifei0527/polyant/pkg/errors"
 )
 
@@ -88,6 +90,102 @@ func (h *SessionHandler) CreateSessionHandler(w http.ResponseWriter, r *http.Req
 				"agent_name": user.AgentName,
 				"user_level": user.UserLevel,
 			},
+		},
+	})
+}
+
+// LoginHandler 密码登录（Web admin 远程登录入口）。
+// POST /api/v1/admin/session/login  {"identifier":"<email 或公钥>","password":"..."}
+// 成功返回 session token；任何失败统一返回 401"凭证无效"（不区分用户不存在与密码错，防枚举），
+// 等级不足返回 403。
+func (h *SessionHandler) LoginHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		writeAdminError(w, awerrors.New(100, awerrors.CategoryAPI, "method not allowed", http.StatusMethodNotAllowed))
+		return
+	}
+	var req struct {
+		Identifier string `json:"identifier"`
+		Password   string `json:"password"`
+	}
+	// body 限制 64KB（登录载荷很小；全局 body 限制中间件落地前先在此兜底）
+	if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 1<<16)).Decode(&req); err != nil {
+		writeAdminError(w, awerrors.ErrJSONParse)
+		return
+	}
+	if req.Identifier == "" || req.Password == "" {
+		writeAdminError(w, awerrors.ErrInvalidParams)
+		return
+	}
+
+	// 查找用户：先按邮箱（Web 登录主路径），再按公钥（Get 内部会哈希原始公钥）
+	user, err := h.userStore.GetByEmail(r.Context(), req.Identifier)
+	if err != nil || user == nil {
+		user, err = h.userStore.Get(r.Context(), req.Identifier)
+		if err != nil || user == nil {
+			writeAdminError(w, awerrors.New(401, awerrors.CategoryAPI, "凭证无效", http.StatusUnauthorized))
+			return
+		}
+	}
+
+	// 密码校验（bcrypt 恒定时间）；未设密码（空 hash）直接拒
+	if !crypto.CheckPassword(user.PasswordHash, req.Password) {
+		writeAdminError(w, awerrors.New(401, awerrors.CategoryAPI, "凭证无效", http.StatusUnauthorized))
+		return
+	}
+
+	// 等级门控：仅 Lv4+ 可登录 admin
+	if user.UserLevel < model.UserLevelLv4 {
+		writeAdminError(w, awerrors.ErrPermissionDenied)
+		return
+	}
+
+	token, err := h.sessionMgr.CreateSession(user.PublicKey)
+	if err != nil {
+		writeAdminError(w, awerrors.New(500, awerrors.CategoryAPI, "创建会话失败", http.StatusInternalServerError))
+		return
+	}
+	writeAdminJSON(w, http.StatusOK, map[string]interface{}{
+		"code":    0,
+		"message": "success",
+		"data": map[string]interface{}{
+			"token":      token,
+			"expires_at": time.Now().Add(24 * time.Hour).UnixMilli(),
+			"user": map[string]interface{}{
+				"public_key": user.PublicKey,
+				"agent_name": user.AgentName,
+				"user_level": user.UserLevel,
+			},
+		},
+	})
+}
+
+// GetSessionHandler 校验 Bearer token 并返回当前用户（供 SPA 刷新恢复会话）。
+// GET /api/v1/admin/session
+func (h *SessionHandler) GetSessionHandler(w http.ResponseWriter, r *http.Request) {
+	authHeader := r.Header.Get("Authorization")
+	if !strings.HasPrefix(authHeader, "Bearer ") {
+		writeAdminError(w, awerrors.New(401, awerrors.CategoryAPI, "未认证", http.StatusUnauthorized))
+		return
+	}
+	token := strings.TrimPrefix(authHeader, "Bearer ")
+	pubKey, ok := h.sessionMgr.ValidateSession(token)
+	if !ok {
+		writeAdminError(w, awerrors.New(401, awerrors.CategoryAPI, "会话已过期", http.StatusUnauthorized))
+		return
+	}
+	// Get 内部对原始公钥自动哈希，故用 session 中存的 pubKey 直接查
+	user, err := h.userStore.Get(r.Context(), pubKey)
+	if err != nil || user == nil {
+		writeAdminError(w, awerrors.ErrUserNotFound)
+		return
+	}
+	writeAdminJSON(w, http.StatusOK, map[string]interface{}{
+		"code":    0,
+		"message": "success",
+		"data": map[string]interface{}{
+			"public_key": user.PublicKey,
+			"agent_name": user.AgentName,
+			"user_level": user.UserLevel,
 		},
 	})
 }

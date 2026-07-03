@@ -440,9 +440,15 @@ func registerAdminRoutes(mux *http.ServeMux, deps *Dependencies, sessionMgr *cor
 	adminHandler := admin.NewHandler(deps.Store)
 	adminAuthMW := admin.NewAuthMiddleware(sessionMgr)
 
-	// Session API (仅本地访问)
+	// Session API
 	mux.Handle("/api/v1/admin/session/create",
 		admin.LocalOnlyMiddleware(http.HandlerFunc(sessionHandler.CreateSessionHandler), deps.AdminListenAddr))
+	// 密码登录（Web admin 远程入口；公开，靠密码+等级门控，全局限流/body 限制兜底）
+	mux.Handle("/api/v1/admin/session/login",
+		http.HandlerFunc(sessionHandler.LoginHandler))
+	// token 自检（Bearer 认证，供 SPA 刷新恢复会话）
+	mux.Handle("/api/v1/admin/session",
+		adminAuthMW.Middleware(http.HandlerFunc(sessionHandler.GetSessionHandler)))
 
 	// Admin API (需要 Session Token 认证)
 	// 用户管理
