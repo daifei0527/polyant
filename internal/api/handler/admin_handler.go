@@ -29,6 +29,39 @@ type BanUserRequest struct {
 	BanType model.BanType `json:"ban_type"` // full 或 readonly
 }
 
+// SetPasswordRequest 设置/重置 Web admin 登录密码请求
+type SetPasswordRequest struct {
+	PublicKey string `json:"public_key"` // 目标用户公钥
+	Password  string `json:"password"`   // 新密码（至少 8 位）
+}
+
+// SetPasswordHandler 设置/重置某用户的 Web admin 登录密码。
+// 需 ManageUser 权限（路由层 RequirePermission 守卫）。POST /api/v1/admin/user/password
+func (h *AdminHandler) SetPasswordHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		writeError(w, awerrors.New(100, awerrors.CategoryAPI, "method not allowed", http.StatusMethodNotAllowed))
+		return
+	}
+	var req SetPasswordRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, awerrors.ErrJSONParse)
+		return
+	}
+	if req.PublicKey == "" {
+		writeError(w, awerrors.New(400, awerrors.CategoryAPI, "public_key is required", http.StatusBadRequest))
+		return
+	}
+	if err := h.adminSvc.SetPassword(r.Context(), req.PublicKey, req.Password); err != nil {
+		writeError(w, awerrors.Wrap(800, awerrors.CategoryUser, err.Error(), http.StatusBadRequest, err))
+		return
+	}
+	writeJSON(w, http.StatusOK, &APIResponse{
+		Code:    0,
+		Message: "success",
+		Data:    map[string]interface{}{"public_key": req.PublicKey},
+	})
+}
+
 // SetLevelRequest 设置等级请求
 type SetLevelRequest struct {
 	Level  int32  `json:"level"`

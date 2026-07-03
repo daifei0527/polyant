@@ -2142,3 +2142,35 @@ func TestClient_GetSyncStatus_Complete(t *testing.T) {
 		t.Errorf("Expected SyncedEntries 100, got %d", status.SyncedEntries)
 	}
 }
+
+func TestClient_AdminSetPassword(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost || r.URL.Path != "/api/v1/admin/user/password" {
+			t.Errorf("unexpected request: %s %s", r.Method, r.URL.Path)
+		}
+		var body map[string]interface{}
+		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+			t.Fatalf("decode body: %v", err)
+		}
+		if body["public_key"] != "pk-target" || body["password"] != "newpw1234" {
+			t.Errorf("unexpected body: %v", body)
+		}
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(APIResponse{Code: 0, Message: "success"})
+	}))
+	defer server.Close()
+
+	client := NewClient(server.URL)
+	tmpDir, err := createTempKeyDir()
+	if err != nil {
+		t.Fatalf("createTempKeyDir: %v", err)
+	}
+	defer cleanupTempDir(tmpDir)
+	if err := client.LoadOrGenerateKeys(tmpDir); err != nil {
+		t.Fatalf("LoadOrGenerateKeys: %v", err)
+	}
+
+	if err := client.AdminSetPassword(context.Background(), "pk-target", "newpw1234"); err != nil {
+		t.Fatalf("AdminSetPassword failed: %v", err)
+	}
+}

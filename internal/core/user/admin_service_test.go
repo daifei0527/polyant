@@ -4,7 +4,9 @@ import (
 	"context"
 	"testing"
 
+	"github.com/daifei0527/polyant/internal/storage"
 	"github.com/daifei0527/polyant/internal/storage/model"
+	"github.com/daifei0527/polyant/pkg/crypto"
 )
 
 func TestAdminService_ListUsers(t *testing.T) {
@@ -252,5 +254,30 @@ func TestAdminService_GetUserStats_WithBanned(t *testing.T) {
 	}
 	if stats.BannedCount != 1 {
 		t.Errorf("Expected BannedCount 1, got %d", stats.BannedCount)
+	}
+}
+
+func TestAdminService_SetPassword(t *testing.T) {
+	store, _ := storage.NewMemoryStore()
+	svc := NewAdminService(store)
+	ctx := context.Background()
+	store.User.Create(ctx, &model.User{PublicKey: "pk-target", UserLevel: model.UserLevelLv1})
+
+	if err := svc.SetPassword(ctx, "pk-target", "short"); err == nil {
+		t.Fatal("short password must be rejected")
+	}
+	if err := svc.SetPassword(ctx, "pk-target", "newpw1234"); err != nil {
+		t.Fatalf("SetPassword: %v", err)
+	}
+	hash := HashPublicKey("pk-target")
+	u, _ := store.User.Get(ctx, hash)
+	if u == nil || !crypto.CheckPassword(u.PasswordHash, "newpw1234") {
+		t.Fatal("password not set or not verifiable")
+	}
+	if u.PasswordHash == "newpw1234" {
+		t.Fatal("stored value must be hashed, not plaintext")
+	}
+	if u.PasswordHash == "" {
+		t.Fatal("PasswordHash empty after set")
 	}
 }

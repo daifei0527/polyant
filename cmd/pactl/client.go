@@ -1166,6 +1166,17 @@ func (c *Client) BanUser(ctx context.Context, publicKey, reason, banType string)
 	return c.doRequestWithAuth(ctx, http.MethodPost, path, req, &resp, true)
 }
 
+// AdminSetPassword 设置/重置某用户的 Web admin 登录密码（需 ManageUser 权限）。
+// 目标用户随后可用该密码 + 标识（email 或公钥）通过 /admin/session/login 登录。
+func (c *Client) AdminSetPassword(ctx context.Context, targetPubKey, password string) error {
+	req := map[string]interface{}{
+		"public_key": targetPubKey,
+		"password":   password,
+	}
+	var resp APIResponse
+	return c.doRequestWithAuth(ctx, http.MethodPost, "/api/v1/admin/user/password", req, &resp, true)
+}
+
 // UnbanUser 解封用户（需要管理员权限）
 func (c *Client) UnbanUser(ctx context.Context, publicKey string) error {
 	path := fmt.Sprintf("/api/v1/admin/users/%s/unban", publicKey)

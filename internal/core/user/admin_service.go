@@ -7,6 +7,7 @@ import (
 
 	"github.com/daifei0527/polyant/internal/storage"
 	"github.com/daifei0527/polyant/internal/storage/model"
+	"github.com/daifei0527/polyant/pkg/crypto"
 )
 
 var (
@@ -103,6 +104,29 @@ func (s *AdminService) SetUserLevel(ctx context.Context, targetPublicKey string,
 	user.LevelChangedAt = time.Now().UnixMilli()
 	user.LevelChangedBy = adminPublicKey
 
+	_, err = s.store.User.Update(ctx, user)
+	return err
+}
+
+// ErrPasswordTooShort 密码过短
+var ErrPasswordTooShort = fmt.Errorf("密码至少 8 位")
+
+// SetPassword 设置/重置目标用户的 Web admin 登录密码（bcrypt 哈希存储）。
+// 密码至少 8 位。供 pactl（Ed25519 签名 + ManageUser 权限）调用。
+func (s *AdminService) SetPassword(ctx context.Context, targetPublicKey, password string) error {
+	if len(password) < 8 {
+		return ErrPasswordTooShort
+	}
+	hash := HashPublicKey(targetPublicKey)
+	user, err := s.store.User.Get(ctx, hash)
+	if err != nil {
+		return ErrUserNotFound
+	}
+	hp, err := crypto.HashPassword(password)
+	if err != nil {
+		return err
+	}
+	user.PasswordHash = hp
 	_, err = s.store.User.Update(ctx, user)
 	return err
 }

@@ -21,6 +21,7 @@ require (
 	github.com/dgraph-io/badger/v4 v4.9.1
 	github.com/stretchr/testify v1.11.1
 	golang.org/x/crypto v0.49.0
+	golang.org/x/term v0.41.0
 	google.golang.org/protobuf v1.36.11
 )
 

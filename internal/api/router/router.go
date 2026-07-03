@@ -396,6 +396,12 @@ func registerAuthRoutes(mux *http.ServeMux, authMW *middleware.AuthMiddleware, e
 		mux.Handle("/api/v1/admin/import", authMW.Middleware(authMW.RequirePermission(rbac.PermManageUser, http.HandlerFunc(exh.ImportHandler))))
 	}
 
+	// ==================== 管理员账户路由 ====================
+	if ah != nil {
+		// 设置/重置 Web admin 登录密码 POST /api/v1/admin/user/password - Lv4+ (ManageUser)
+		mux.Handle("/api/v1/admin/user/password", authMW.Middleware(authMW.RequirePermission(rbac.PermManageUser, http.HandlerFunc(ah.SetPasswordHandler))))
+	}
+
 	// ==================== 选举路由 ====================
 	if elh != nil {
 		// 创建选举 POST /api/v1/elections - Lv5 (SuperAdmin)
