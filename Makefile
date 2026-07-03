@@ -136,6 +136,9 @@ docker-user:
 build-admin:
 	@echo ">>> 构建管理页面..."
 	cd web/admin && npm install && npm run build
+	@echo ">>> 同步到 embed 目录 internal/api/admin/dist ..."
+	rm -rf internal/api/admin/dist
+	cp -r web/admin/dist internal/api/admin/dist
 	@echo ">>> 管理页面构建完成"
 
 ## dev-admin: 开发模式运行管理页面

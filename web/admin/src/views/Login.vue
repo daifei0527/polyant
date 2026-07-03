@@ -7,12 +7,20 @@
       </template>
 
       <el-form :model="form" :rules="rules" ref="formRef" label-position="top">
-        <el-form-item label="公钥" prop="publicKey">
+        <el-form-item label="标识（邮箱或公钥）" prop="identifier">
           <el-input
-            v-model="form.publicKey"
-            type="textarea"
-            :rows="3"
-            placeholder="请输入您的 Ed25519 公钥"
+            v-model="form.identifier"
+            placeholder="请输入邮箱或公钥"
+          />
+        </el-form-item>
+
+        <el-form-item label="密码" prop="password">
+          <el-input
+            v-model="form.password"
+            type="password"
+            show-password
+            placeholder="请输入密码"
+            @keyup.enter="handleLogin"
           />
         </el-form-item>
 
@@ -26,7 +34,7 @@
       <el-divider />
 
       <p class="hint">
-        管理后台仅限本地访问，请使用已注册的 Ed25519 公钥登录
+        使用管理员账号登录。密码由 <code>pactl admin set-password</code> 设置。
       </p>
     </el-card>
   </div>
@@ -45,12 +53,16 @@ const formRef = ref(null)
 const loading = ref(false)
 
 const form = reactive({
-  publicKey: ''
+  identifier: '',
+  password: ''
 })
 
 const rules = {
-  publicKey: [
-    { required: true, message: '请输入公钥', trigger: 'blur' }
+  identifier: [
+    { required: true, message: '请输入标识（邮箱或公钥）', trigger: 'blur' }
+  ],
+  password: [
+    { required: true, message: '请输入密码', trigger: 'blur' }
   ]
 }
 
@@ -60,12 +72,12 @@ const handleLogin = async () => {
 
   loading.value = true
   try {
-    const success = await adminStore.login(form.publicKey)
+    const success = await adminStore.login(form.identifier, form.password)
     if (success) {
       ElMessage.success('登录成功')
       router.push('/')
     } else {
-      ElMessage.error('登录失败，请检查公钥是否正确')
+      ElMessage.error('登录失败，请检查标识与密码')
     }
   } finally {
     loading.value = false
