@@ -50,3 +50,6 @@ polyant_deploy.pub
 
 # Web
 web/admin/node_modules/
+
+# Web build output (intermediate; canonical embed is internal/api/admin/dist)
+web/admin/dist/
