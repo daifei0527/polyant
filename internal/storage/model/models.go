@@ -59,6 +59,8 @@ type KnowledgeEntry struct {
 	Score       float64                  `json:"score"`       // 加权平均评分
 	ScoreCount  int32                    `json:"scoreCount"`  // 评分数量
 	ContentHash string                   `json:"contentHash"` // 内容哈希
+	Signature   []byte                  `json:"signature,omitempty"`     // 创建者对内容哈希的 Ed25519 签名（同步/推送完整性校验）
+	SignAlgorithm string                `json:"signAlgorithm,omitempty"` // 签名算法，目前 "ed25519"
 	Status      string                   `json:"status"`      // 条目状态
 	License     string                   `json:"license"`     // 许可证
 	SourceRef   string                   `json:"sourceRef"`   // 来源引用
@@ -224,6 +226,8 @@ type Rating struct {
 	WeightedScore float64 `json:"weightedScore"` // 加权评分
 	RatedAt       int64   `json:"ratedAt"`       // 评分时间
 	Comment       string  `json:"comment"`       // 评分评论
+	Signature     []byte  `json:"signature,omitempty"`     // 评分者对评分内容的 Ed25519 签名
+	SignAlgorithm string  `json:"signAlgorithm,omitempty"` // 签名算法，目前 "ed25519"
 }
 
 // ToJSON 将评分序列化为JSON字节数组

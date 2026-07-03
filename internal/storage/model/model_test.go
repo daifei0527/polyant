@@ -47,3 +47,43 @@ func TestUserStatusConstants(t *testing.T) {
 		t.Errorf("UserStatusSuspended should be 'suspended', got %s", UserStatusSuspended)
 	}
 }
+
+func TestKnowledgeEntry_SignatureRoundtrip(t *testing.T) {
+	e := NewKnowledgeEntry("t", "c", "cat", "creator")
+	if e.Signature != nil || e.SignAlgorithm != "" {
+		t.Fatal("new entry must have empty signature by default")
+	}
+	e.Signature = []byte("sig-bytes")
+	e.SignAlgorithm = "ed25519"
+	data, err := e.ToJSON()
+	if err != nil {
+		t.Fatalf("marshal: %v", err)
+	}
+	var got KnowledgeEntry
+	if err := got.FromJSON(data); err != nil {
+		t.Fatalf("unmarshal: %v", err)
+	}
+	if string(got.Signature) != "sig-bytes" || got.SignAlgorithm != "ed25519" {
+		t.Fatalf("signature not preserved: sig=%v algo=%q", got.Signature, got.SignAlgorithm)
+	}
+}
+
+func TestRating_SignatureRoundtrip(t *testing.T) {
+	r := &Rating{ID: "r1", EntryId: "e1", RaterPubkey: "pk", Score: 4}
+	if r.Signature != nil || r.SignAlgorithm != "" {
+		t.Fatal("new rating must have empty signature by default")
+	}
+	r.Signature = []byte("r-sig")
+	r.SignAlgorithm = "ed25519"
+	data, err := r.ToJSON()
+	if err != nil {
+		t.Fatalf("marshal: %v", err)
+	}
+	var got Rating
+	if err := got.FromJSON(data); err != nil {
+		t.Fatalf("unmarshal: %v", err)
+	}
+	if string(got.Signature) != "r-sig" || got.SignAlgorithm != "ed25519" {
+		t.Fatalf("signature not preserved: sig=%v algo=%q", got.Signature, got.SignAlgorithm)
+	}
+}
