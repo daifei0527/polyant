@@ -22,6 +22,9 @@ type ProtocolInterface interface {
 
 	// SendRatingPush 发送评分推送
 	SendRatingPush(ctx context.Context, peerID peer.ID, req *RatingPush) (*RatingAck, error)
+
+	// SendMirrorRequest 发送镜像请求（镜像数据通过 HandleMirrorData 异步回流）
+	SendMirrorRequest(ctx context.Context, target peer.ID, req *MirrorRequest) error
 }
 
 // 编译时检查 Protocol 是否实现 ProtocolInterface

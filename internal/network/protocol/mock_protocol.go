@@ -103,6 +103,11 @@ func (m *MockProtocol) SendRatingPush(ctx context.Context, peerID peer.ID, req *
 	return m.ratingAck, nil
 }
 
+// SendMirrorRequest 发送镜像请求
+func (m *MockProtocol) SendMirrorRequest(ctx context.Context, target peer.ID, req *MirrorRequest) error {
+	return nil
+}
+
 // --- 测试辅助方法 ---
 
 // SetHandshakeAck 设置握手响应

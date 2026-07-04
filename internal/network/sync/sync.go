@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/ed25519"
 	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"log"
 	"sync"
@@ -846,5 +847,32 @@ func (se *SyncEngine) HandleHeartbeat(ctx context.Context, h *protocolpkg.Heartb
 func (se *SyncEngine) HandleBitfield(ctx context.Context, b *protocolpkg.Bitfield) error {
 	// 合并远端版本向量（versionVec 自保护，无需 se.mu）
 	se.versionVec.Merge(VersionVectorFromProto(b.VersionVector))
+	return nil
+}
+
+// HandleMirrorData 处理接收到的镜像数据批次：反序列化 entries，逐个经冲突仲裁落库。
+func (se *SyncEngine) HandleMirrorData(ctx context.Context, d *protocolpkg.MirrorData) error {
+	if d == nil {
+		return fmt.Errorf("nil mirror data")
+	}
+	for _, entryJSON := range d.Entries {
+		var entry model.KnowledgeEntry
+		if err := json.Unmarshal(entryJSON, &entry); err != nil {
+			log.Printf("[Sync] mirror data unmarshal entry failed: %v", err)
+			continue
+		}
+		localVersion := se.versionVec.Get(entry.ID)
+		merged, err := se.resolveConflictAndMerge(ctx, &entry, localVersion)
+		if err != nil {
+			log.Printf("[Sync] mirror merge entry %s failed: %v", entry.ID, err)
+			continue
+		}
+		se.versionVec.Set(merged.ID, merged.Version)
+		if se.store.Search != nil {
+			if err := se.store.Search.IndexEntry(merged); err != nil {
+				log.Printf("[Sync] mirror index entry %s failed: %v", merged.ID, err)
+			}
+		}
+	}
 	return nil
 }

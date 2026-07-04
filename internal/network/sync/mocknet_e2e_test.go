@@ -196,3 +196,53 @@ func TestMocknetE2E_SyncPullReplicates(t *testing.T) {
 		t.Errorf("content = %q, want from-b", got.Content)
 	}
 }
+
+// TestSync_MirrorDataReceivedAndStored 验证镜像请求 → 生产端推 MirrorData → 接收端 HandleMirrorData 落库。
+func TestSync_MirrorDataReceivedAndStored(t *testing.T) {
+	nodes := setupMocknetNodes(t, 2)
+	src := nodes[0] // 镜像源
+	dst := nodes[1] // 镜像方
+
+	// 在 src 放一个 published 条目（带合法签名供 R1 验签通过；默认 RequireEntrySignatures=false 可不带）
+	srcEntry := &model.KnowledgeEntry{
+		ID: "mirror-e1", Title: "镜像条目", Content: "内容", Category: "cat",
+		Status: model.EntryStatusPublished, Version: 1,
+		CreatedAt: model.NowMillis(), UpdatedAt: model.NowMillis(),
+		CreatedBy: "src-creator",
+	}
+	_, err := src.store.Entry.Create(context.Background(), srcEntry)
+	if err != nil {
+		t.Fatalf("create on src: %v", err)
+	}
+
+	// 需要先 Start engine 以使 HandleMirrorRequest 生产者能使用服务级 ctx
+	ctx := context.Background()
+	if err := src.engine.Start(ctx); err != nil {
+		t.Fatalf("start src engine: %v", err)
+	}
+	defer src.engine.Stop()
+
+	// dst 向 src 发 MirrorRequest，src 推 MirrorData 回 dst，dst 的 HandleMirrorData 落库
+	reqCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	err = dst.proto.SendMirrorRequest(reqCtx, src.h.ID(), &protocol.MirrorRequest{
+		RequestID: "req1", Categories: []string{"cat"},
+	})
+	if err != nil {
+		t.Fatalf("SendMirrorRequest: %v", err)
+	}
+
+	// 轮询 dst store，等待镜像条目出现
+	deadline := time.Now().Add(3 * time.Second)
+	for time.Now().Before(deadline) {
+		got, gerr := dst.store.Entry.Get(context.Background(), "mirror-e1")
+		if gerr == nil && got != nil {
+			if got.Title != "镜像条目" {
+				t.Errorf("镜像条目 title = %q, want 镜像条目", got.Title)
+			}
+			return
+		}
+		time.Sleep(20 * time.Millisecond)
+	}
+	t.Fatal("镜像条目未在接收端落库（HandleMirrorData 未实现或未路由）")
+}

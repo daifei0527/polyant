@@ -20,6 +20,7 @@ type Handler interface {
 	HandleMirrorRequest(ctx context.Context, r *MirrorRequest) (<-chan *MirrorData, error)
 	HandlePushEntry(ctx context.Context, e *PushEntry) (*PushAck, error)
 	HandleRatingPush(ctx context.Context, r *RatingPush) (*RatingAck, error)
+	HandleMirrorData(ctx context.Context, d *MirrorData) error
 	HandleHeartbeat(ctx context.Context, h *Heartbeat) error
 	HandleBitfield(ctx context.Context, b *Bitfield) error
 }
@@ -198,6 +199,16 @@ func (p *Protocol) processMessage(ctx context.Context, remotePeer peer.ID, proto
 		b := msg.Payload.(*Bitfield)
 		return nil, p.handler.HandleBitfield(ctx, b)
 
+	case MessageTypeMirrorData:
+		d, ok := msg.Payload.(*MirrorData)
+		if !ok {
+			return nil, fmt.Errorf("invalid MirrorData payload")
+		}
+		if err := p.handler.HandleMirrorData(ctx, d); err != nil {
+			return nil, fmt.Errorf("handle mirror data: %w", err)
+		}
+		return nil, nil
+
 	default:
 		return nil, fmt.Errorf("unknown message type: %v", msg.Header.Type)
 	}
@@ -351,4 +362,18 @@ func (p *Protocol) SendRatingPush(ctx context.Context, peerID peer.ID, r *Rating
 
 	domainResp := fromProtoMessage(resp)
 	return domainResp.Payload.(*RatingAck), nil
+}
+
+// SendMirrorRequest 向 peer 发送镜像请求。镜像数据通过 HandleMirrorData 异步回流。
+// 注意：不关闭 stream。服务端 handleStream 的 ctx 与此 stream 的 ReadMessage 循环绑定；
+// 关闭 stream 会导致 ReadMessage 返回 EOF → ctx 取消 → 镜像消费者 goroutine 的
+// NewStream(ctx) 也因 ctx 已取消而失败。保持 stream 打开直到 ctx 超时后由 libp2p 回收。
+func (p *Protocol) SendMirrorRequest(ctx context.Context, target peer.ID, req *MirrorRequest) error {
+	s, err := p.host.NewStream(ctx, target, AWSPProtocolID)
+	if err != nil {
+		return fmt.Errorf("new stream: %w", err)
+	}
+	writer := NewProtobufStreamWriter(s)
+	msg := &Message{Header: NewMessageHeader(MessageTypeMirrorRequest), Payload: req}
+	return writer.WriteMessage(toProtoMessage(msg))
 }

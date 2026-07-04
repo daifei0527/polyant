@@ -132,6 +132,7 @@ type mockHandler struct {
 	queryFunc         func(ctx context.Context, q *protocol.Query) (*protocol.QueryResult, error)
 	syncRequestFunc   func(ctx context.Context, r *protocol.SyncRequest) (*protocol.SyncResponse, error)
 	mirrorRequestFunc func(ctx context.Context, r *protocol.MirrorRequest) (<-chan *protocol.MirrorData, error)
+	mirrorDataFunc    func(ctx context.Context, d *protocol.MirrorData) error
 	pushEntryFunc     func(ctx context.Context, e *protocol.PushEntry) (*protocol.PushAck, error)
 	ratingPushFunc    func(ctx context.Context, r *protocol.RatingPush) (*protocol.RatingAck, error)
 	heartbeatFunc     func(ctx context.Context, h *protocol.Heartbeat) error
@@ -166,6 +167,13 @@ func (m *mockHandler) HandleMirrorRequest(ctx context.Context, r *protocol.Mirro
 	ch := make(chan *protocol.MirrorData)
 	close(ch)
 	return ch, nil
+}
+
+func (m *mockHandler) HandleMirrorData(ctx context.Context, d *protocol.MirrorData) error {
+	if m.mirrorDataFunc != nil {
+		return m.mirrorDataFunc(ctx, d)
+	}
+	return nil
 }
 
 func (m *mockHandler) HandlePushEntry(ctx context.Context, e *protocol.PushEntry) (*protocol.PushAck, error) {
