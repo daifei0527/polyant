@@ -117,6 +117,7 @@ type APIConfig struct {
 	CORS                 bool     `json:"cors"`                   // 是否启用 CORS
 	CORSAllowOrigins     []string `json:"cors_allow_origins"`     // 允许的源，空则等价于 ["*"]
 	CORSAllowCredentials bool     `json:"cors_allow_credentials"` // 是否允许携带凭证（与 "*" 互斥）
+	BodyLimitBytes       int64    `json:"body_limit_bytes"`       // R1-C2: 请求体最大字节数，<=0 不限制（默认 1MB）
 }
 
 // StorageConfig 存储配置
@@ -227,8 +228,9 @@ func DefaultConfig() *Config {
 			From:     "",
 		},
 		API: APIConfig{
-			Enabled: true,
-			CORS:    true,
+			Enabled:        true,
+			CORS:           true,
+			BodyLimitBytes: 1 << 20, // 默认 1MB
 		},
 		Storage: StorageConfig{
 			KVType:     "pebble",

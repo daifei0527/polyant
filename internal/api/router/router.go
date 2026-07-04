@@ -50,7 +50,8 @@ type Dependencies struct {
 	ApiKey                    string                // API 访问密钥
 	DevReturnVerificationCode bool                  // dev/测试：发送验证码接口是否回传验证码（默认 false）
 	CORSConfig                middleware.CORSConfig // 可选；为零值时使用 DefaultCORSConfig
-	AdminListenAddr           string                // admin 本地访问校验用的监听地址（默认 127.0.0.1:18531）
+	AdminListenAddr           string // admin 本地访问校验用的监听地址（默认 127.0.0.1:18531）
+	BodyLimitBytes            int64  // R1-C2: 请求体大小上限（<=0 不限制）
 }
 
 // Router 包装已注册路由与中间件链，并暴露 Close 以便优雅停机时
@@ -92,6 +93,7 @@ func NewRouter(store *storage.Store, cfg *config.Config) (*Router, error) {
 		DevReturnVerificationCode: cfg.Dev.ReturnVerificationCode,
 		CORSConfig:                CORSConfigFromConfig(cfg),
 		AdminListenAddr:           cfg.Admin.Listen,
+		BodyLimitBytes:            cfg.API.BodyLimitBytes,
 	})
 }
 
@@ -203,6 +205,10 @@ func NewRouterWithDeps(deps *Dependencies) (*Router, error) {
 
 	// 应用中间件链
 	var httpHandler http.Handler = mux
+	// R1-C2: 请求体大小限制（最内层，包住 mux 使所有路由生效）
+	if deps.BodyLimitBytes > 0 {
+		httpHandler = middleware.BodyLimitMiddleware(deps.BodyLimitBytes)(httpHandler)
+	}
 	if auditMW != nil {
 		httpHandler = auditMW.Middleware(httpHandler)
 	}
