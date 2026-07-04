@@ -10,6 +10,16 @@ linters:
     - goimports
     - misspell
     - ineffassign
+    - govet # R1-E2: go vet 已全绿（go vet ./... 通过），零风险接入
+
+    # 以下 linter 暂缓启用（待 R4 专项清理）：
+    #   - gosec      : 27 处。真实信号仅 G306（WriteFile 权限，含 keys.go 写 Ed25519 私钥），
+    #                  需逐处核对权限敏感性；G115/G101/G109/G402 为本仓库噪声/有意为之。
+    #   - staticcheck: 38 处。含 SA1019（libp2p EnableAutoRelay 已弃用）需独立 API 迁移。
+    #   - unused     : 19 处。含 2 个生产 mu sync.RWMutex 字段——疑似"忘记加锁"（与 R2 并发数据竞争
+    #                  审计项相关），不应在安全轮草率删除；余为测试死代码。
+    #   - errcheck   : 50 处。需逐处判断可否忽略。
+    # 一并硬启会让 CI lint job 变红，且多数不属于 R1（安全）范畴。R4 设独立 task 清理后再开。
 
 issues:
   exclude-rules:

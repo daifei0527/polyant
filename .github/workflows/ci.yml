@@ -17,7 +17,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: '1.22'
+          go-version: '1.25.x'
           cache: true
 
       - name: Download dependencies
@@ -46,14 +46,37 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: '1.22'
+          go-version: '1.25.x'
           cache: true
 
       - name: Run golangci-lint
         uses: golangci/golangci-lint-action@v4
         with:
           version: latest
-          args: --timeout=5m
+          args: --timeout=10m
+
+  security:
+    name: Security (govulncheck)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.25.x'
+          cache: true
+
+      - name: Download dependencies
+        run: go mod download
+
+      # R1-E2: 扫描依赖已知 CVE。独立 job——若发现依赖漏洞只让本 job 变红，
+      # 不阻塞 test/lint/build；视为可操作的依赖升级信号。
+      - name: Run govulncheck
+        run: |
+          go install golang.org/x/vuln/cmd/govulncheck@latest
+          govulncheck ./...
 
   build:
     name: Build
@@ -66,15 +89,16 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: '1.22'
+          go-version: '1.25.x'
           cache: true
 
+      # R1-E2: 构建真实存在的二进制（与 Makefile 一致：seed/user/pactl）。
+      # 原 ci.yml 引用不存在的 ./cmd/polyant 与 ./cmd/awctl，build job 一直失败。
       - name: Build binaries
         run: |
-          go build -o bin/polyant ./cmd/polyant
-          go build -o bin/awctl ./cmd/awctl
-          go build -o bin/polyant-seed ./cmd/seed
-          go build -o bin/polyant-user ./cmd/user
+          go build -o bin/seed ./cmd/seed
+          go build -o bin/user ./cmd/user
+          go build -o bin/pactl ./cmd/pactl
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4

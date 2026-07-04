@@ -19,13 +19,15 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: '1.22'
+          go-version: '1.25.x'
           cache: true
 
       - name: Get version
         id: get_version
         run: echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
 
+      # R1-E2: 只构建真实存在的二进制（seed/user/pactl，与 Makefile 一致）。
+      # 原 release.yml 引用不存在的 ./cmd/polyant 与 ./cmd/awctl，release 一直失败。
       - name: Build for Linux AMD64
         env:
           GOOS: linux
@@ -33,10 +35,9 @@ jobs:
           CGO_ENABLED: 0
         run: |
           mkdir -p release/polyant-${{ steps.get_version.outputs.VERSION }}-linux-amd64
-          go build -ldflags="-s -w -X main.Version=${{ steps.get_version.outputs.VERSION }}" -o release/polyant-${{ steps.get_version.outputs.VERSION }}-linux-amd64/polyant ./cmd/polyant
-          go build -ldflags="-s -w" -o release/polyant-${{ steps.get_version.outputs.VERSION }}-linux-amd64/awctl ./cmd/awctl
           go build -ldflags="-s -w" -o release/polyant-${{ steps.get_version.outputs.VERSION }}-linux-amd64/polyant-seed ./cmd/seed
           go build -ldflags="-s -w" -o release/polyant-${{ steps.get_version.outputs.VERSION }}-linux-amd64/polyant-user ./cmd/user
+          go build -ldflags="-s -w" -o release/polyant-${{ steps.get_version.outputs.VERSION }}-linux-amd64/pactl ./cmd/pactl
           cp README.md release/polyant-${{ steps.get_version.outputs.VERSION }}-linux-amd64/
           cp SKILL.md release/polyant-${{ steps.get_version.outputs.VERSION }}-linux-amd64/ 2>/dev/null || true
           cp -r configs release/polyant-${{ steps.get_version.outputs.VERSION }}-linux-amd64/ 2>/dev/null || true
@@ -49,10 +50,9 @@ jobs:
           CGO_ENABLED: 0
         run: |
           mkdir -p release/polyant-${{ steps.get_version.outputs.VERSION }}-linux-arm64
-          go build -ldflags="-s -w -X main.Version=${{ steps.get_version.outputs.VERSION }}" -o release/polyant-${{ steps.get_version.outputs.VERSION }}-linux-arm64/polyant ./cmd/polyant
-          go build -ldflags="-s -w" -o release/polyant-${{ steps.get_version.outputs.VERSION }}-linux-arm64/awctl ./cmd/awctl
           go build -ldflags="-s -w" -o release/polyant-${{ steps.get_version.outputs.VERSION }}-linux-arm64/polyant-seed ./cmd/seed
           go build -ldflags="-s -w" -o release/polyant-${{ steps.get_version.outputs.VERSION }}-linux-arm64/polyant-user ./cmd/user
+          go build -ldflags="-s -w" -o release/polyant-${{ steps.get_version.outputs.VERSION }}-linux-arm64/pactl ./cmd/pactl
           cp README.md release/polyant-${{ steps.get_version.outputs.VERSION }}-linux-arm64/
           cp SKILL.md release/polyant-${{ steps.get_version.outputs.VERSION }}-linux-arm64/ 2>/dev/null || true
           cp -r configs release/polyant-${{ steps.get_version.outputs.VERSION }}-linux-arm64/ 2>/dev/null || true
@@ -65,10 +65,9 @@ jobs:
           CGO_ENABLED: 0
         run: |
           mkdir -p release/polyant-${{ steps.get_version.outputs.VERSION }}-darwin-amd64
-          go build -ldflags="-s -w -X main.Version=${{ steps.get_version.outputs.VERSION }}" -o release/polyant-${{ steps.get_version.outputs.VERSION }}-darwin-amd64/polyant ./cmd/polyant
-          go build -ldflags="-s -w" -o release/polyant-${{ steps.get_version.outputs.VERSION }}-darwin-amd64/awctl ./cmd/awctl
           go build -ldflags="-s -w" -o release/polyant-${{ steps.get_version.outputs.VERSION }}-darwin-amd64/polyant-seed ./cmd/seed
           go build -ldflags="-s -w" -o release/polyant-${{ steps.get_version.outputs.VERSION }}-darwin-amd64/polyant-user ./cmd/user
+          go build -ldflags="-s -w" -o release/polyant-${{ steps.get_version.outputs.VERSION }}-darwin-amd64/pactl ./cmd/pactl
           cp README.md release/polyant-${{ steps.get_version.outputs.VERSION }}-darwin-amd64/
           cp SKILL.md release/polyant-${{ steps.get_version.outputs.VERSION }}-darwin-amd64/ 2>/dev/null || true
           cp -r configs release/polyant-${{ steps.get_version.outputs.VERSION }}-darwin-amd64/ 2>/dev/null || true
@@ -81,10 +80,9 @@ jobs:
           CGO_ENABLED: 0
         run: |
           mkdir -p release/polyant-${{ steps.get_version.outputs.VERSION }}-darwin-arm64
-          go build -ldflags="-s -w -X main.Version=${{ steps.get_version.outputs.VERSION }}" -o release/polyant-${{ steps.get_version.outputs.VERSION }}-darwin-arm64/polyant ./cmd/polyant
-          go build -ldflags="-s -w" -o release/polyant-${{ steps.get_version.outputs.VERSION }}-darwin-arm64/awctl ./cmd/awctl
           go build -ldflags="-s -w" -o release/polyant-${{ steps.get_version.outputs.VERSION }}-darwin-arm64/polyant-seed ./cmd/seed
           go build -ldflags="-s -w" -o release/polyant-${{ steps.get_version.outputs.VERSION }}-darwin-arm64/polyant-user ./cmd/user
+          go build -ldflags="-s -w" -o release/polyant-${{ steps.get_version.outputs.VERSION }}-darwin-arm64/pactl ./cmd/pactl
           cp README.md release/polyant-${{ steps.get_version.outputs.VERSION }}-darwin-arm64/
           cp SKILL.md release/polyant-${{ steps.get_version.outputs.VERSION }}-darwin-arm64/ 2>/dev/null || true
           cp -r configs release/polyant-${{ steps.get_version.outputs.VERSION }}-darwin-arm64/ 2>/dev/null || true
