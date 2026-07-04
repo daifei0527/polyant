@@ -301,6 +301,11 @@ func (e *BleveEngine) Search(ctx context.Context, query SearchQuery) (*SearchRes
 		boolQuery.AddMust(rangeQuery)
 	}
 
+	// C3：只搜 published 条目（与 MemorySearchEngine/BadgerSearchEngine 行为一致）
+	statusQuery := bleve.NewTermQuery(model.EntryStatusPublished)
+	statusQuery.SetField("status")
+	boolQuery.AddMust(statusQuery)
+
 	// 构建搜索请求
 	searchRequest := bleve.NewSearchRequest(boolQuery)
 	searchRequest.Size = query.Limit

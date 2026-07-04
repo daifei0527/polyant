@@ -452,3 +452,21 @@ func TestBleveEngine_Rebuild_FixesStaleIndex(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, uint64(1), cnt)
 }
+
+// TestBleveEngine_SearchFiltersDraftStatus 验证 draft/archived 条目不被搜出。
+func TestBleveEngine_SearchFiltersDraftStatus(t *testing.T) {
+	eng, err := NewBleveEngine(filepath.Join(t.TempDir(), "t.bleve"))
+	require.NoError(t, err)
+	defer eng.Close()
+
+	pub := &model.KnowledgeEntry{ID: "pub", Title: "shared keyword", Content: "x", Category: "c", Status: model.EntryStatusPublished, CreatedBy: "x"}
+	pub.ContentHash = pub.ComputeContentHash()
+	draft := &model.KnowledgeEntry{ID: "draft", Title: "shared keyword", Content: "x", Category: "c", Status: model.EntryStatusDraft, CreatedBy: "x"}
+	draft.ContentHash = draft.ComputeContentHash()
+	require.NoError(t, eng.IndexEntry(pub))
+	require.NoError(t, eng.IndexEntry(draft))
+
+	res, err := eng.Search(context.Background(), SearchQuery{Keyword: "shared"})
+	require.NoError(t, err)
+	assert.Equal(t, 1, res.TotalCount, "only published entry should be searchable; draft filtered")
+}
