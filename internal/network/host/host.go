@@ -58,8 +58,6 @@ func (n NATType) String() string {
 type HostConfig struct {
 	// ListenAddrs 监听地址列表
 	ListenAddrs []string
-	// SeedPeers 种子节点地址列表
-	SeedPeers []string
 	// RelayPeers 中继节点地址列表（用于NAT穿透）
 	RelayPeers []string
 	// EnableDHT 是否启用DHT

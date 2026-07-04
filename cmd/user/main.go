@@ -275,7 +275,6 @@ func (app *UserApp) Start() error {
 
 	// 创建 P2P Host 配置
 	hostCfg := &host.HostConfig{
-		SeedPeers:       app.seedNodeAddrs,
 		EnableDHT:       true,
 		EnableMDNS:      true, // 用户节点启用 mDNS 用于本地发现
 		EnableNAT:       true,

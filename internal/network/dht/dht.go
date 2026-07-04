@@ -10,7 +10,6 @@ import (
 	"github.com/libp2p/go-libp2p/core/host"
 	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/libp2p/go-libp2p/core/routing"
-	"github.com/multiformats/go-multiaddr"
 	"go.uber.org/zap"
 
 	"github.com/daifei0527/polyant/pkg/config"
@@ -44,35 +43,19 @@ func NewDHTNode(h host.Host, cfg *config.Config) (*DHTNode, error) {
 	}, nil
 }
 
-// Bootstrap 引导 DHT 网络连接到 bootstrap 节点
+// Bootstrap 引导 DHT 网络连接到 bootstrap 节点。
+//
+// R2-E1：删除了误导性的 SeedNodes 解析块——它把配置里的种子地址解析进一个本地
+// peers 切片后从未真正用于引导（d.dht.Bootstrap 用的是 libp2p 内置默认 peer），
+// 连接实际靠 app 层的 ConnectToPeer 循环完成。保留真实工作 d.dht.Bootstrap(ctx)。
 func (d *DHTNode) Bootstrap(ctx context.Context) error {
 	d.log.Info("Bootstrapping DHT...")
-
-	// 如果配置了种子节点，使用配置的，否则使用默认
-	peers := dht.GetDefaultBootstrapPeerAddrInfos()
-	// 将配置的添加进去
-	if len(d.cfg.Network.SeedNodes) > 0 {
-		for _, addrInfoStr := range d.cfg.Network.SeedNodes {
-			// 解析 multiaddr 字符串
-			maddr, err := multiaddr.NewMultiaddr(addrInfoStr)
-			if err != nil {
-				d.log.Warnf("Failed to parse seed node address %s: %v", addrInfoStr, err)
-				continue
-			}
-			pi, err := peer.AddrInfoFromP2pAddr(maddr)
-			if err != nil {
-				d.log.Warnf("Failed to get peer info from address %s: %v", addrInfoStr, err)
-				continue
-			}
-			peers = append(peers, *pi)
-		}
-	}
 
 	if err := d.dht.Bootstrap(ctx); err != nil {
 		return fmt.Errorf("DHT bootstrap failed: %w", err)
 	}
 
-	d.log.Infof("DHT bootstrap completed with %d bootstrap peers", len(peers))
+	d.log.Info("DHT bootstrap completed")
 	return nil
 }
 

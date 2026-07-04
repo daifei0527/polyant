@@ -115,33 +115,6 @@ func TestDHTNodeBootstrap(t *testing.T) {
 	_ = dhtNode.Bootstrap(ctx)
 }
 
-// TestDHTNodeBootstrapWithSeedNodes 测试带种子节点的 Bootstrap
-func TestDHTNodeBootstrapWithSeedNodes(t *testing.T) {
-	h := createTestHost(t)
-	defer h.Close()
-
-	cfg := &config.Config{
-		Network: config.NetworkConfig{
-			SeedNodes: []string{
-				// 无效的种子节点地址，用于测试解析逻辑
-				"/ip4/127.0.0.1/tcp/12345/p2p/12D3KooWGtest",
-			},
-		},
-	}
-
-	dhtNode, err := dht.NewDHTNode(h, cfg)
-	if err != nil {
-		t.Fatalf("NewDHTNode 失败: %v", err)
-	}
-	defer dhtNode.Close()
-
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-
-	// Bootstrap 应该能处理无效的种子节点
-	_ = dhtNode.Bootstrap(ctx)
-}
-
 // ==================== DHT FindPeer 测试 ====================
 
 // TestDHTNodeFindPeer 测试查找节点

@@ -303,7 +303,6 @@ func (app *SeedApp) Start() error {
 	// 创建 P2P Host 配置 - 种子节点启用中继服务
 	hostCfg := &host.HostConfig{
 		ListenAddrs:        []string{listenAddr},
-		SeedPeers:          app.config.Seed.BootstrapPeers,
 		EnableDHT:          true,  // 种子节点必须启用 DHT
 		EnableMDNS:         false, // 种子节点不需要 mDNS
 		EnableNAT:          false, // 种子节点有公网 IP，不需要 NAT 映射
