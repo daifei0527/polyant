@@ -36,57 +36,102 @@ type SyncConfig struct {
 	RequireEntrySignatures bool // R1-B4: 为 true 时拒绝未签名的 P2P 推送条目/评分
 }
 
-type VersionVector map[string]int64
-
-func (vv VersionVector) Increment(entryID string) int64 {
-	vv[entryID]++
-	return vv[entryID]
+// VersionVector 是线程安全的版本向量。所有方法内部加锁，可在多 goroutine 间并发使用。
+type VersionVector struct {
+	mu sync.RWMutex
+	m  map[string]int64
 }
 
-func (vv VersionVector) Get(entryID string) int64 {
-	if v, ok := vv[entryID]; ok {
-		return v
-	}
-	return 0
+// NewVersionVector 创建空的线程安全版本向量。
+func NewVersionVector() *VersionVector {
+	return &VersionVector{m: make(map[string]int64)}
 }
 
-func (vv VersionVector) Merge(other VersionVector) VersionVector {
-	result := make(VersionVector)
-	for k, v := range vv {
-		result[k] = v
-	}
+// Increment 递增某条目版本号并返回新值。
+func (vv *VersionVector) Increment(entryID string) int64 {
+	vv.mu.Lock()
+	defer vv.mu.Unlock()
+	vv.m[entryID]++
+	return vv.m[entryID]
+}
+
+// Get 返回某条目版本号（不存在返回 0）。
+func (vv *VersionVector) Get(entryID string) int64 {
+	vv.mu.RLock()
+	defer vv.mu.RUnlock()
+	return vv.m[entryID]
+}
+
+// Set 设置某条目版本号。
+func (vv *VersionVector) Set(entryID string, ver int64) {
+	vv.mu.Lock()
+	defer vv.mu.Unlock()
+	vv.m[entryID] = ver
+}
+
+// Merge 合并另一版本向量（按 key 取 max）。
+func (vv *VersionVector) Merge(other map[string]int64) {
+	vv.mu.Lock()
+	defer vv.mu.Unlock()
 	for k, v := range other {
-		if v > result[k] {
-			result[k] = v
+		if cur, ok := vv.m[k]; !ok || v > cur {
+			vv.m[k] = v
 		}
 	}
-	return result
 }
 
-func (vv VersionVector) Diff(other VersionVector) []string {
+// Diff 返回 other 中比 self 更新的 entryID 列表。
+func (vv *VersionVector) Diff(other map[string]int64) []string {
+	vv.mu.RLock()
+	defer vv.mu.RUnlock()
 	var needed []string
 	for id, theirV := range other {
-		if theirV > vv.Get(id) {
+		if theirV > vv.m[id] {
 			needed = append(needed, id)
 		}
 	}
 	return needed
 }
 
-func (vv VersionVector) ToProto() map[string]int64 {
-	result := make(map[string]int64)
-	for k, v := range vv {
-		result[k] = v
+// Clone 返回内部 map 的深拷贝。
+func (vv *VersionVector) Clone() map[string]int64 {
+	vv.mu.RLock()
+	defer vv.mu.RUnlock()
+	out := make(map[string]int64, len(vv.m))
+	for k, v := range vv.m {
+		out[k] = v
 	}
-	return result
+	return out
 }
 
-func VersionVectorFromProto(m map[string]int64) VersionVector {
-	vv := make(VersionVector)
-	for k, v := range m {
-		vv[k] = v
+// ToProto 返回可序列化的 map 拷贝（用于 protobuf 传输）。
+func (vv *VersionVector) ToProto() map[string]int64 {
+	return vv.Clone()
+}
+
+// Delete 删除某条目版本记录。
+func (vv *VersionVector) Delete(entryID string) {
+	vv.mu.Lock()
+	defer vv.mu.Unlock()
+	delete(vv.m, entryID)
+}
+
+// Range 遍历所有条目（持读锁，回调内不可回头改 vv）。
+func (vv *VersionVector) Range(fn func(entryID string, ver int64)) {
+	vv.mu.RLock()
+	defer vv.mu.RUnlock()
+	for k, v := range vv.m {
+		fn(k, v)
 	}
-	return vv
+}
+
+// VersionVectorFromProto 从 protobuf map 构造裸 map（供 Merge 消费）。
+func VersionVectorFromProto(m map[string]int64) map[string]int64 {
+	out := make(map[string]int64, len(m))
+	for k, v := range m {
+		out[k] = v
+	}
+	return out
 }
 
 type SyncEngine struct {
@@ -95,7 +140,7 @@ type SyncEngine struct {
 	store      *storage.Store
 	config     *SyncConfig
 	state      SyncState
-	versionVec VersionVector
+	versionVec *VersionVector
 	lastSync   int64
 	mu         sync.RWMutex
 	cancel     context.CancelFunc
@@ -109,7 +154,7 @@ func NewSyncEngine(p2pHost host.P2PHostInterface, proto protocolpkg.ProtocolInte
 		store:      store,
 		config:     cfg,
 		state:      SyncStateIdle,
-		versionVec: make(VersionVector),
+		versionVec: NewVersionVector(),
 	}
 }
 
@@ -237,10 +282,7 @@ func (se *SyncEngine) syncWithPeer(ctx context.Context, peerID peer.ID) error {
 	}
 
 	// 合并远端版本向量到本地
-	remoteVV := VersionVectorFromProto(resp.ServerVersionVector)
-	se.mu.Lock()
-	se.versionVec = se.versionVec.Merge(remoteVV)
-	se.mu.Unlock()
+	se.versionVec.Merge(VersionVectorFromProto(resp.ServerVersionVector))
 
 	return nil
 }
@@ -261,7 +303,7 @@ func (se *SyncEngine) processSyncResponse(ctx context.Context, resp *protocolpkg
 				log.Printf("[Sync] Failed to merge entry %s: %v", entry.ID, err)
 				continue
 			}
-			se.versionVec[entry.ID] = entry.Version
+			se.versionVec.Set(entry.ID, entry.Version)
 			// 更新搜索索引
 			if se.store.Search != nil {
 				se.store.Search.IndexEntry(&entry)
@@ -282,7 +324,7 @@ func (se *SyncEngine) processSyncResponse(ctx context.Context, resp *protocolpkg
 				log.Printf("[Sync] Failed to merge entry %s: %v", entry.ID, err)
 				continue
 			}
-			se.versionVec[entry.ID] = entry.Version
+			se.versionVec.Set(entry.ID, entry.Version)
 			// 更新搜索索引
 			if se.store.Search != nil {
 				se.store.Search.UpdateIndex(&entry)
@@ -296,10 +338,7 @@ func (se *SyncEngine) processSyncResponse(ctx context.Context, resp *protocolpkg
 			log.Printf("[Sync] Failed to delete entry %s: %v", deletedID, err)
 			continue
 		}
-		se.mu.Lock()
-		delete(se.versionVec, deletedID)
-		se.mu.Unlock()
-		// 从搜索索引中删除
+		se.versionVec.Delete(deletedID)
 		if se.store.Search != nil {
 			if err := se.store.Search.DeleteIndex(deletedID); err != nil {
 				log.Printf("[Sync] Failed to delete index for entry %s: %v", deletedID, err)
@@ -366,15 +405,8 @@ func (se *SyncEngine) GetState() SyncState {
 	return se.state
 }
 
-func (se *SyncEngine) GetVersionVector() VersionVector {
-	se.mu.RLock()
-	defer se.mu.RUnlock()
-
-	vv := make(VersionVector)
-	for k, v := range se.versionVec {
-		vv[k] = v
-	}
-	return vv
+func (se *SyncEngine) GetVersionVector() map[string]int64 {
+	return se.versionVec.Clone()
 }
 
 func (se *SyncEngine) MergeEntries(ctx context.Context, entries []*model.KnowledgeEntry) error {
@@ -384,7 +416,7 @@ func (se *SyncEngine) MergeEntries(ctx context.Context, entries []*model.Knowled
 			if _, err := se.store.Entry.Create(ctx, entry); err != nil {
 				continue
 			}
-			se.versionVec[entry.ID] = entry.Version
+			se.versionVec.Set(entry.ID, entry.Version)
 		}
 	}
 	return nil
@@ -431,7 +463,7 @@ func (se *SyncEngine) HandleSyncRequest(ctx context.Context, req *protocolpkg.Sy
 		}
 
 		if entry.UpdatedAt > req.LastSyncTimestamp {
-			if clientVV.Get(entry.ID) < entry.Version {
+			if clientVV[entry.ID] < entry.Version {
 				// 如果条目已删除，只需要发送ID通知对方删除
 				if entry.Status == model.EntryStatusDeleted {
 					resp.DeletedEntryIDs = append(resp.DeletedEntryIDs, entry.ID)
@@ -795,10 +827,7 @@ func (se *SyncEngine) HandleHeartbeat(ctx context.Context, h *protocolpkg.Heartb
 
 // HandleBitfield 处理位图同步
 func (se *SyncEngine) HandleBitfield(ctx context.Context, b *protocolpkg.Bitfield) error {
-	// 合并远端版本向量
-	remoteVV := VersionVectorFromProto(b.VersionVector)
-	se.mu.Lock()
-	se.versionVec = se.versionVec.Merge(remoteVV)
-	se.mu.Unlock()
+	// 合并远端版本向量（versionVec 自保护，无需 se.mu）
+	se.versionVec.Merge(VersionVectorFromProto(b.VersionVector))
 	return nil
 }

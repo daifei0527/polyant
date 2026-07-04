@@ -22,8 +22,8 @@ import (
 
 // TestVersionVectorGet 测试获取版本号
 func TestVersionVectorGet(t *testing.T) {
-	vv := make(sync.VersionVector)
-	vv["entry-1"] = 5
+	vv := sync.NewVersionVector()
+	vv.Set("entry-1", 5)
 
 	if vv.Get("entry-1") != 5 {
 		t.Errorf("Get 错误: got %d, want 5", vv.Get("entry-1"))
@@ -36,7 +36,7 @@ func TestVersionVectorGet(t *testing.T) {
 
 // TestVersionVectorIncrement 测试版本号递增
 func TestVersionVectorIncrement(t *testing.T) {
-	vv := make(sync.VersionVector)
+	vv := sync.NewVersionVector()
 
 	// 首次递增
 	v1 := vv.Increment("entry-1")
@@ -59,47 +59,41 @@ func TestVersionVectorIncrement(t *testing.T) {
 
 // TestVersionVectorMerge 测试版本向量合并
 func TestVersionVectorMerge(t *testing.T) {
-	vv1 := make(sync.VersionVector)
-	vv1["entry-1"] = 5
-	vv1["entry-2"] = 3
+	vv1 := sync.NewVersionVector()
+	vv1.Set("entry-1", 5)
+	vv1.Set("entry-2", 3)
 
-	vv2 := make(sync.VersionVector)
-	vv2["entry-1"] = 7
-	vv2["entry-3"] = 2
+	vv2 := map[string]int64{"entry-1": 7, "entry-3": 2}
 
-	merged := vv1.Merge(vv2)
+	vv1.Merge(vv2)
 
 	// entry-1 应取较大值
-	if merged["entry-1"] != 7 {
-		t.Errorf("合并后 entry-1 应为 7: got %d", merged["entry-1"])
+	if vv1.Get("entry-1") != 7 {
+		t.Errorf("合并后 entry-1 应为 7: got %d", vv1.Get("entry-1"))
 	}
 
 	// entry-2 应保留
-	if merged["entry-2"] != 3 {
-		t.Errorf("合并后 entry-2 应为 3: got %d", merged["entry-2"])
+	if vv1.Get("entry-2") != 3 {
+		t.Errorf("合并后 entry-2 应为 3: got %d", vv1.Get("entry-2"))
 	}
 
 	// entry-3 应从 vv2 添加
-	if merged["entry-3"] != 2 {
-		t.Errorf("合并后 entry-3 应为 2: got %d", merged["entry-3"])
-	}
-
-	// 原始向量不应被修改
-	if vv1["entry-1"] != 5 {
-		t.Error("原始向量不应被修改")
+	if vv1.Get("entry-3") != 2 {
+		t.Errorf("合并后 entry-3 应为 2: got %d", vv1.Get("entry-3"))
 	}
 }
 
 // TestVersionVectorDiff 测试版本向量差异计算
 func TestVersionVectorDiff(t *testing.T) {
-	vv1 := make(sync.VersionVector)
-	vv1["entry-1"] = 5
-	vv1["entry-2"] = 3
+	vv1 := sync.NewVersionVector()
+	vv1.Set("entry-1", 5)
+	vv1.Set("entry-2", 3)
 
-	vv2 := make(sync.VersionVector)
-	vv2["entry-1"] = 7 // 比 vv1 新
-	vv2["entry-2"] = 3 // 相同
-	vv2["entry-3"] = 2 // vv1 没有
+	vv2 := map[string]int64{
+		"entry-1": 7, // 比 vv1 新
+		"entry-2": 3, // 相同
+		"entry-3": 2, // vv1 没有
+	}
 
 	// vv2 相比 vv1 的新条目
 	diff := vv1.Diff(vv2)
@@ -131,9 +125,8 @@ func TestVersionVectorDiff(t *testing.T) {
 
 // TestVersionVectorDiffEmpty 测试空向量差异
 func TestVersionVectorDiffEmpty(t *testing.T) {
-	vv1 := make(sync.VersionVector)
-	vv2 := make(sync.VersionVector)
-	vv2["entry-1"] = 5
+	vv1 := sync.NewVersionVector()
+	vv2 := map[string]int64{"entry-1": 5}
 
 	diff := vv1.Diff(vv2)
 
@@ -142,7 +135,7 @@ func TestVersionVectorDiffEmpty(t *testing.T) {
 	}
 
 	// 反向差异
-	diff2 := vv2.Diff(vv1)
+	diff2 := vv1.Diff(map[string]int64{})
 	if len(diff2) != 0 {
 		t.Errorf("Diff 空向量应返回 0: got %d", len(diff2))
 	}
@@ -150,9 +143,9 @@ func TestVersionVectorDiffEmpty(t *testing.T) {
 
 // TestVersionVectorToProto 测试转换为 protobuf 格式
 func TestVersionVectorToProto(t *testing.T) {
-	vv := make(sync.VersionVector)
-	vv["entry-1"] = 5
-	vv["entry-2"] = 3
+	vv := sync.NewVersionVector()
+	vv.Set("entry-1", 5)
+	vv.Set("entry-2", 3)
 
 	proto := vv.ToProto()
 
@@ -168,24 +161,25 @@ func TestVersionVectorFromProto(t *testing.T) {
 		"entry-2": 3,
 	}
 
-	vv := sync.VersionVectorFromProto(proto)
+	m := sync.VersionVectorFromProto(proto)
 
-	if vv.Get("entry-1") != 5 {
-		t.Errorf("FromProto 错误: got %d", vv.Get("entry-1"))
+	if m["entry-1"] != 5 {
+		t.Errorf("FromProto 错误: got %d", m["entry-1"])
 	}
 }
 
 // TestVersionVectorRoundTrip 测试序列化往返
 func TestVersionVectorRoundTrip(t *testing.T) {
-	original := make(sync.VersionVector)
-	original["entry-1"] = 10
-	original["entry-2"] = 20
-	original["entry-3"] = 30
+	original := sync.NewVersionVector()
+	original.Set("entry-1", 10)
+	original.Set("entry-2", 20)
+	original.Set("entry-3", 30)
 
 	proto := original.ToProto()
 	recovered := sync.VersionVectorFromProto(proto)
 
-	for k, v := range original {
+	clone := original.Clone()
+	for k, v := range clone {
 		if recovered[k] != v {
 			t.Errorf("RoundTrip 错误: %s: got %d, want %d", k, recovered[k], v)
 		}
@@ -236,65 +230,56 @@ func TestSyncStateConstants(t *testing.T) {
 
 // TestVersionVectorMergeMultiple 测试多次合并
 func TestVersionVectorMergeMultiple(t *testing.T) {
-	vv1 := make(sync.VersionVector)
-	vv1["a"] = 1
-	vv1["b"] = 2
+	vv1 := sync.NewVersionVector()
+	vv1.Set("a", 1)
+	vv1.Set("b", 2)
 
-	vv2 := make(sync.VersionVector)
-	vv2["a"] = 3
-	vv2["c"] = 4
+	// 链式合并（in-place）
+	vv1.Merge(map[string]int64{"a": 3, "c": 4})
+	vv1.Merge(map[string]int64{"b": 5, "d": 6})
 
-	vv3 := make(sync.VersionVector)
-	vv3["b"] = 5
-	vv3["d"] = 6
-
-	// 链式合并
-	result := vv1.Merge(vv2).Merge(vv3)
-
-	if result["a"] != 3 {
-		t.Errorf("a 应为 3: got %d", result["a"])
+	if vv1.Get("a") != 3 {
+		t.Errorf("a 应为 3: got %d", vv1.Get("a"))
 	}
-	if result["b"] != 5 {
-		t.Errorf("b 应为 5: got %d", result["b"])
+	if vv1.Get("b") != 5 {
+		t.Errorf("b 应为 5: got %d", vv1.Get("b"))
 	}
-	if result["c"] != 4 {
-		t.Errorf("c 应为 4: got %d", result["c"])
+	if vv1.Get("c") != 4 {
+		t.Errorf("c 应为 4: got %d", vv1.Get("c"))
 	}
-	if result["d"] != 6 {
-		t.Errorf("d 应为 6: got %d", result["d"])
+	if vv1.Get("d") != 6 {
+		t.Errorf("d 应为 6: got %d", vv1.Get("d"))
 	}
 }
 
 // TestVersionVectorIncrementAndMerge 测试递增后合并
 func TestVersionVectorIncrementAndMerge(t *testing.T) {
-	local := make(sync.VersionVector)
-	local["entry-1"] = 5
-
-	remote := make(sync.VersionVector)
-	remote["entry-1"] = 3
+	local := sync.NewVersionVector()
+	local.Set("entry-1", 5)
 
 	// 本地有更新
 	local.Increment("entry-1") // 变成 6
 
-	// 合并远程
-	merged := local.Merge(remote)
+	// 合并远程（in-place）
+	local.Merge(map[string]int64{"entry-1": 3})
 
 	// 应保留本地较高版本
-	if merged["entry-1"] != 6 {
-		t.Errorf("entry-1 应为 6: got %d", merged["entry-1"])
+	if local.Get("entry-1") != 6 {
+		t.Errorf("entry-1 应为 6: got %d", local.Get("entry-1"))
 	}
 }
 
 // TestVersionVectorDiffAfterMerge 测试合并后的差异计算
 func TestVersionVectorDiffAfterMerge(t *testing.T) {
-	local := make(sync.VersionVector)
-	local["entry-1"] = 5
-	local["entry-2"] = 3
+	local := sync.NewVersionVector()
+	local.Set("entry-1", 5)
+	local.Set("entry-2", 3)
 
-	remote := make(sync.VersionVector)
-	remote["entry-1"] = 7
-	remote["entry-2"] = 3
-	remote["entry-3"] = 2
+	remote := map[string]int64{
+		"entry-1": 7,
+		"entry-2": 3,
+		"entry-3": 2,
+	}
 
 	// 合并前：remote 有更新
 	diff1 := local.Diff(remote)
@@ -302,8 +287,8 @@ func TestVersionVectorDiffAfterMerge(t *testing.T) {
 		t.Errorf("合并前应有 2 个差异: got %d", len(diff1))
 	}
 
-	// 合并
-	local = local.Merge(remote)
+	// 合并（in-place）
+	local.Merge(remote)
 
 	// 合并后：应无差异
 	diff2 := local.Diff(remote)
@@ -426,8 +411,8 @@ func TestSyncEngineHandleBitfield(t *testing.T) {
 
 	// 验证版本向量被合并
 	vv := engine.GetVersionVector()
-	if vv.Get("entry-1") != 5 {
-		t.Errorf("版本向量应被合并: got %d", vv.Get("entry-1"))
+	if vv["entry-1"] != 5 {
+		t.Errorf("版本向量应被合并: got %d", vv["entry-1"])
 	}
 }
 
@@ -447,14 +432,14 @@ func TestSyncEngineHandleBitfieldMerge(t *testing.T) {
 	})
 
 	vv := engine.GetVersionVector()
-	if vv.Get("a") != 3 {
-		t.Errorf("a 应为 3: got %d", vv.Get("a"))
+	if vv["a"] != 3 {
+		t.Errorf("a 应为 3: got %d", vv["a"])
 	}
-	if vv.Get("b") != 2 {
-		t.Errorf("b 应为 2: got %d", vv.Get("b"))
+	if vv["b"] != 2 {
+		t.Errorf("b 应为 2: got %d", vv["b"])
 	}
-	if vv.Get("c") != 4 {
-		t.Errorf("c 应为 4: got %d", vv.Get("c"))
+	if vv["c"] != 4 {
+		t.Errorf("c 应为 4: got %d", vv["c"])
 	}
 }
 
@@ -547,7 +532,7 @@ func TestSyncConfigValidation(t *testing.T) {
 
 // TestVersionVectorEmpty 测试空版本向量操作
 func TestVersionVectorEmpty(t *testing.T) {
-	vv := make(sync.VersionVector)
+	vv := sync.NewVersionVector()
 
 	// 空向量 Get 应返回 0
 	if vv.Get("nonexistent") != 0 {
@@ -555,37 +540,31 @@ func TestVersionVectorEmpty(t *testing.T) {
 	}
 
 	// 空向量 Diff
-	other := make(sync.VersionVector)
-	other["a"] = 1
-	diff := vv.Diff(other)
+	other := sync.NewVersionVector()
+	other.Set("a", 1)
+	diff := vv.Diff(other.Clone())
 	if len(diff) != 1 || diff[0] != "a" {
 		t.Errorf("Diff 应返回缺失的条目: got %v", diff)
 	}
 
-	// 空向量 Merge
-	merged := vv.Merge(other)
-	if merged.Get("a") != 1 {
-		t.Errorf("Merge 应包含 other 的条目: got %d", merged.Get("a"))
+	// 空向量 Merge（in-place）
+	vv.Merge(other.Clone())
+	if vv.Get("a") != 1 {
+		t.Errorf("Merge 应包含 other 的条目: got %d", vv.Get("a"))
 	}
 }
 
 // TestVersionVectorConcurrentIncrement 测试并发递增
-// 注意：VersionVector 本身不是线程安全的，需要外部同步
-// SyncEngine 通过 mutex 保护 versionVec 的并发访问
+// VersionVector 现在是线程安全的（自带 sync.RWMutex），无需外部同步。
 func TestVersionVectorConcurrentIncrement(t *testing.T) {
-	// VersionVector 是简单的 map，不是线程安全的
-	// 这个测试验证使用 mutex 保护时的正确行为
-	vv := make(sync.VersionVector)
-	var mu stdsync.Mutex
+	vv := sync.NewVersionVector()
 	var wg stdsync.WaitGroup
 
 	for i := 0; i < 100; i++ {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			mu.Lock()
 			vv.Increment("entry-1")
-			mu.Unlock()
 		}()
 	}
 	wg.Wait()
@@ -597,21 +576,22 @@ func TestVersionVectorConcurrentIncrement(t *testing.T) {
 
 // TestVersionVectorConcurrentMerge 测试并发合并
 func TestVersionVectorConcurrentMerge(t *testing.T) {
-	vv := make(sync.VersionVector)
-	vv["base"] = 1
+	vv := sync.NewVersionVector()
+	vv.Set("base", 1)
 
 	var wg stdsync.WaitGroup
 	for i := 0; i < 10; i++ {
 		wg.Add(1)
 		go func(idx int) {
 			defer wg.Done()
-			other := make(sync.VersionVector)
-			other[fmt.Sprintf("key-%d", idx)] = int64(idx + 1)
-			_ = vv.Merge(other)
+			vv.Merge(map[string]int64{fmt.Sprintf("key-%d", idx): int64(idx + 1)})
 		}(i)
 	}
 	wg.Wait()
-	// 注意：由于 Merge 返回新向量，并发调用不会修改原始 vv
+	// Merge 现在是 in-place 修改，并发安全
+	if vv.Get("base") != 1 {
+		t.Errorf("base 应保持 1: got %d", vv.Get("base"))
+	}
 }
 
 // ==================== PushService 测试 ====================
@@ -778,8 +758,8 @@ func TestSyncEngineMergeEntries(t *testing.T) {
 
 	// 验证版本向量已更新
 	vv := engine.GetVersionVector()
-	if vv.Get("entry-1") != 1 {
-		t.Errorf("版本向量应更新为 1: got %d", vv.Get("entry-1"))
+	if vv["entry-1"] != 1 {
+		t.Errorf("版本向量应更新为 1: got %d", vv["entry-1"])
 	}
 }
 
@@ -1886,8 +1866,8 @@ func TestSyncLoop(t *testing.T) {
 
 // TestVersionVectorLargeValues 测试大值
 func TestVersionVectorLargeValues(t *testing.T) {
-	vv := make(sync.VersionVector)
-	vv["entry-1"] = math.MaxInt64
+	vv := sync.NewVersionVector()
+	vv.Set("entry-1", math.MaxInt64)
 
 	if vv.Get("entry-1") != math.MaxInt64 {
 		t.Errorf("应支持大值: got %d", vv.Get("entry-1"))
@@ -1895,30 +1875,29 @@ func TestVersionVectorLargeValues(t *testing.T) {
 
 	// 递增大值会溢出，但这在正常使用中不会发生
 	// 我们测试大值的合并操作
-	other := make(sync.VersionVector)
-	other["entry-1"] = math.MaxInt64
-	other["entry-2"] = 100
+	other := map[string]int64{"entry-1": math.MaxInt64, "entry-2": 100}
 
-	merged := vv.Merge(other)
-	if merged.Get("entry-1") != math.MaxInt64 {
-		t.Errorf("合并后应保持大值: got %d", merged.Get("entry-1"))
+	vv.Merge(other)
+	if vv.Get("entry-1") != math.MaxInt64 {
+		t.Errorf("合并后应保持大值: got %d", vv.Get("entry-1"))
 	}
-	if merged.Get("entry-2") != 100 {
-		t.Errorf("应包含新条目: got %d", merged.Get("entry-2"))
+	if vv.Get("entry-2") != 100 {
+		t.Errorf("应包含新条目: got %d", vv.Get("entry-2"))
 	}
 }
 
 // TestVersionVectorManyEntries 测试大量条目
 func TestVersionVectorManyEntries(t *testing.T) {
-	vv := make(sync.VersionVector)
+	vv := sync.NewVersionVector()
 
 	// 添加大量条目
 	for i := 0; i < 10000; i++ {
-		vv[fmt.Sprintf("entry-%d", i)] = int64(i)
+		vv.Set(fmt.Sprintf("entry-%d", i), int64(i))
 	}
 
-	if len(vv) != 10000 {
-		t.Errorf("应有 10000 个条目: got %d", len(vv))
+	clone := vv.Clone()
+	if len(clone) != 10000 {
+		t.Errorf("应有 10000 个条目: got %d", len(clone))
 	}
 
 	// 验证最后一个
@@ -2247,14 +2226,14 @@ func TestMergeEntries_MultipleEntries(t *testing.T) {
 
 	// 验证版本向量
 	vv := engine.GetVersionVector()
-	if vv.Get("entry-1") != 1 {
-		t.Errorf("entry-1 版本应为 1: got %d", vv.Get("entry-1"))
+	if vv["entry-1"] != 1 {
+		t.Errorf("entry-1 版本应为 1: got %d", vv["entry-1"])
 	}
-	if vv.Get("entry-2") != 1 {
-		t.Errorf("entry-2 版本应为 1: got %d", vv.Get("entry-2"))
+	if vv["entry-2"] != 1 {
+		t.Errorf("entry-2 版本应为 1: got %d", vv["entry-2"])
 	}
-	if vv.Get("entry-3") != 1 {
-		t.Errorf("entry-3 版本应为 1: got %d", vv.Get("entry-3"))
+	if vv["entry-3"] != 1 {
+		t.Errorf("entry-3 版本应为 1: got %d", vv["entry-3"])
 	}
 }
 
@@ -2291,8 +2270,8 @@ func TestMergeEntries_OlderVersion(t *testing.T) {
 
 	// 验证版本向量未更新
 	vv := engine.GetVersionVector()
-	if vv.Get("entry-1") != 2 {
-		t.Errorf("entry-1 版本应保持 2: got %d", vv.Get("entry-1"))
+	if vv["entry-1"] != 2 {
+		t.Errorf("entry-1 版本应保持 2: got %d", vv["entry-1"])
 	}
 }
 
@@ -2775,13 +2754,11 @@ func TestHandleMirrorRequest_ServerCategories(t *testing.T) {
 
 // TestVersionVectorDiff_SameVectors 测试相同向量的差异
 func TestVersionVectorDiff_SameVectors(t *testing.T) {
-	vv1 := make(sync.VersionVector)
-	vv1["entry-1"] = 5
-	vv1["entry-2"] = 3
+	vv1 := sync.NewVersionVector()
+	vv1.Set("entry-1", 5)
+	vv1.Set("entry-2", 3)
 
-	vv2 := make(sync.VersionVector)
-	vv2["entry-1"] = 5
-	vv2["entry-2"] = 3
+	vv2 := map[string]int64{"entry-1": 5, "entry-2": 3}
 
 	diff := vv1.Diff(vv2)
 	if len(diff) != 0 {
@@ -2791,27 +2768,24 @@ func TestVersionVectorDiff_SameVectors(t *testing.T) {
 
 // TestVersionVectorMerge_EmptyOther 测试合并空向量
 func TestVersionVectorMerge_EmptyOther(t *testing.T) {
-	vv := make(sync.VersionVector)
-	vv["entry-1"] = 5
+	vv := sync.NewVersionVector()
+	vv.Set("entry-1", 5)
 
-	other := make(sync.VersionVector)
-
-	merged := vv.Merge(other)
-	if merged.Get("entry-1") != 5 {
-		t.Errorf("合并空向量应保持原值: got %d", merged.Get("entry-1"))
+	vv.Merge(map[string]int64{})
+	if vv.Get("entry-1") != 5 {
+		t.Errorf("合并空向量应保持原值: got %d", vv.Get("entry-1"))
 	}
 }
 
 // TestVersionVectorMerge_EmptySelf 测试空向量合并
 func TestVersionVectorMerge_EmptySelf(t *testing.T) {
-	vv := make(sync.VersionVector)
+	vv := sync.NewVersionVector()
 
-	other := make(sync.VersionVector)
-	other["entry-1"] = 5
+	other := map[string]int64{"entry-1": 5}
 
-	merged := vv.Merge(other)
-	if merged.Get("entry-1") != 5 {
-		t.Errorf("空向量合并应获得其他向量的值: got %d", merged.Get("entry-1"))
+	vv.Merge(other)
+	if vv.Get("entry-1") != 5 {
+		t.Errorf("空向量合并应获得其他向量的值: got %d", vv.Get("entry-1"))
 	}
 }
 
@@ -3842,5 +3816,41 @@ func TestProcessSyncResponse_Complete(t *testing.T) {
 	updated, _ := store.Entry.Get(context.Background(), "local-entry")
 	if updated.Title != "Updated Local" {
 		t.Errorf("更新条目标题错误: got %s", updated.Title)
+	}
+}
+
+// ==================== 线程安全 VersionVector 测试 (R2-A1) ====================
+
+// TestVersionVector_ConcurrentSafe 验证 VersionVector 在多 goroutine 并发下不触发
+// fatal "concurrent map read/write" 且 -race 无报告。重构前 NewVersionVector 不存在 → 编译失败。
+func TestVersionVector_ConcurrentSafe(t *testing.T) {
+	vv := sync.NewVersionVector()
+	var wg stdsync.WaitGroup
+	for i := 0; i < 200; i++ {
+		wg.Add(1)
+		go func(i int) {
+			defer wg.Done()
+			id := fmt.Sprintf("e%d", i%20)
+			vv.Set(id, int64(i))
+			_ = vv.Get(id)
+			_ = vv.Increment(id)
+			_ = vv.ToProto()
+			_ = vv.Clone()
+			vv.Merge(map[string]int64{id: int64(i + 1)})
+		}(i)
+	}
+	// 并发 delete + range
+	for i := 0; i < 50; i++ {
+		wg.Add(1)
+		go func(i int) {
+			defer wg.Done()
+			vv.Delete(fmt.Sprintf("e%d", i%20))
+			vv.Range(func(_ string, _ int64) {})
+		}(i)
+	}
+	wg.Wait()
+	// 最终值应是最后写入的某个版本（非零即可，不要求精确）
+	if vv.Get("e0") == 0 && vv.Get("e1") == 0 {
+		t.Fatal("versionVector lost all writes")
 	}
 }
