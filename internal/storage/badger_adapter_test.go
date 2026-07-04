@@ -74,6 +74,25 @@ func TestBadgerEntryStore_Update(t *testing.T) {
 	if updated.Title != "Updated Title" {
 		t.Errorf("Expected Title 'Updated Title', got '%s'", updated.Title)
 	}
+
+	// Badger 路径：调用方自增 +1，Update 落库恰为该值（不再 +1）
+	entry.Version = 1
+	_, err = entryStore.Update(context.Background(), entry)
+	if err != nil {
+		t.Fatalf("Update (v1) failed: %v", err)
+	}
+	entry.Version++ // 模拟 handler 自增
+	_, err = entryStore.Update(context.Background(), entry)
+	if err != nil {
+		t.Fatalf("Update (v2) failed: %v", err)
+	}
+	got, err := entryStore.Get(context.Background(), entry.ID)
+	if err != nil {
+		t.Fatalf("Get after versioned update failed: %v", err)
+	}
+	if got.Version != 2 {
+		t.Fatalf("Badger update Version: got=%d want=2 (no double bump)", got.Version)
+	}
 }
 
 func TestBadgerEntryStore_Delete(t *testing.T) {

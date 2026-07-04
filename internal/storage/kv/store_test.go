@@ -281,9 +281,17 @@ func TestEntryStoreUpdate(t *testing.T) {
 		t.Errorf("Title 未更新: got %q", got.Title)
 	}
 
-	// Version 应该增加
-	if got.Version != 2 {
-		t.Errorf("Version 应为 2, got %d", got.Version)
+	// B1：kv 层不再副作用自增 Version；调用方负责。UpdateEntry 后 Version 保持入参值。
+	entry.Version = 5 // 显式设一个值
+	if err := entryStore.UpdateEntry(entry); err != nil {
+		t.Fatalf("UpdateEntry(5) 失败: %v", err)
+	}
+	got, err = entryStore.GetEntry(entry.ID)
+	if err != nil {
+		t.Fatalf("GetEntry 失败: %v", err)
+	}
+	if got.Version != 5 {
+		t.Fatalf("UpdateEntry must not bump Version; got=%d want=5", got.Version)
 	}
 }
 

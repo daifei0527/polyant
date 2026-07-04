@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"sort"
 	"strconv"
-	"time"
 
 	"github.com/daifei0527/polyant/internal/storage/model"
 )
@@ -149,9 +148,8 @@ func (es *EntryStore) UpdateEntry(entry *model.KnowledgeEntry) error {
 		return fmt.Errorf("failed to check entry existence: %w", err)
 	}
 
-	// 更新时间戳和版本号
-	entry.UpdatedAt = time.Now().Unix()
-	entry.Version++
+	// B1：Version/UpdatedAt 由调用方负责（handler 自增、sync 设 max）。
+	// 存储层只忠实写入，并重算 ContentHash（幂等，保证哈希契约）。
 	entry.ContentHash = entry.ComputeContentHash()
 
 	data, err := entry.ToJSON()
