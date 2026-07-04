@@ -56,6 +56,7 @@ type AuthMiddleware struct {
 	userStore    storage.UserStore
 	seenRequests sync.Map      // map[string]time.Time - tracks request signatures for replay protection
 	stopCleanup  chan struct{} // signals cleanup goroutine to stop
+	userLimit    *TokenBucketLimiter // R1-D2: 认证后按用户限流（全局限流在 auth 前运行，无法按用户区分）
 }
 
 // NewAuthMiddleware 创建认证中间件实例
@@ -63,6 +64,7 @@ func NewAuthMiddleware(userStore storage.UserStore) *AuthMiddleware {
 	m := &AuthMiddleware{
 		userStore:   userStore,
 		stopCleanup: make(chan struct{}),
+		userLimit:   NewTokenBucketLimiter(1, 10), // R1-D2: ~60 请求/分钟，突发 10
 	}
 	go m.cleanupSeenRequests()
 	return m
@@ -192,6 +194,12 @@ func (m *AuthMiddleware) Middleware(next http.Handler) http.Handler {
 		// 检查只读模式用户
 		if user.IsReadOnly() && isWriteOperation(r.Method, r.URL.Path) {
 			writeAuthError(w, awerrors.New(403, awerrors.CategoryAPI, "用户处于只读模式", http.StatusForbidden))
+			return
+		}
+
+		// R1-D2: 认证后按用户限流（全局限流在 auth 之前运行，无法按用户区分）
+		if len(user.PublicKey) >= 16 && !m.userLimit.Allow(user.PublicKey[:16]) {
+			writeAuthError(w, awerrors.New(429, awerrors.CategoryAPI, "per-user rate limit exceeded", http.StatusTooManyRequests))
 			return
 		}
 
