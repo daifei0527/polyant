@@ -6,6 +6,8 @@ import (
 	"testing"
 
 	"github.com/daifei0527/polyant/internal/storage/model"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestBleveEngine_IndexAndSearch(t *testing.T) {
@@ -410,4 +412,43 @@ func TestBleveEngine_SearchI18n(t *testing.T) {
 	if result.TotalCount == 0 {
 		t.Error("Search should hit the entry via localized content indexed in all_text")
 	}
+}
+
+// TestBleveEngine_Rebuild_FixesStaleIndex 验证索引陈旧/损坏时 Rebuild 后内容与给定 entries 一致。
+func TestBleveEngine_Rebuild_FixesStaleIndex(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "test.bleve")
+
+	// 第一次：索引一个会随后被"丢弃"的陈旧条目 + 一个 published
+	e1 := &model.KnowledgeEntry{ID: "e1", Title: "alpha", Content: "alpha", Category: "c", Status: model.EntryStatusPublished, CreatedBy: "x"}
+	e1.ContentHash = e1.ComputeContentHash()
+	stale := &model.KnowledgeEntry{ID: "stale", Title: "beta gone", Content: "beta", Category: "c", Status: model.EntryStatusPublished, CreatedBy: "x"}
+	stale.ContentHash = stale.ComputeContentHash()
+
+	eng1, err := NewBleveEngine(path)
+	require.NoError(t, err)
+	require.NoError(t, eng1.IndexEntry(e1))
+	require.NoError(t, eng1.IndexEntry(stale))
+	require.NoError(t, eng1.Close())
+
+	// 第二次：reopen，调 Rebuild 只喂 e1（模拟 stale 已从 store 删除）
+	eng2, err := NewBleveEngine(path)
+	require.NoError(t, err)
+	defer eng2.Close()
+	require.NoError(t, eng2.Rebuild([]*model.KnowledgeEntry{e1}))
+
+	// 陈旧条目搜不到
+	res, err := eng2.Search(context.Background(), SearchQuery{Keyword: "beta"})
+	require.NoError(t, err)
+	assert.Equal(t, 0, res.TotalCount, "stale entry should be gone after rebuild")
+
+	// e1 仍可搜
+	res2, err := eng2.Search(context.Background(), SearchQuery{Keyword: "alpha"})
+	require.NoError(t, err)
+	assert.Equal(t, 1, res2.TotalCount, "e1 should be searchable after rebuild")
+
+	// 自检：DocCount == entries 数
+	cnt, err := eng2.IndexCount()
+	require.NoError(t, err)
+	assert.Equal(t, uint64(1), cnt)
 }

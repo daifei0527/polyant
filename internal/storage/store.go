@@ -5,6 +5,7 @@ package storage
 import (
 	"context"
 	"fmt"
+	"log"
 
 	"github.com/daifei0527/polyant/internal/storage/index"
 	"github.com/daifei0527/polyant/internal/storage/kv"
@@ -217,6 +218,14 @@ func NewPersistentStore(cfg *StoreConfig) (*Store, error) {
 	titleIdx.Build(titleEntries)
 	// 重建 published 条目计数器（Create/Update/Delete 增量维护，Count 经它 O(1) 取值）
 	_ = kv.SetEntryPublishedCount(kvStore, int64(len(entries)))
+
+	// C1：启动全量 rebuild bleve 索引，保证索引↔store 一致（自愈历史漂移/损坏）。
+	// entries 已是 published 全量切片，rebuild 后索引天然只含 published。
+	if be, ok := searchEngine.(*index.BleveEngine); ok {
+		if err := be.Rebuild(entries); err != nil {
+			log.Printf("[Store] bleve rebuild failed: %v", err)
+		}
+	}
 
 	return &Store{
 		Entry:    entryStore,

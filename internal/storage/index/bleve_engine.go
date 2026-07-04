@@ -12,6 +12,7 @@ import (
 	"github.com/blevesearch/bleve/v2/analysis/analyzer/keyword"
 	"github.com/blevesearch/bleve/v2/index/upsidedown"
 	"github.com/blevesearch/bleve/v2/index/upsidedown/store/boltdb"
+	"github.com/blevesearch/bleve/v2/mapping"
 	"github.com/daifei0527/polyant/internal/storage/model"
 )
 
@@ -23,8 +24,9 @@ const (
 // BleveEngine 是基于 Bleve 的全文搜索引擎实现
 // 支持持久化索引和中文分词
 type BleveEngine struct {
-	index bleve.Index
-	jieba *JiebaWrapper
+	index     bleve.Index
+	jieba     *JiebaWrapper
+	indexPath string // 索引磁盘路径，供 Rebuild 删目录重建使用
 }
 
 // entryDocument 是用于索引的文档结构
@@ -47,7 +49,23 @@ func NewBleveEngine(indexPath string) (*BleveEngine, error) {
 	// 创建中文分词器
 	jieba := NewJiebaWrapper()
 
-	// 创建索引映射
+	indexPath = filepath.Clean(indexPath)
+
+	idx, err := openOrCreate(indexPath, buildMapping())
+	if err != nil {
+		return nil, err
+	}
+
+	return &BleveEngine{
+		index:     idx,
+		jieba:     jieba,
+		indexPath: indexPath,
+	}, nil
+}
+
+// buildMapping 构造 bleve 索引映射（字段分析器、权重等）。
+// 抽出为独立 helper，供 NewBleveEngine 与 Rebuild 复用，保证两次创建的 mapping 完全一致。
+func buildMapping() mapping.IndexMapping {
 	mapping := bleve.NewIndexMapping()
 	mapping.TypeField = "type"
 	mapping.DefaultAnalyzer = "standard"
@@ -93,38 +111,68 @@ func NewBleveEngine(indexPath string) (*BleveEngine, error) {
 	entryMapping.AddFieldMappingsAt("updated_at", bleve.NewNumericFieldMapping())
 
 	mapping.AddDocumentMapping(indexMappingName, entryMapping)
+	return mapping
+}
 
-	// 创建或打开索引
-	var index bleve.Index
-	var err error
-
+// openOrCreate 打开已存在的索引，或用 mapping 新建。
+func openOrCreate(indexPath string, idxMapping mapping.IndexMapping) (bleve.Index, error) {
 	indexPath = filepath.Clean(indexPath)
 
 	// 检查索引是否已存在
-	indexExists := bleveIndexExists(indexPath)
-
-	if indexExists {
-		// 打开已存在的索引
-		index, err = bleve.OpenUsing(indexPath, nil)
-	} else {
-		// 确保目录存在
-		if err := os.MkdirAll(filepath.Dir(indexPath), 0755); err != nil {
-			// gojieba 有 finalizer，会自动释放
-			return nil, fmt.Errorf("failed to create index directory: %w", err)
+	if bleveIndexExists(indexPath) {
+		idx, err := bleve.OpenUsing(indexPath, nil)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create/open bleve index: %w", err)
 		}
-		// 创建新索引，使用 upsidedown 索引类型和 boltdb 存储
-		index, err = bleve.NewUsing(indexPath, mapping, upsidedown.Name, boltdb.Name, nil)
+		return idx, nil
 	}
 
+	// 确保目录存在
+	if err := os.MkdirAll(filepath.Dir(indexPath), 0755); err != nil {
+		// gojieba 有 finalizer，会自动释放
+		return nil, fmt.Errorf("failed to create index directory: %w", err)
+	}
+	// 创建新索引，使用 upsidedown 索引类型和 boltdb 存储
+	idx, err := bleve.NewUsing(indexPath, idxMapping, upsidedown.Name, boltdb.Name, nil)
 	if err != nil {
 		// 注意: gojieba 有 finalizer，会在 GC 时自动释放，不需要手动 Free
 		return nil, fmt.Errorf("failed to create/open bleve index: %w", err)
 	}
+	return idx, nil
+}
 
-	return &BleveEngine{
-		index: index,
-		jieba: jieba,
-	}, nil
+// Rebuild 清空索引并按给定 entries 全量重建（bleve 无 ClearIndex，故 Close+删目录+重建）。
+// 用于启动时强制索引↔store 一致，自愈历史漂移或损坏。
+func (e *BleveEngine) Rebuild(entries []*model.KnowledgeEntry) error {
+	if e.index == nil {
+		return fmt.Errorf("bleve engine not initialized")
+	}
+	if e.indexPath == "" {
+		return fmt.Errorf("bleve engine missing indexPath, cannot rebuild")
+	}
+
+	// 关闭并删除旧索引目录，重建空索引
+	if err := e.index.Close(); err != nil {
+		return fmt.Errorf("rebuild: close old index: %w", err)
+	}
+	if err := os.RemoveAll(e.indexPath); err != nil {
+		return fmt.Errorf("rebuild: remove old index dir: %w", err)
+	}
+	idx, err := openOrCreate(e.indexPath, buildMapping())
+	if err != nil {
+		// 标记 index 已关闭，避免后续 Close/操作二次报错；返回错误
+		e.index = nil
+		return fmt.Errorf("rebuild: reopen index: %w", err)
+	}
+	e.index = idx
+
+	// 全量重灌
+	for _, entry := range entries {
+		if err := e.IndexEntry(entry); err != nil {
+			return fmt.Errorf("rebuild index entry %s: %w", entry.ID, err)
+		}
+	}
+	return nil
 }
 
 // bleveIndexExists 检查索引是否存在
