@@ -148,6 +148,9 @@ func (p *Protocol) processMessage(ctx context.Context, remotePeer peer.ID, proto
 						Header:  NewMessageHeader(MessageTypeMirrorData),
 						Payload: data,
 					})
+					// NewStream 接受 ctx，当 ctx 取消时返回错误，不需要额外超时控制；
+					// WriteMessage 依赖 stream 的传输层超时，属 best-effort 写入。
+					// 两者均依赖 libp2p ctx 中断语义，goroutine 通过 ctx.Done() 退出。
 					s, err := p.host.NewStream(ctx, mirrorDialTarget(remotePeer, r), AWSPProtocolID)
 					if err != nil {
 						log.Printf("[Protocol] mirror NewStream failed: %v", err)

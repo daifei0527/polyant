@@ -55,6 +55,7 @@ type UserApp struct {
 	dhtNode       *dht.DHTNode
 	syncEngine    *networksync.SyncEngine
 	pushService   *networksync.PushService
+	remoteQuery   *networksync.RemoteQueryService
 	syncQueue     *queuesync.SyncQueue
 	httpServer    *http.Server
 	apiRouter     *router.Router
@@ -364,8 +365,9 @@ func (app *UserApp) Start() error {
 	app.logger.Info("AWSP protocol layer initialized")
 
 	// 创建远程查询服务
-	remoteQueryService := networksync.NewRemoteQueryService(app.p2pHost, proto, app.store, nil)
-	remoteQueryService.SetProtocol(proto)
+	app.remoteQuery = networksync.NewRemoteQueryService(app.p2pHost, proto, app.store, nil)
+	app.remoteQuery.SetProtocol(proto)
+	app.remoteQuery.Start(ctx)
 	app.logger.Info("Remote query service initialized")
 
 	// 创建推送服务
@@ -414,7 +416,7 @@ func (app *UserApp) Start() error {
 		CategoryStore:   app.store.Category,
 		SearchEngine:    app.store.Search,
 		Backlink:        app.store.Backlink,
-		RemoteQuerier:   remoteQueryService,
+		RemoteQuerier:   app.remoteQuery,
 		EntryPusher:     app.pushService,
 		SyncTrigger:     app.syncEngine,
 		KVStore:         app.store.KVStore(),
@@ -504,6 +506,11 @@ func (app *UserApp) Stop() error {
 	}
 	if app.p2pHost != nil {
 		app.p2pHost.Close()
+	}
+
+	// 停止远程查询服务（在 store Close 之前，避免关库后写缓存）
+	if app.remoteQuery != nil {
+		app.remoteQuery.Close()
 	}
 
 	// 清理资源

@@ -702,6 +702,22 @@ func TestRemoteQueryServiceCreation(t *testing.T) {
 	}
 }
 
+// TestRemoteQueryServiceStartClose 测试 Start()/Close() 生命周期：
+// 验证 cmd 层接入后服务级 ctx 就绪，Close 安全完成。
+func TestRemoteQueryServiceStartClose(t *testing.T) {
+	svc := sync.NewRemoteQueryService(nil, nil, nil, nil)
+	require.NotNil(t, svc)
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	// Start 设置服务级 ctx（内部实现 s.ctx = 派生 ctx）
+	svc.Start(ctx)
+	// Close 取消服务级 ctx 并等待所有异步 goroutine（wg.Wait）
+	svc.Close()
+	// 二次 Close 不应 panic
+	svc.Close()
+}
+
 // TestRemoteQueryDefaultConfig 测试默认配置
 func TestRemoteQueryDefaultConfig(t *testing.T) {
 	cfg := sync.DefaultRemoteQueryConfig()
