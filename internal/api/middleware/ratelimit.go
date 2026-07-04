@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"net"
 	"net/http"
 	"strings"
 	"sync"
@@ -157,6 +158,9 @@ type RateLimitConfig struct {
 	WriteRate int
 	// WriteBurst 写入接口突发容量
 	WriteBurst int
+	// TrustedProxies R1-D1: 仅当 RemoteAddr 属于这些 IP/CIDR 时才采信 X-Forwarded-For。
+	// 为空表示不信任任何反代，限流键一律用连接级 RemoteAddr（最安全）。
+	TrustedProxies []string
 }
 
 // DefaultRateLimitConfig 默认速率限制配置
@@ -223,7 +227,8 @@ func (m *RateLimitMiddleware) Middleware(next http.Handler) http.Handler {
 	})
 }
 
-// getLimitKey 获取限制键
+// getLimitKey 获取限制键。R1-D1：仅当 RemoteAddr 属于受信代理时才采信 XFF 首跳，
+// 否则一律用连接级 RemoteAddr 的 host（去端口），防止 XFF 伪造绕过限流。
 func (m *RateLimitMiddleware) getLimitKey(r *http.Request) string {
 	// 优先使用用户公钥
 	user := GetUserFromContextFromRateLimit(r.Context())
@@ -231,13 +236,39 @@ func (m *RateLimitMiddleware) getLimitKey(r *http.Request) string {
 		return fmt.Sprintf("user:%s", user.PublicKey[:16])
 	}
 
-	// 其次使用 X-Forwarded-For
-	if xff := r.Header.Get("X-Forwarded-For"); xff != "" {
-		return fmt.Sprintf("ip:%s", xff)
+	host, _, err := net.SplitHostPort(r.RemoteAddr)
+	if err != nil {
+		host = r.RemoteAddr
 	}
 
-	// 最后使用 RemoteAddr
-	return fmt.Sprintf("ip:%s", r.RemoteAddr)
+	// 仅受信代理来源的 XFF 才采信
+	if m.isTrustedProxy(host) {
+		if xff := r.Header.Get("X-Forwarded-For"); xff != "" {
+			first := strings.TrimSpace(strings.Split(xff, ",")[0])
+			if first != "" {
+				return "ip:" + first
+			}
+		}
+	}
+
+	return "ip:" + host
+}
+
+// isTrustedProxy 判断 host 是否属于受信代理（精确 IP 或 CIDR 匹配）。
+func (m *RateLimitMiddleware) isTrustedProxy(host string) bool {
+	if host == "" || len(m.config.TrustedProxies) == 0 {
+		return false
+	}
+	ip := net.ParseIP(host)
+	for _, tp := range m.config.TrustedProxies {
+		if tp == host {
+			return true
+		}
+		if _, cidr, err := net.ParseCIDR(tp); err == nil && ip != nil && cidr.Contains(ip) {
+			return true
+		}
+	}
+	return false
 }
 
 // selectLimiter 根据路径选择限制器

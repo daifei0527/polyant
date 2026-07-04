@@ -118,6 +118,7 @@ type APIConfig struct {
 	CORSAllowOrigins     []string `json:"cors_allow_origins"`     // 允许的源，空则等价于 ["*"]
 	CORSAllowCredentials bool     `json:"cors_allow_credentials"` // 是否允许携带凭证（与 "*" 互斥）
 	BodyLimitBytes       int64    `json:"body_limit_bytes"`       // R1-C2: 请求体最大字节数，<=0 不限制（默认 1MB）
+	TrustedProxies       []string `json:"trusted_proxies"`        // R1-D1: 受信反代 IP/CIDR，仅其 XFF 被限流采信；空=不信任任何反代
 }
 
 // StorageConfig 存储配置
@@ -376,6 +377,9 @@ func LoadWithEnv(config *Config) *Config {
 	}
 	if v := os.Getenv("POLYANT_NETWORK_REQUIRE_ENTRY_SIGNATURES"); v != "" {
 		config.Network.RequireEntrySignatures = parseBool(v)
+	}
+	if v := os.Getenv("POLYANT_API_TRUSTED_PROXIES"); v != "" {
+		config.API.TrustedProxies = strings.Split(v, ",")
 	}
 
 	// 同步配置环境变量

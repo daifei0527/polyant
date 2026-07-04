@@ -248,7 +248,7 @@ func TestSelectLimiter(t *testing.T) {
 
 // ==================== getLimitKey 测试 ====================
 
-// TestGetLimitKey_IP 测试使用 IP 作为键
+// TestGetLimitKey_IP 测试使用 RemoteAddr 的 host（去端口）作为键
 func TestGetLimitKey_IP(t *testing.T) {
 	m := NewRateLimitMiddleware(DefaultRateLimitConfig())
 
@@ -257,21 +257,33 @@ func TestGetLimitKey_IP(t *testing.T) {
 
 	key := m.getLimitKey(req)
 
-	if key == "" {
-		t.Error("键不应为空")
+	if key != "ip:192.0.2.1" {
+		t.Errorf("expected ip:192.0.2.1 (host without port), got %s", key)
 	}
 }
 
-// TestGetLimitKey_XForwardedFor 测试使用 X-Forwarded-For
-func TestGetLimitKey_XForwardedFor(t *testing.T) {
-	m := NewRateLimitMiddleware(DefaultRateLimitConfig())
+// TestGetLimitKey_UntrustedXFFIgnored: 不受信来源带任意 XFF → 用 RemoteAddr，忽略 XFF（R1-D1）。
+func TestGetLimitKey_UntrustedXFFIgnored(t *testing.T) {
+	m := NewRateLimitMiddleware(&RateLimitConfig{Enabled: true, TrustedProxies: []string{"10.0.0.1"}})
 
 	req := httptest.NewRequest(http.MethodGet, "/api/v1/test", nil)
-	req.Header.Set("X-Forwarded-For", "203.0.113.1")
+	req.RemoteAddr = "198.51.100.7:5000" // 不在受信列表
+	req.Header.Set("X-Forwarded-For", "203.0.113.9")
 
-	key := m.getLimitKey(req)
+	if key := m.getLimitKey(req); key != "ip:198.51.100.7" {
+		t.Errorf("untrusted source must use RemoteAddr, got %s", key)
+	}
+}
 
-	if key == "" {
-		t.Error("键不应为空")
+// TestGetLimitKey_TrustedProxyXFF: 受信代理来源 → 采信 XFF 首跳（R1-D1）。
+func TestGetLimitKey_TrustedProxyXFF(t *testing.T) {
+	m := NewRateLimitMiddleware(&RateLimitConfig{Enabled: true, TrustedProxies: []string{"10.0.0.0/24"}})
+
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/test", nil)
+	req.RemoteAddr = "10.0.0.5:5000" // 在受信 CIDR 内
+	req.Header.Set("X-Forwarded-For", "203.0.113.9, 10.0.0.5")
+
+	if key := m.getLimitKey(req); key != "ip:203.0.113.9" {
+		t.Errorf("trusted proxy must use XFF first hop, got %s", key)
 	}
 }
