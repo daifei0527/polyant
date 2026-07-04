@@ -34,13 +34,13 @@ func TestHandlePushEntry_ValidSignatureAccepted(t *testing.T) {
 	require.NoError(t, err)
 
 	entry := &model.KnowledgeEntry{
-		ID:       "e1",
-		Title:    "T",
-		Content:  "C",
-		Category: "cat",
+		ID:        "e1",
+		Title:     "T",
+		Content:   "C",
+		Category:  "cat",
 		CreatedBy: pubB64,
-		Version:  1,
-		Status:   model.EntryStatusPublished,
+		Version:   1,
+		Status:    model.EntryStatusPublished,
 		Signature: sig,
 	}
 	entryJSON, _ := entry.ToJSON()

@@ -28,13 +28,13 @@ type NodeConfig struct {
 
 // NetworkConfig 网络配置
 type NetworkConfig struct {
-	ListenPort              int      `json:"listen_port"`               // P2P 监听端口
-	APIPort                 int      `json:"api_port"`                  // API 服务端口
-	SeedNodes               []string `json:"seed_nodes"`                // 种子节点列表
-	DHTEnabled              bool     `json:"dht_enabled"`               // 是否启用 DHT
-	MDNSEnabled             bool     `json:"mdns_enabled"`              // 是否启用 mDNS 发现
-	ApiKey                  string   `json:"api_key"`                   // API 访问密钥，为空则不验证
-	RequireEntrySignatures  bool     `json:"require_entry_signatures"`  // R1-B4: 拒绝未签名/错签名的 P2P 推送（默认 false 软上线）
+	ListenPort             int      `json:"listen_port"`              // P2P 监听端口
+	APIPort                int      `json:"api_port"`                 // API 服务端口
+	SeedNodes              []string `json:"seed_nodes"`               // 种子节点列表
+	DHTEnabled             bool     `json:"dht_enabled"`              // 是否启用 DHT
+	MDNSEnabled            bool     `json:"mdns_enabled"`             // 是否启用 mDNS 发现
+	ApiKey                 string   `json:"api_key"`                  // API 访问密钥，为空则不验证
+	RequireEntrySignatures bool     `json:"require_entry_signatures"` // R1-B4: 拒绝未签名/错签名的 P2P 推送（默认 false 软上线）
 }
 
 // SyncConfig 同步配置

@@ -54,8 +54,8 @@ const (
 // 验证通过后将用户信息注入到请求上下文中
 type AuthMiddleware struct {
 	userStore    storage.UserStore
-	seenRequests sync.Map      // map[string]time.Time - tracks request signatures for replay protection
-	stopCleanup  chan struct{} // signals cleanup goroutine to stop
+	seenRequests sync.Map            // map[string]time.Time - tracks request signatures for replay protection
+	stopCleanup  chan struct{}       // signals cleanup goroutine to stop
 	userLimit    *TokenBucketLimiter // R1-D2: 认证后按用户限流（全局限流在 auth 前运行，无法按用户区分）
 }
 

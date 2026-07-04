@@ -50,9 +50,9 @@ type Dependencies struct {
 	ApiKey                    string                // API 访问密钥
 	DevReturnVerificationCode bool                  // dev/测试：发送验证码接口是否回传验证码（默认 false）
 	CORSConfig                middleware.CORSConfig // 可选；为零值时使用 DefaultCORSConfig
-	AdminListenAddr           string // admin 本地访问校验用的监听地址（默认 127.0.0.1:18531）
-	BodyLimitBytes            int64  // R1-C2: 请求体大小上限（<=0 不限制）
-	TrustedProxies            []string // R1-D1: 受信反代 IP/CIDR
+	AdminListenAddr           string                // admin 本地访问校验用的监听地址（默认 127.0.0.1:18531）
+	BodyLimitBytes            int64                 // R1-C2: 请求体大小上限（<=0 不限制）
+	TrustedProxies            []string              // R1-D1: 受信反代 IP/CIDR
 }
 
 // Router 包装已注册路由与中间件链，并暴露 Close 以便优雅停机时

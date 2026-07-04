@@ -28,12 +28,12 @@ const (
 )
 
 type SyncConfig struct {
-	AutoSync                bool
-	IntervalSeconds         int
-	MirrorCategories        []string
-	MaxLocalSizeMB          int
-	BatchSize               int
-	RequireEntrySignatures  bool // R1-B4: 为 true 时拒绝未签名的 P2P 推送条目/评分
+	AutoSync               bool
+	IntervalSeconds        int
+	MirrorCategories       []string
+	MaxLocalSizeMB         int
+	BatchSize              int
+	RequireEntrySignatures bool // R1-B4: 为 true 时拒绝未签名的 P2P 推送条目/评分
 }
 
 type VersionVector map[string]int64

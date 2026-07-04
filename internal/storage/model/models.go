@@ -46,24 +46,24 @@ const (
 
 // KnowledgeEntry 表示一条知识条目
 type KnowledgeEntry struct {
-	ID          string                   `json:"id"`
-	Title       string                   `json:"title"`
-	Content     string                   `json:"content"`     // Markdown格式内容
-	JSONData    []map[string]interface{} `json:"jsonData"`    // 结构化JSON数据
-	Category    string                   `json:"category"`    // 所属分类路径
-	Tags        []string                 `json:"tags"`        // 标签列表
-	Version     int64                    `json:"version"`     // 版本号
-	CreatedAt   int64                    `json:"createdAt"`   // 创建时间(Unix时间戳)
-	UpdatedAt   int64                    `json:"updatedAt"`   // 更新时间
-	CreatedBy   string                   `json:"createdBy"`   // 创建者公钥
-	Score       float64                  `json:"score"`       // 加权平均评分
-	ScoreCount  int32                    `json:"scoreCount"`  // 评分数量
-	ContentHash string                   `json:"contentHash"` // 内容哈希
-	Signature   []byte                  `json:"signature,omitempty"`     // 创建者对内容哈希的 Ed25519 签名（同步/推送完整性校验）
-	SignAlgorithm string                `json:"signAlgorithm,omitempty"` // 签名算法，目前 "ed25519"
-	Status      string                   `json:"status"`      // 条目状态
-	License     string                   `json:"license"`     // 许可证
-	SourceRef   string                   `json:"sourceRef"`   // 来源引用
+	ID            string                   `json:"id"`
+	Title         string                   `json:"title"`
+	Content       string                   `json:"content"`                 // Markdown格式内容
+	JSONData      []map[string]interface{} `json:"jsonData"`                // 结构化JSON数据
+	Category      string                   `json:"category"`                // 所属分类路径
+	Tags          []string                 `json:"tags"`                    // 标签列表
+	Version       int64                    `json:"version"`                 // 版本号
+	CreatedAt     int64                    `json:"createdAt"`               // 创建时间(Unix时间戳)
+	UpdatedAt     int64                    `json:"updatedAt"`               // 更新时间
+	CreatedBy     string                   `json:"createdBy"`               // 创建者公钥
+	Score         float64                  `json:"score"`                   // 加权平均评分
+	ScoreCount    int32                    `json:"scoreCount"`              // 评分数量
+	ContentHash   string                   `json:"contentHash"`             // 内容哈希
+	Signature     []byte                   `json:"signature,omitempty"`     // 创建者对内容哈希的 Ed25519 签名（同步/推送完整性校验）
+	SignAlgorithm string                   `json:"signAlgorithm,omitempty"` // 签名算法，目前 "ed25519"
+	Status        string                   `json:"status"`                  // 条目状态
+	License       string                   `json:"license"`                 // 许可证
+	SourceRef     string                   `json:"sourceRef"`               // 来源引用
 	// 多语言支持
 	Lang        string            `json:"lang,omitempty"`        // 条目主语言
 	TitleI18n   map[string]string `json:"titleI18n,omitempty"`   // 多语言标题 {"zh-CN": "标题", "en-US": "Title"}
@@ -149,18 +149,18 @@ func (e *KnowledgeEntry) ProjectToLang(lang string) *KnowledgeEntry {
 
 // User 表示系统中的一个用户
 type User struct {
-	PublicKey       string `json:"publicKey"`       // 用户公钥(唯一标识)
-	AgentName       string `json:"agentName"`       // 代理名称
-	UserLevel       int32  `json:"userLevel"`       // 用户等级
-	Email           string `json:"email"`           // 电子邮箱
-	EmailVerified   bool   `json:"emailVerified"`   // 邮箱是否已验证
-	Phone           string `json:"phone"`           // 手机号码
-	RegisteredAt    int64  `json:"registeredAt"`    // 注册时间
-	LastActive      int64  `json:"lastActive"`      // 最后活跃时间
-	ContributionCnt int32  `json:"contributionCnt"` // 贡献数量
-	RatingCnt       int32  `json:"ratingCnt"`       // 评分数量
-	NodeId          string `json:"nodeId"`          // 所属节点ID
-	Status          string `json:"status"`          // 用户状态
+	PublicKey       string `json:"publicKey"`              // 用户公钥(唯一标识)
+	AgentName       string `json:"agentName"`              // 代理名称
+	UserLevel       int32  `json:"userLevel"`              // 用户等级
+	Email           string `json:"email"`                  // 电子邮箱
+	EmailVerified   bool   `json:"emailVerified"`          // 邮箱是否已验证
+	Phone           string `json:"phone"`                  // 手机号码
+	RegisteredAt    int64  `json:"registeredAt"`           // 注册时间
+	LastActive      int64  `json:"lastActive"`             // 最后活跃时间
+	ContributionCnt int32  `json:"contributionCnt"`        // 贡献数量
+	RatingCnt       int32  `json:"ratingCnt"`              // 评分数量
+	NodeId          string `json:"nodeId"`                 // 所属节点ID
+	Status          string `json:"status"`                 // 用户状态
 	PasswordHash    string `json:"passwordHash,omitempty"` // bcrypt 哈希（Web admin 登录用，零值=未设密码）
 	// 管理员相关字段
 	BanType           BanType `json:"banType,omitempty"`           // 封禁类型
@@ -218,14 +218,14 @@ type UserStats struct {
 
 // Rating 表示对知识条目的评分
 type Rating struct {
-	ID            string  `json:"id"`            // 评分唯一ID
-	EntryId       string  `json:"entryId"`       // 被评分条目ID
-	RaterPubkey   string  `json:"raterPubkey"`   // 评分者公钥
-	Score         float64 `json:"score"`         // 原始评分
-	Weight        float64 `json:"weight"`        // 评分权重(基于用户等级)
-	WeightedScore float64 `json:"weightedScore"` // 加权评分
-	RatedAt       int64   `json:"ratedAt"`       // 评分时间
-	Comment       string  `json:"comment"`       // 评分评论
+	ID            string  `json:"id"`                      // 评分唯一ID
+	EntryId       string  `json:"entryId"`                 // 被评分条目ID
+	RaterPubkey   string  `json:"raterPubkey"`             // 评分者公钥
+	Score         float64 `json:"score"`                   // 原始评分
+	Weight        float64 `json:"weight"`                  // 评分权重(基于用户等级)
+	WeightedScore float64 `json:"weightedScore"`           // 加权评分
+	RatedAt       int64   `json:"ratedAt"`                 // 评分时间
+	Comment       string  `json:"comment"`                 // 评分评论
 	Signature     []byte  `json:"signature,omitempty"`     // 评分者对评分内容的 Ed25519 签名
 	SignAlgorithm string  `json:"signAlgorithm,omitempty"` // 签名算法，目前 "ed25519"
 }

@@ -288,7 +288,7 @@ func (h *EntryHandler) CreateEntryHandler(w http.ResponseWriter, r *http.Request
 		License:    req.License,
 		SourceRef:  req.SourceRef,
 
-		Signature:     sigBytes,  // 创建者内容签名（R1-B3）
+		Signature:     sigBytes, // 创建者内容签名（R1-B3）
 		SignAlgorithm: "ed25519",
 	}
 	if entry.License == "" {

@@ -328,10 +328,10 @@ func TestIntegration_CreateEntry(t *testing.T) {
 
 	// 创建条目
 	resp, err := s.DoRequest("POST", "/api/v1/entry/create", map[string]interface{}{
-		"title":            "集成测试条目",
-		"content":          "# 测试\n\n这是一个集成测试创建的知识条目。",
-		"category":         "tech/programming",
-		"tags":             []string{"test", "integration"},
+		"title":             "集成测试条目",
+		"content":           "# 测试\n\n这是一个集成测试创建的知识条目。",
+		"category":          "tech/programming",
+		"tags":              []string{"test", "integration"},
 		"creator_signature": s.contentSig(t, "集成测试条目", "# 测试\n\n这是一个集成测试创建的知识条目。", "tech/programming"),
 	}, true)
 	if err != nil {
@@ -362,10 +362,10 @@ func TestIntegration_EntryLifecycle(t *testing.T) {
 
 	// 创建条目
 	createResp, err := s.DoRequest("POST", "/api/v1/entry/create", map[string]interface{}{
-		"title":            "生命周期测试条目",
-		"content":          "初始内容",
-		"category":         "tech/programming",
-		"tags":             []string{"lifecycle"},
+		"title":             "生命周期测试条目",
+		"content":           "初始内容",
+		"category":          "tech/programming",
+		"tags":              []string{"lifecycle"},
 		"creator_signature": s.contentSig(t, "生命周期测试条目", "初始内容", "tech/programming"),
 	}, true)
 	if err != nil {
@@ -405,8 +405,8 @@ func TestIntegration_EntryLifecycle(t *testing.T) {
 
 	// 更新条目（R1-B3：内容变更须带新签名，签的是更新后的 title/content/category）
 	updateResp, err := s.DoRequest("PUT", "/api/v1/entry/update/"+entryID, map[string]interface{}{
-		"title":            "更新后的标题",
-		"content":          "更新后的内容",
+		"title":             "更新后的标题",
+		"content":           "更新后的内容",
 		"creator_signature": s.contentSig(t, "更新后的标题", "更新后的内容", "tech/programming"),
 	}, true)
 	if err != nil {
@@ -443,10 +443,10 @@ func TestIntegration_SearchAfterCreate(t *testing.T) {
 
 	// 创建条目
 	_, err := s.DoRequest("POST", "/api/v1/entry/create", map[string]interface{}{
-		"title":            "Go语言并发编程",
-		"content":          "Go语言通过goroutine实现并发编程",
-		"category":         "tech/programming",
-		"tags":             []string{"go", "concurrency"},
+		"title":             "Go语言并发编程",
+		"content":           "Go语言通过goroutine实现并发编程",
+		"category":          "tech/programming",
+		"tags":              []string{"go", "concurrency"},
 		"creator_signature": s.contentSig(t, "Go语言并发编程", "Go语言通过goroutine实现并发编程", "tech/programming"),
 	}, true)
 	if err != nil {
@@ -484,9 +484,9 @@ func TestIntegration_RatingFlow(t *testing.T) {
 
 	// 创建条目
 	createResp, err := s.DoRequest("POST", "/api/v1/entry/create", map[string]interface{}{
-		"title":            "评分测试条目",
-		"content":          "用于测试评分功能",
-		"category":         "tech/programming",
+		"title":             "评分测试条目",
+		"content":           "用于测试评分功能",
+		"category":          "tech/programming",
 		"creator_signature": s.contentSig(t, "评分测试条目", "用于测试评分功能", "tech/programming"),
 	}, true)
 	if err != nil {

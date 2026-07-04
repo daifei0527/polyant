@@ -20,7 +20,7 @@ func TestBodyLimitMiddleware_RejectsOversize(t *testing.T) {
 	req := httptest.NewRequest(http.MethodPost, "/x", body)
 	rec := httptest.NewRecorder()
 
-	BodyLimitMiddleware(1 << 20)(inner).ServeHTTP(rec, req)
+	BodyLimitMiddleware(1<<20)(inner).ServeHTTP(rec, req)
 
 	assert.Equal(t, http.StatusRequestEntityTooLarge, rec.Code)
 	assert.False(t, handled, "downstream handler must not run when body is oversize")
@@ -33,7 +33,7 @@ func TestBodyLimitMiddleware_AllowsWithinLimit(t *testing.T) {
 	req := httptest.NewRequest(http.MethodPost, "/x", bytes.NewBufferString(strings.Repeat("a", 100)))
 	rec := httptest.NewRecorder()
 
-	BodyLimitMiddleware(1 << 20)(inner).ServeHTTP(rec, req)
+	BodyLimitMiddleware(1<<20)(inner).ServeHTTP(rec, req)
 
 	assert.Equal(t, http.StatusOK, rec.Code)
 	assert.True(t, handled, "downstream handler must run when body is within limit")
@@ -62,6 +62,6 @@ func TestBodyLimitMiddleware_TruncatesStreamingOversize(t *testing.T) {
 	req.ContentLength = -1
 	rec := httptest.NewRecorder()
 
-	BodyLimitMiddleware(1 << 20)(inner).ServeHTTP(rec, req)
+	BodyLimitMiddleware(1<<20)(inner).ServeHTTP(rec, req)
 	assert.NotNil(t, readErr, "reading past the limit must error")
 }
