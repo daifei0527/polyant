@@ -171,6 +171,12 @@ func (h *UserHandler) SendVerificationCodeHandler(w http.ResponseWriter, r *http
 		return
 	}
 
+	// R1-C3：锁定窗口内拒绝再次发送验证码（防暴破轰炸）
+	if h.verificationMgr != nil && h.verificationMgr.IsEmailLocked(req.Email) {
+		writeError(w, awerrors.New(429, awerrors.CategoryUser, "too many verification attempts, try again later", http.StatusTooManyRequests))
+		return
+	}
+
 	// 生成验证码
 	var code string
 	if h.verificationMgr != nil {
