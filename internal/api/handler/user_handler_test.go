@@ -255,6 +255,28 @@ func TestRateEntryHandler_ConcurrentSameRaterNoDup(t *testing.T) {
 	}
 }
 
+// TestRateEntryHandler_UpdatesEntryScore 验证评分后 entry.Score/ScoreCount 被重算并持久化。
+// 重构前 RateEntryHandler 不重算，评分后 entry.Score 永远陈旧（0）。
+func TestRateEntryHandler_UpdatesEntryScore(t *testing.T) {
+	handler, store := newTestUserHandler(t)
+	user, _ := createTestUser(t, store, "rater", model.UserLevelLv1)
+	createTestEntry(t, store, "e1", "Test")
+
+	body := `{"score":4.0,"comment":"x"}`
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/entry/e1/rate", bytes.NewBufferString(body))
+	req.Header.Set("Content-Type", "application/json")
+	req = req.WithContext(setUserInContext(req.Context(), user))
+	rec := httptest.NewRecorder()
+	handler.RateEntryHandler(rec, req)
+	require.Equal(t, http.StatusCreated, rec.Code)
+
+	// 评分后 entry.ScoreCount 应为 1，Score 应为该评分（weight=GetLevelWeight(Lv1)）
+	updated, err := store.Entry.Get(context.Background(), "e1")
+	require.NoError(t, err)
+	assert.Equal(t, int32(1), updated.ScoreCount, "ScoreCount must be recomputed after rating")
+	assert.Greater(t, updated.Score, 0.0, "Score must be recomputed (not stale 0)")
+}
+
 // ---------- SendVerificationCodeHandler: verify-code leak gate (P1.1) ----------
 
 // TestSendVerificationCodeHandler_CodeNotLeakedByDefault: with the dev flag off

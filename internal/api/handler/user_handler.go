@@ -8,6 +8,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 	"strings"
 	"sync"
@@ -480,6 +481,28 @@ func (h *UserHandler) RateEntryHandler(w http.ResponseWriter, r *http.Request) {
 			writeError(w, awerrors.Wrap(700, awerrors.CategoryRating, "failed to create rating", 500, err))
 			return
 		}
+
+		// R2-D2：重算 entry.Score（加权平均 Σ WeightedScore / Σ Weight）与 ScoreCount 并落库。
+		// 口径与 kv.RatingStore.ComputeEntryScore 一致；修复"评分后 entry.Score 永远陈旧"。
+		// 位于 D1 临界区内，避免与并发评分交错产生 lost-update。
+		if entry, gerr := h.entryStore.Get(r.Context(), entryID); gerr == nil && entry != nil {
+			ratings, rerr := h.ratingStore.ListByEntry(r.Context(), entryID)
+			if rerr == nil && len(ratings) > 0 {
+				var sumW, sumWS float64
+				for _, rt := range ratings {
+					sumW += rt.Weight
+					sumWS += rt.WeightedScore
+				}
+				if sumW > 0 {
+					entry.Score = sumWS / sumW
+				}
+				entry.ScoreCount = int32(len(ratings))
+				if _, uerr := h.entryStore.Update(r.Context(), entry); uerr != nil {
+					log.Printf("[UserHandler] recompute entry %s score failed: %v", entryID, uerr)
+				}
+			}
+		}
+
 		writeJSON(w, http.StatusCreated, &APIResponse{
 			Code:    0,
 			Message: "success",
