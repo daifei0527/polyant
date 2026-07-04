@@ -24,8 +24,8 @@ type RemoteQueryService struct {
 	store    *storage.Store
 	config   *RemoteQueryConfig
 	mu       sync.RWMutex
-	wg       sync.WaitGroup   // 跟踪异步 goroutine（如 cacheRemoteEntries）
-	ctx      context.Context  // 服务级 ctx，Start 赋值
+	wg       sync.WaitGroup  // 跟踪异步 goroutine（如 cacheRemoteEntries）
+	ctx      context.Context // 服务级 ctx，Start 赋值
 	cancel   context.CancelFunc
 }
 
