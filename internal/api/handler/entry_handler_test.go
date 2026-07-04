@@ -145,6 +145,29 @@ func (f *fakeEntryPusher) PushEntry(entry *model.KnowledgeEntry, signature []byt
 	return nil
 }
 
+// TestCreateEntryHandler_IndexFailureDoesNotBlock: 搜索索引写入失败应仅记日志，
+// 不得阻塞条目创建或改变 HTTP 状态码（best-effort 索引，R2-C2）。
+func TestCreateEntryHandler_IndexFailureDoesNotBlock(t *testing.T) {
+	memStore, err := storage.NewMemoryStore()
+	require.NoError(t, err)
+	h := NewEntryHandler(memStore.Entry, memStore.Search, memStore.Backlink, memStore.User, memStore.TitleIdx)
+	mock := &mockSearchEngine{indexErr: assertErrIndexFail}
+	h.searchEngine = mock
+
+	user, priv := createTestUserWithKey(t, memStore, "author", model.UserLevelLv1)
+	sig := signContentB64(t, priv, "T", "C", "cat")
+	body := `{"title":"T","content":"C","category":"cat","creator_signature":"` + sig + `"}`
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/entry/create", bytes.NewBufferString(body))
+	req.Header.Set("Content-Type", "application/json")
+	req = req.WithContext(setUserInContext(req.Context(), user))
+	rec := httptest.NewRecorder()
+
+	h.CreateEntryHandler(rec, req)
+
+	assert.Equal(t, http.StatusCreated, rec.Result().StatusCode, "entry create must succeed despite index error")
+	assert.Greater(t, mock.indexCalls, 0, "IndexEntry must still be attempted")
+}
+
 // TestCreateEntryHandler_PushesToSeed: creating an entry must push it to the
 // configured EntryPusher (the dormant push half-flow is now wired).
 func TestCreateEntryHandler_PushesToSeed(t *testing.T) {

@@ -311,7 +311,9 @@ func (se *SyncEngine) processSyncResponse(ctx context.Context, resp *protocolpkg
 			se.versionVec.Set(entry.ID, entry.Version)
 			// 更新搜索索引
 			if se.store.Search != nil {
-				se.store.Search.IndexEntry(&entry)
+				if err := se.store.Search.IndexEntry(&entry); err != nil {
+					log.Printf("[Sync] index entry %s failed: %v", entry.ID, err)
+				}
 			}
 		}
 	}
@@ -332,7 +334,9 @@ func (se *SyncEngine) processSyncResponse(ctx context.Context, resp *protocolpkg
 			se.versionVec.Set(entry.ID, entry.Version)
 			// 更新搜索索引
 			if se.store.Search != nil {
-				se.store.Search.UpdateIndex(&entry)
+				if err := se.store.Search.UpdateIndex(&entry); err != nil {
+					log.Printf("[Sync] update index %s failed: %v", entry.ID, err)
+				}
 			}
 		}
 	}

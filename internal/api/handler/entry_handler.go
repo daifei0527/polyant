@@ -307,7 +307,9 @@ func (h *EntryHandler) CreateEntryHandler(w http.ResponseWriter, r *http.Request
 
 	// 建立全文索引
 	if h.searchEngine != nil {
-		_ = h.searchEngine.IndexEntry(created)
+		if err := h.searchEngine.IndexEntry(created); err != nil {
+			log.Printf("[EntryHandler] index entry %s failed: %v", created.ID, err)
+		}
 	}
 
 	// 更新标题索引
@@ -433,7 +435,9 @@ func (h *EntryHandler) UpdateEntryHandler(w http.ResponseWriter, r *http.Request
 
 	// 更新全文索引
 	if h.searchEngine != nil {
-		_ = h.searchEngine.UpdateIndex(updated)
+		if err := h.searchEngine.UpdateIndex(updated); err != nil {
+			log.Printf("[EntryHandler] update index %s failed: %v", updated.ID, err)
+		}
 	}
 
 	// 更新标题索引
@@ -511,7 +515,9 @@ func (h *EntryHandler) DeleteEntryHandler(w http.ResponseWriter, r *http.Request
 
 	// 从全文索引中删除
 	if h.searchEngine != nil {
-		_ = h.searchEngine.DeleteIndex(id)
+		if err := h.searchEngine.DeleteIndex(id); err != nil {
+			log.Printf("[EntryHandler] delete index %s failed: %v", id, err)
+		}
 	}
 
 	// 从标题索引中删除

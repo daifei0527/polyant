@@ -100,7 +100,9 @@ func (si *SeedDataInitializer) importEntries(ctx context.Context, filePath strin
 
 		// 建立索引
 		if si.store.Search != nil {
-			si.store.Search.IndexEntry(&entry)
+			if err := si.store.Search.IndexEntry(&entry); err != nil {
+				log.Printf("[SeedData] index entry %s failed: %v", entry.ID, err)
+			}
 		}
 
 		imported++

@@ -3,6 +3,7 @@ package handler
 import (
 	"context"
 	"encoding/json"
+	"log"
 	"net/http"
 
 	"github.com/daifei0527/polyant/internal/storage"
@@ -404,7 +405,9 @@ func (h *BatchHandler) executeBatchCreate(r *http.Request, entries []BatchEntry,
 
 		// 建立全文索引
 		if h.searchEngine != nil {
-			_ = h.searchEngine.IndexEntry(created)
+			if err := h.searchEngine.IndexEntry(created); err != nil {
+				log.Printf("[BatchHandler] index entry %s failed: %v", created.ID, err)
+			}
 		}
 
 		// 建立反向链接索引
@@ -518,7 +521,9 @@ func (h *BatchHandler) executeBatchUpdate(r *http.Request, entries []BatchUpdate
 
 		// 更新全文索引
 		if h.searchEngine != nil {
-			_ = h.searchEngine.UpdateIndex(updated)
+			if err := h.searchEngine.UpdateIndex(updated); err != nil {
+				log.Printf("[BatchHandler] update index %s failed: %v", updated.ID, err)
+			}
 		}
 
 		// 更新反向链接索引
@@ -593,7 +598,9 @@ func (h *BatchHandler) executeBatchDelete(r *http.Request, ids []string, user *m
 
 		// 从全文索引中删除
 		if h.searchEngine != nil {
-			_ = h.searchEngine.DeleteIndex(id)
+			if err := h.searchEngine.DeleteIndex(id); err != nil {
+				log.Printf("[BatchHandler] delete index %s failed: %v", id, err)
+			}
 		}
 
 		// 从反向链接索引中删除
