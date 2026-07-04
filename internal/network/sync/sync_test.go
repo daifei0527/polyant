@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"math"
+	"runtime"
 	stdsync "sync"
 	"testing"
 	"time"
@@ -16,6 +17,9 @@ import (
 	"github.com/daifei0527/polyant/internal/storage/index"
 	"github.com/daifei0527/polyant/internal/storage/model"
 	"github.com/libp2p/go-libp2p/core/peer"
+	"github.com/stretchr/testify/require"
+
+	protocolpkg "github.com/daifei0527/polyant/internal/network/protocol"
 )
 
 // ==================== VersionVector 测试 ====================
@@ -3852,5 +3856,47 @@ func TestVersionVector_ConcurrentSafe(t *testing.T) {
 	// 最终值应是最后写入的某个版本（非零即可，不要求精确）
 	if vv.Get("e0") == 0 && vv.Get("e1") == 0 {
 		t.Fatal("versionVector lost all writes")
+	}
+}
+
+// ==================== goroutine 泄漏修复测试 (R2-A2) ====================
+
+// TestSyncEngine_StopReapsMirrorProducer 验证 Stop 后无 goroutine 悬挂。
+// 修复前：HandleMirrorRequest 的生产者 goroutine fire-and-forget，阻塞在 dataCh<-，
+// Stop() 不 cancel 不 wait → goroutine 泄漏。
+func TestSyncEngine_StopReapsMirrorProducer(t *testing.T) {
+	store, _ := storage.NewMemoryStore()
+	// 填入 200 条目让生产者有数据可发，确保会阻塞在 dataCh<-
+	for i := 0; i < 200; i++ {
+		_, _ = store.Entry.Create(context.Background(), &model.KnowledgeEntry{
+			ID:        fmt.Sprintf("e%d", i),
+			Title:     "t",
+			Content:   "c",
+			Category:  "cat",
+			Status:    model.EntryStatusPublished,
+			Version:   1,
+			CreatedAt: model.NowMillis(),
+			UpdatedAt: model.NowMillis(),
+		})
+	}
+	se := sync.NewSyncEngine(nil, nil, store, &sync.SyncConfig{AutoSync: false})
+	require.NoError(t, se.Start(context.Background()))
+
+	before := runtime.NumGoroutine()
+	// 触发镜像生产，但无人消费 dataCh（消费者弃读场景）
+	// BatchSize=1 → 200 个批次 >> dataCh buffer(10)，生产者必阻塞在 dataCh<-
+	_, _ = se.HandleMirrorRequest(context.Background(), &protocolpkg.MirrorRequest{
+		RequestID: "r1", Categories: []string{"cat"}, BatchSize: 1,
+	})
+	time.Sleep(50 * time.Millisecond) // 让生产者进入阻塞写
+
+	require.NoError(t, se.Stop())
+	// 等 goroutine 退出
+	deadline := time.Now().Add(2 * time.Second)
+	for runtime.NumGoroutine() > before && time.Now().Before(deadline) {
+		time.Sleep(10 * time.Millisecond)
+	}
+	if got := runtime.NumGoroutine(); got > before {
+		t.Fatalf("goroutine leak: before=%d after=%d", before, got)
 	}
 }

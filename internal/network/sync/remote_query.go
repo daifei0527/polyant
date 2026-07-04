@@ -24,6 +24,9 @@ type RemoteQueryService struct {
 	store    *storage.Store
 	config   *RemoteQueryConfig
 	mu       sync.RWMutex
+	wg       sync.WaitGroup   // 跟踪异步 goroutine（如 cacheRemoteEntries）
+	ctx      context.Context  // 服务级 ctx，Start 赋值
+	cancel   context.CancelFunc
 }
 
 // RemoteQueryConfig 远程查询配置
@@ -71,6 +74,24 @@ func (s *RemoteQueryService) SetProtocol(proto *protocol.Protocol) {
 	s.protocol = proto
 }
 
+// Start 初始化服务级 ctx（不启动后台任务，但为异步 goroutine 提供生命周期管理）。
+// 上层（cmd/seed, cmd/user）需在 shutdown 流程中调用 Close()。
+func (s *RemoteQueryService) Start(ctx context.Context) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.ctx, s.cancel = context.WithCancel(ctx)
+}
+
+// Close 取消服务级 ctx 并等待所有异步 goroutine 退出。
+func (s *RemoteQueryService) Close() {
+	s.mu.Lock()
+	if s.cancel != nil {
+		s.cancel()
+	}
+	s.mu.Unlock()
+	s.wg.Wait()
+}
+
 // SearchWithRemote 本地搜索并在结果不足时查询远程
 func (s *RemoteQueryService) SearchWithRemote(ctx context.Context, query index.SearchQuery) (*index.SearchResult, error) {
 	// 1. 先执行本地搜索
@@ -90,9 +111,17 @@ func (s *RemoteQueryService) SearchWithRemote(ctx context.Context, query index.S
 	// 4. 合并结果
 	merged := s.mergeResults(localResult.Entries, remoteEntries, query.Limit)
 
-	// 5. 缓存远程结果
+	// 5. 缓存远程结果（使用服务级 ctx，而非脱离生命周期的 context.Background）
 	if s.config.CacheResults && len(remoteEntries) > 0 {
-		go s.cacheRemoteEntries(context.Background(), remoteEntries)
+		s.wg.Add(1)
+		go func() {
+			defer s.wg.Done()
+			cacheCtx := s.ctx
+			if cacheCtx == nil {
+				cacheCtx = ctx // 降级：未调用 Start 时用请求级 ctx
+			}
+			s.cacheRemoteEntries(cacheCtx, remoteEntries)
+		}()
 	}
 
 	return &index.SearchResult{

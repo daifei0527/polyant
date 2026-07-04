@@ -145,6 +145,7 @@ type SyncEngine struct {
 	mu         sync.RWMutex
 	cancel     context.CancelFunc
 	wg         sync.WaitGroup
+	ctx        context.Context // 服务级 ctx，Start 赋值，Stop 取消
 }
 
 func NewSyncEngine(p2pHost host.P2PHostInterface, proto protocolpkg.ProtocolInterface, store *storage.Store, cfg *SyncConfig) *SyncEngine {
@@ -169,12 +170,15 @@ func (se *SyncEngine) Start(ctx context.Context) error {
 	se.mu.Lock()
 	defer se.mu.Unlock()
 
+	// 始终保存服务级 ctx，即使 AutoSync=false，以便 HandleMirrorRequest 生产者
+	// 能在 Stop() 时被取消。
+	ctx, cancel := context.WithCancel(ctx)
+	se.ctx = ctx
+	se.cancel = cancel
+
 	if !se.config.AutoSync {
 		return nil
 	}
-
-	ctx, cancel := context.WithCancel(ctx)
-	se.cancel = cancel
 
 	se.wg.Add(1)
 	go se.syncLoop(ctx)
@@ -523,12 +527,21 @@ func (se *SyncEngine) categoryMatches(entryCategory string, filterCategories []s
 func (se *SyncEngine) HandleMirrorRequest(ctx context.Context, req *protocolpkg.MirrorRequest) (<-chan *protocolpkg.MirrorData, error) {
 	dataCh := make(chan *protocolpkg.MirrorData, 10)
 
+	se.wg.Add(1)
 	go func() {
+		defer se.wg.Done()
 		defer close(dataCh)
 
+		// 使用服务级 ctx，使 Stop() 能取消生产者
+		prodCtx := se.ctx
+		if prodCtx == nil {
+			prodCtx = ctx
+		}
+
 		// 获取所有条目，应用分类过滤
-		entries, _, err := se.store.Entry.List(ctx, storage.EntryFilter{Limit: 10000})
+		entries, _, err := se.store.Entry.List(prodCtx, storage.EntryFilter{Limit: 10000})
 		if err != nil {
+			log.Printf("[Sync] HandleMirrorRequest list entries failed: %v", err)
 			return
 		}
 
@@ -577,11 +590,15 @@ func (se *SyncEngine) HandleMirrorRequest(ctx context.Context, req *protocolpkg.
 				entryData = append(entryData, data)
 			}
 
-			dataCh <- &protocolpkg.MirrorData{
+			select {
+			case dataCh <- &protocolpkg.MirrorData{
 				RequestID:    req.RequestID,
 				BatchIndex:   int32(i),
 				TotalBatches: int32(totalBatches),
 				Entries:      entryData,
+			}:
+			case <-prodCtx.Done():
+				return
 			}
 		}
 	}()

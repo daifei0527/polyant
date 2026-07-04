@@ -3,6 +3,7 @@ package protocol
 import (
 	"context"
 	"fmt"
+	"log"
 	"sync"
 	"time"
 
@@ -28,6 +29,7 @@ type Protocol struct {
 	handler Handler
 	codec   *ProtobufCodec
 	mu      sync.RWMutex
+	wg      sync.WaitGroup // 跟踪异步 goroutine（如镜像消费者）
 }
 
 func NewProtocol(h host.Host, handler Handler) *Protocol {
@@ -38,6 +40,13 @@ func NewProtocol(h host.Host, handler Handler) *Protocol {
 	}
 	h.SetStreamHandler(AWSPProtocolID, p.handleStream)
 	return p
+}
+
+// Close 等待所有通过 wg.Add 注册的异步 goroutine（如镜像消费者）退出。
+// 上层（node/cmd）需在关闭流程中调用此方法以确保 goroutine 不泄漏。
+// TODO(cmd/seed, cmd/user): 在 shutdown 流程中调用 proto.Close()。
+func (p *Protocol) Close() {
+	p.wg.Wait()
 }
 
 func (p *Protocol) handleStream(s network.Stream) {
@@ -121,17 +130,36 @@ func (p *Protocol) processMessage(ctx context.Context, remotePeer peer.ID, proto
 		if err != nil {
 			return nil, err
 		}
+		p.wg.Add(1)
 		go func() {
-			for data := range dataCh {
-				protoMsg := toProtoMessage(&Message{
-					Header:  NewMessageHeader(MessageTypeMirrorData),
-					Payload: data,
-				})
-				s, _ := p.host.NewStream(ctx, mirrorDialTarget(remotePeer, r), AWSPProtocolID)
-				if s != nil {
+			defer p.wg.Done()
+			defer func() {
+				if r := recover(); r != nil {
+					log.Printf("[Protocol] mirror consumer panic: %v", r)
+				}
+			}()
+			for {
+				select {
+				case data, ok := <-dataCh:
+					if !ok {
+						return
+					}
+					protoMsg := toProtoMessage(&Message{
+						Header:  NewMessageHeader(MessageTypeMirrorData),
+						Payload: data,
+					})
+					s, err := p.host.NewStream(ctx, mirrorDialTarget(remotePeer, r), AWSPProtocolID)
+					if err != nil {
+						log.Printf("[Protocol] mirror NewStream failed: %v", err)
+						continue
+					}
 					writer := NewProtobufStreamWriter(s)
-					writer.WriteMessage(protoMsg)
+					if err := writer.WriteMessage(protoMsg); err != nil {
+						log.Printf("[Protocol] mirror write failed: %v", err)
+					}
 					s.Close()
+				case <-ctx.Done():
+					return
 				}
 			}
 		}()
