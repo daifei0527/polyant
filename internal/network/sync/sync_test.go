@@ -3869,10 +3869,11 @@ func TestVersionVector_ConcurrentSafe(t *testing.T) {
 		}(i)
 	}
 	wg.Wait()
-	// 最终值应是最后写入的某个版本（非零即可，不要求精确）
-	if vv.Get("e0") == 0 && vv.Get("e1") == 0 {
-		t.Fatal("versionVector lost all writes")
-	}
+	// 注意：此处不对最终值做断言。并发 Delete 与 Set/Increment 交错时，e0/e1
+	// 完全可能以 Delete 收尾（值合法地归零），断言"任一非零"是调度相关的 flaky 检查。
+	// 本测试真正的契约是：不触发 fatal "concurrent map read/write"，且 -race 无报告——
+	// 二者由不 panic + -race flag 自动保证（goroutine 已覆盖 Set/Get/Increment/Clone/
+	// ToProto/Merge/Delete/Range 全部并发路径）。
 }
 
 // ==================== goroutine 泄漏修复测试 (R2-A2) ====================
