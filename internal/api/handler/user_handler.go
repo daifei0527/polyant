@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/daifei0527/polyant/internal/core/email"
@@ -27,7 +28,15 @@ type UserHandler struct {
 	ratingStore     storage.RatingStore
 	emailService    *email.Service
 	verificationMgr *email.VerificationManager
-	devReturnCode   bool // 仅 dev/测试：SendVerificationCodeHandler 是否在响应中回传验证码
+	devReturnCode   bool     // 仅 dev/测试：SendVerificationCodeHandler 是否在响应中回传验证码
+	entryLocks      sync.Map // entryID -> *sync.Mutex，保证评分查重+写入原子（R2-D1）
+}
+
+// lockForEntry 返回某条目的评分互斥锁（惰性创建）。
+// R2-D1：串行化同一 entry 的并发评分，使 GetByRater 查重与 Create 成为原子操作。
+func (h *UserHandler) lockForEntry(entryID string) *sync.Mutex {
+	actual, _ := h.entryLocks.LoadOrStore(entryID, &sync.Mutex{})
+	return actual.(*sync.Mutex)
 }
 
 // NewUserHandler 创建新的 UserHandler 实例
@@ -431,6 +440,12 @@ func (h *UserHandler) RateEntryHandler(w http.ResponseWriter, r *http.Request) {
 		writeError(w, awerrors.ErrEntryNotFound)
 		return
 	}
+
+	// R2-D1：per-entry 锁 —— GetByRater 查重与 Create 必须原子，防并发双重投票。
+	// 锁粒度为单个 entry，仅串行化同一 entry 的并发评分，不影响其他 entry。
+	entryMu := h.lockForEntry(entryID)
+	entryMu.Lock()
+	defer entryMu.Unlock()
 
 	// 检查是否已评分（防止重复评分）
 	if h.ratingStore != nil {

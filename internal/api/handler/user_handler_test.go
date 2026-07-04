@@ -11,6 +11,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"sync"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -211,6 +212,47 @@ func TestUserHandler_RateEntryHandler_NoAuth(t *testing.T) {
 	handler.RateEntryHandler(rec, req)
 
 	assert.Equal(t, http.StatusUnauthorized, rec.Result().StatusCode)
+}
+
+// TestRateEntryHandler_ConcurrentSameRaterNoDup 验证同一用户并发评分只成功一次。
+// 重构前 GetByRater 查重与 Create 之间无锁，并发双重投票可全部成功 → ok > 1。
+func TestRateEntryHandler_ConcurrentSameRaterNoDup(t *testing.T) {
+	handler, store := newTestUserHandler(t)
+	user, _ := createTestUser(t, store, "rater", model.UserLevelLv1)
+	createTestEntry(t, store, "e1", "Test")
+
+	const n = 50
+	var (
+		wg      sync.WaitGroup
+		mu      sync.Mutex
+		ok, dup int
+	)
+	for i := 0; i < n; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			body := `{"score":4.0,"comment":"x"}`
+			req := httptest.NewRequest(http.MethodPost, "/api/v1/entry/e1/rate", bytes.NewBufferString(body))
+			req.Header.Set("Content-Type", "application/json")
+			req = req.WithContext(setUserInContext(req.Context(), user))
+			rec := httptest.NewRecorder()
+			handler.RateEntryHandler(rec, req)
+			mu.Lock()
+			defer mu.Unlock()
+			if rec.Code == http.StatusCreated {
+				ok++
+			} else {
+				dup++
+			}
+		}()
+	}
+	wg.Wait()
+	if ok != 1 {
+		t.Fatalf("expected exactly 1 successful rating, got %d (race: double voting)", ok)
+	}
+	if dup != n-1 {
+		t.Fatalf("expected %d rejections, got %d", n-1, dup)
+	}
 }
 
 // ---------- SendVerificationCodeHandler: verify-code leak gate (P1.1) ----------
