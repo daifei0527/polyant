@@ -27,8 +27,8 @@ type RateLimiter interface {
 type TokenBucketLimiter struct {
 	mu          sync.RWMutex
 	buckets     map[string]*tokenBucket
-	rate        int           // 每秒添加的令牌数
-	burst       int           // 桶容量
+	rate        float64       // 每秒添加的令牌数（R1-D3: float64 以支持 <1/s，如 0.5=30/min）
+	burst       float64       // 桶容量
 	cleanupTick time.Duration // 清理周期
 }
 
@@ -37,8 +37,8 @@ type tokenBucket struct {
 	lastUpdate time.Time
 }
 
-// NewTokenBucketLimiter 创建令牌桶限制器
-func NewTokenBucketLimiter(rate, burst int) *TokenBucketLimiter {
+// NewTokenBucketLimiter 创建令牌桶限制器。rate 为令牌/秒，burst 为桶容量。
+func NewTokenBucketLimiter(rate, burst float64) *TokenBucketLimiter {
 	l := &TokenBucketLimiter{
 		buckets:     make(map[string]*tokenBucket),
 		rate:        rate,
@@ -58,7 +58,7 @@ func (l *TokenBucketLimiter) Allow(key string) bool {
 	bucket, exists := l.buckets[key]
 	if !exists {
 		bucket = &tokenBucket{
-			tokens:     float64(l.burst - 1),
+			tokens:     l.burst - 1,
 			lastUpdate: now,
 		}
 		l.buckets[key] = bucket
@@ -67,8 +67,8 @@ func (l *TokenBucketLimiter) Allow(key string) bool {
 
 	// 计算自上次更新以来添加的令牌
 	elapsed := now.Sub(bucket.lastUpdate).Seconds()
-	newTokens := float64(l.rate) * elapsed
-	bucket.tokens = min(float64(l.burst), bucket.tokens+newTokens)
+	newTokens := l.rate * elapsed
+	bucket.tokens = min(l.burst, bucket.tokens+newTokens)
 	bucket.lastUpdate = now
 
 	if bucket.tokens >= 1 {
@@ -86,13 +86,13 @@ func (l *TokenBucketLimiter) Remaining(key string) int {
 
 	bucket, exists := l.buckets[key]
 	if !exists {
-		return l.burst
+		return int(l.burst)
 	}
 
 	now := time.Now()
 	elapsed := now.Sub(bucket.lastUpdate).Seconds()
-	newTokens := float64(l.rate) * elapsed
-	tokens := min(float64(l.burst), bucket.tokens+newTokens)
+	newTokens := l.rate * elapsed
+	tokens := min(l.burst, bucket.tokens+newTokens)
 
 	return int(tokens)
 }
@@ -107,13 +107,13 @@ func (l *TokenBucketLimiter) ResetAfter(key string) time.Duration {
 		return 0
 	}
 
-	if bucket.tokens >= float64(l.burst) {
+	if bucket.tokens >= l.burst {
 		return 0
 	}
 
 	// 计算填满桶需要的时间
-	tokensNeeded := float64(l.burst) - bucket.tokens
-	secondsNeeded := tokensNeeded / float64(l.rate)
+	tokensNeeded := l.burst - bucket.tokens
+	secondsNeeded := tokensNeeded / l.rate
 	return time.Duration(secondsNeeded * float64(time.Second))
 }
 
@@ -142,36 +142,38 @@ func (l *TokenBucketLimiter) cleanup() {
 	}
 }
 
-// RateLimitConfig 速率限制配置
+// RateLimitConfig 速率限制配置。速率单位均为 令牌/秒（R1-D3: float64 以支持 <1/s）。
 type RateLimitConfig struct {
 	// Enabled 是否启用速率限制
 	Enabled bool
-	// DefaultRate 默认每秒请求数
-	DefaultRate int
+	// DefaultRate 默认令牌/秒（1 = 60/min）
+	DefaultRate float64
 	// DefaultBurst 默认突发容量
-	DefaultBurst int
-	// SearchRate 搜索接口速率
-	SearchRate int
+	DefaultBurst float64
+	// SearchRate 搜索接口令牌/秒
+	SearchRate float64
 	// SearchBurst 搜索接口突发容量
-	SearchBurst int
-	// WriteRate 写入接口速率
-	WriteRate int
+	SearchBurst float64
+	// WriteRate 写入接口令牌/秒
+	WriteRate float64
 	// WriteBurst 写入接口突发容量
-	WriteBurst int
+	WriteBurst float64
 	// TrustedProxies R1-D1: 仅当 RemoteAddr 属于这些 IP/CIDR 时才采信 X-Forwarded-For。
 	// 为空表示不信任任何反代，限流键一律用连接级 RemoteAddr（最安全）。
 	TrustedProxies []string
 }
 
-// DefaultRateLimitConfig 默认速率限制配置
+// DefaultRateLimitConfig 默认速率限制配置。
+// 旧实现把 rate 当 "请求/分钟" 但令牌桶按 "令牌/秒" 计算，导致实际阈值是注释的 60 倍
+// （DefaultRate=60 实为 60/s=3600/min，限流形同虚设）。R1-D3 修正为真实的 令牌/秒。
 func DefaultRateLimitConfig() *RateLimitConfig {
 	return &RateLimitConfig{
 		Enabled:      true,
-		DefaultRate:  60, // 60 请求/分钟 = 1 请求/秒
+		DefaultRate:  1, // 1/s = 60/min
 		DefaultBurst: 10,
-		SearchRate:   30, // 30 请求/分钟
+		SearchRate:   1, // 1/s = 60/min
 		SearchBurst:  10,
-		WriteRate:    10, // 10 请求/分钟
+		WriteRate:    0.5, // 0.5/s = 30/min（写入更严）
 		WriteBurst:   5,
 	}
 }
@@ -201,7 +203,8 @@ func NewRateLimitMiddleware(cfg *RateLimitConfig) *RateLimitMiddleware {
 // Middleware 返回 HTTP 中间件
 func (m *RateLimitMiddleware) Middleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if !m.config.Enabled {
+		// R1-D3: OPTIONS 预检不计入限流（CORS 预检不应被限流阻断）
+		if !m.config.Enabled || r.Method == http.MethodOptions {
 			next.ServeHTTP(w, r)
 			return
 		}
@@ -210,7 +213,7 @@ func (m *RateLimitMiddleware) Middleware(next http.Handler) http.Handler {
 		key := m.getLimitKey(r)
 
 		// 选择适当的限制器
-		limiter := m.selectLimiter(r.URL.Path)
+		limiter := m.selectLimiter(r)
 
 		// 检查是否允许
 		if !limiter.Allow(key) {
@@ -271,37 +274,17 @@ func (m *RateLimitMiddleware) isTrustedProxy(host string) bool {
 	return false
 }
 
-// selectLimiter 根据路径选择限制器
-func (m *RateLimitMiddleware) selectLimiter(path string) *TokenBucketLimiter {
-	// 搜索接口
-	if path == "/api/v1/search" {
-		return m.searchLimit
-	}
-
-	// 写入接口
-	if isWritePath(path) {
+// selectLimiter 按 HTTP 方法选择限制器（R1-D3: 替换原路径白名单，更全面地覆盖写操作）。
+// POST/PUT/PATCH/DELETE → writeLimit；GET /search → searchLimit；其余 → defaultLimit。
+func (m *RateLimitMiddleware) selectLimiter(r *http.Request) *TokenBucketLimiter {
+	switch r.Method {
+	case http.MethodPost, http.MethodPut, http.MethodPatch, http.MethodDelete:
 		return m.writeLimit
 	}
-
+	if r.URL.Path == "/api/v1/search" {
+		return m.searchLimit
+	}
 	return m.defaultLimit
-}
-
-// isWritePath 判断是否为写入路径
-func isWritePath(path string) bool {
-	writePaths := []string{
-		"/api/v1/entry/create",
-		"/api/v1/entry/update",
-		"/api/v1/entry/delete",
-		"/api/v1/entry/rate",
-		"/api/v1/categories/create",
-	}
-
-	for _, p := range writePaths {
-		if strings.HasPrefix(path, p) {
-			return true
-		}
-	}
-	return false
 }
 
 // writeRateLimitError 写入速率限制错误响应

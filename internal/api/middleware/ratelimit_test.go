@@ -16,11 +16,11 @@ func TestNewTokenBucketLimiter(t *testing.T) {
 	}
 
 	if limiter.rate != 10 {
-		t.Errorf("rate 应为 10: got %d", limiter.rate)
+		t.Errorf("rate 应为 10: got %v", limiter.rate)
 	}
 
 	if limiter.burst != 5 {
-		t.Errorf("burst 应为 5: got %d", limiter.burst)
+		t.Errorf("burst 应为 5: got %v", limiter.burst)
 	}
 }
 
@@ -111,12 +111,13 @@ func TestDefaultRateLimitConfig(t *testing.T) {
 		t.Error("默认应启用速率限制")
 	}
 
-	if cfg.DefaultRate != 60 {
-		t.Errorf("DefaultRate 应为 60: got %d", cfg.DefaultRate)
+	// R1-D3: DefaultRate 现为 令牌/秒（1 = 60/min），不再是旧的 60（实为 60/s）
+	if cfg.DefaultRate != 1 {
+		t.Errorf("DefaultRate 应为 1 (令牌/秒): got %v", cfg.DefaultRate)
 	}
 
 	if cfg.DefaultBurst != 10 {
-		t.Errorf("DefaultBurst 应为 10: got %d", cfg.DefaultBurst)
+		t.Errorf("DefaultBurst 应为 10: got %v", cfg.DefaultBurst)
 	}
 }
 
@@ -198,51 +199,79 @@ func TestRateLimitMiddleware_Disabled(t *testing.T) {
 	}
 }
 
-// ==================== isWritePath 测试 ====================
+// ==================== selectLimiter 测试 (R1-D3: 按 HTTP 方法) ====================
 
-// TestIsWritePath 测试写入路径判断
-func TestIsWritePath(t *testing.T) {
-	tests := []struct {
-		path     string
-		expected bool
-	}{
-		{"/api/v1/entry/create", true},
-		{"/api/v1/entry/update/123", true},
-		{"/api/v1/entry/delete/123", true},
-		{"/api/v1/entry/rate/123", true},
-		{"/api/v1/categories/create", true},
-		{"/api/v1/search", false},
-		{"/api/v1/entry/123", false},
-		{"/api/v1/user/info", false},
+// TestSelectLimiter_ByMethod 测试按方法选择限制器
+func TestSelectLimiter_ByMethod(t *testing.T) {
+	m := NewRateLimitMiddleware(DefaultRateLimitConfig())
+
+	// 写方法 → writeLimit
+	for _, method := range []string{http.MethodPost, http.MethodPut, http.MethodPatch, http.MethodDelete} {
+		r := httptest.NewRequest(method, "/api/v1/anything", nil)
+		if m.selectLimiter(r) != m.writeLimit {
+			t.Errorf("%s 应使用 writeLimit", method)
+		}
 	}
 
-	for _, tt := range tests {
-		result := isWritePath(tt.path)
-		if result != tt.expected {
-			t.Errorf("isWritePath(%q) = %v, want %v", tt.path, result, tt.expected)
+	// GET /search → searchLimit
+	r := httptest.NewRequest(http.MethodGet, "/api/v1/search", nil)
+	if m.selectLimiter(r) != m.searchLimit {
+		t.Error("GET /search 应使用 searchLimit")
+	}
+
+	// 普通读 → defaultLimit
+	r = httptest.NewRequest(http.MethodGet, "/api/v1/entry/123", nil)
+	if m.selectLimiter(r) != m.defaultLimit {
+		t.Error("普通 GET 应使用 defaultLimit")
+	}
+}
+
+// TestRateLimitMiddleware_OPTIONSBypass: OPTIONS 预检不计入限流（R1-D3）。
+func TestRateLimitMiddleware_OPTIONSBypass(t *testing.T) {
+	cfg := &RateLimitConfig{Enabled: true, DefaultRate: 1, DefaultBurst: 1}
+	m := NewRateLimitMiddleware(cfg)
+	handler := m.Middleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	}))
+
+	// 同一来源连发 50 个 OPTIONS → 全部 200（永不 429）
+	for i := 0; i < 50; i++ {
+		req := httptest.NewRequest(http.MethodOptions, "/api/v1/entry/create", nil)
+		req.RemoteAddr = "192.0.2.1:1234"
+		rec := httptest.NewRecorder()
+		handler.ServeHTTP(rec, req)
+		if rec.Code != http.StatusOK {
+			t.Fatalf("OPTIONS 请求 #%d 不应被限流, got %d", i, rec.Code)
 		}
 	}
 }
 
-// ==================== selectLimiter 测试 ====================
+// TestRateLimitMiddleware_CorrectMath: 修正后的数学：DefaultRate=1/s burst=10，
+// 连发 15 个 GET 应有部分被 429（旧实现 60/s 永不触发）。
+func TestRateLimitMiddleware_CorrectMath(t *testing.T) {
+	cfg := &RateLimitConfig{Enabled: true, DefaultRate: 1, DefaultBurst: 10}
+	m := NewRateLimitMiddleware(cfg)
+	handler := m.Middleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	}))
 
-// TestSelectLimiter 测试选择限制器
-func TestSelectLimiter(t *testing.T) {
-	m := NewRateLimitMiddleware(DefaultRateLimitConfig())
-
-	// 搜索路径
-	if m.selectLimiter("/api/v1/search") != m.searchLimit {
-		t.Error("搜索路径应使用 searchLimit")
+	ok, limited := 0, 0
+	for i := 0; i < 15; i++ {
+		req := httptest.NewRequest(http.MethodGet, "/api/v1/test", nil)
+		req.RemoteAddr = "192.0.2.1:1234"
+		rec := httptest.NewRecorder()
+		handler.ServeHTTP(rec, req)
+		if rec.Code == http.StatusOK {
+			ok++
+		} else if rec.Code == http.StatusTooManyRequests {
+			limited++
+		}
 	}
-
-	// 写入路径
-	if m.selectLimiter("/api/v1/entry/create") != m.writeLimit {
-		t.Error("写入路径应使用 writeLimit")
+	if limited == 0 {
+		t.Errorf("期望修正后限流能触发 429（burst=10, 发 15 次），ok=%d limited=%d", ok, limited)
 	}
-
-	// 普通路径
-	if m.selectLimiter("/api/v1/entry/123") != m.defaultLimit {
-		t.Error("普通路径应使用 defaultLimit")
+	if ok == 0 {
+		t.Errorf("至少 burst 数量应放行, ok=%d", ok)
 	}
 }
 
