@@ -73,7 +73,7 @@ func (s *BadgerStore) Scan(prefix []byte) (map[string][]byte, error) {
 			key := item.Key()
 			val, err := item.ValueCopy(nil)
 			if err != nil {
-				continue
+				return err // B3：不再吞错，传播给外层 View
 			}
 			result[string(key)] = val
 		}

@@ -81,8 +81,7 @@ func (s *PebbleStore) Scan(prefix []byte) (map[string][]byte, error) {
 
 		value, err := iter.ValueAndErr()
 		if err != nil {
-			iter.Next()
-			continue
+			return result, err // B3：不再吞错
 		}
 
 		// 复制键值
@@ -94,7 +93,10 @@ func (s *PebbleStore) Scan(prefix []byte) (map[string][]byte, error) {
 		result[string(keyCopy)] = valueCopy
 		iter.Next()
 	}
-
+	// B3：检查迭代器累积错误（pebble 要求显式检查，Valid() 在底层错误时静默返回 false）
+	if err := iter.Error(); err != nil {
+		return result, err
+	}
 	return result, nil
 }
 
