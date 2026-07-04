@@ -7,7 +7,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"strings"
-	"time"
 
 	"github.com/daifei0527/polyant/pkg/crypto"
 )
@@ -53,8 +52,8 @@ type KnowledgeEntry struct {
 	Category      string                   `json:"category"`                // 所属分类路径
 	Tags          []string                 `json:"tags"`                    // 标签列表
 	Version       int64                    `json:"version"`                 // 版本号
-	CreatedAt     int64                    `json:"createdAt"`               // 创建时间(Unix时间戳)
-	UpdatedAt     int64                    `json:"updatedAt"`               // 更新时间
+	CreatedAt     int64                    `json:"createdAt"`               // 创建时间(Unix 毫秒时间戳)
+	UpdatedAt     int64                    `json:"updatedAt"`               // 更新时间(Unix 毫秒时间戳)
 	CreatedBy     string                   `json:"createdBy"`               // 创建者公钥
 	Score         float64                  `json:"score"`                   // 加权平均评分
 	ScoreCount    int32                    `json:"scoreCount"`              // 评分数量
@@ -72,7 +71,7 @@ type KnowledgeEntry struct {
 
 // NewKnowledgeEntry 创建一个新的知识条目实例，自动生成ID和时间戳
 func NewKnowledgeEntry(title, content, category, createdBy string) *KnowledgeEntry {
-	now := time.Now().Unix()
+	now := NowMillis()
 	entry := &KnowledgeEntry{
 		ID:         generateID(),
 		Title:      title,

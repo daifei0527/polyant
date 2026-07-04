@@ -86,6 +86,9 @@ func TestNewKnowledgeEntry(t *testing.T) {
 	if entry.ContentHash == "" {
 		t.Error("ContentHash should be computed")
 	}
+	if e := entry; e.CreatedAt < 1e12 || e.UpdatedAt < 1e12 {
+		t.Fatalf("NewKnowledgeEntry timestamps must be millis (>=1e12); got created=%d updated=%d", e.CreatedAt, e.UpdatedAt)
+	}
 }
 
 // TestKnowledgeEntry_ComputeContentHash_Contract pins the documented hash

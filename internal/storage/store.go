@@ -198,6 +198,11 @@ func NewPersistentStore(cfg *StoreConfig) (*Store, error) {
 	// 使用适配器组装存储
 	entryStore := NewBadgerEntryStore(kvStore)
 
+	// B2：迁移历史秒级时间戳为毫秒（幂等）
+	if err := migrateTimestampsToMillis(entryStore); err != nil {
+		return nil, fmt.Errorf("migrate timestamps: %w", err)
+	}
+
 	// 创建标题索引与反向链接索引：启动时遍历已发布条目一次性构建。
 	// backlink 与 titleIdx 同为内存索引，每次启动从持久化的 entries 重建，
 	// 因此条目间的链接关系在重启后不丢失。
