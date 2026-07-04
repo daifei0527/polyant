@@ -164,6 +164,11 @@ func (s *KVCandidateStore) UpdateVoteCount(ctx context.Context, electionID, user
 }
 
 func (s *KVCandidateStore) UpdateStatus(ctx context.Context, electionID, userID string, status model.CandidateStatus) error {
+	// R2-D3：复用 lockFor(electionID)，与 UpdateVoteCount 共用同一把锁，
+	// 串行化"读取-改状态-写回"，避免与并发计票交错产生 lost-update。
+	s.lockFor(electionID).Lock()
+	defer s.lockFor(electionID).Unlock()
+
 	candidate, err := s.Get(ctx, electionID, userID)
 	if err != nil {
 		return err

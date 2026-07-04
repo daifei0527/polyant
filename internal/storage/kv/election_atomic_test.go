@@ -51,6 +51,45 @@ func TestKVCandidateStore_UpdateVoteCount_Concurrent(t *testing.T) {
 	}
 }
 
+// TestKVCandidateStore_UpdateStatus_ConcurrentWithVoteCount: 并发 UpdateVoteCount + UpdateStatus
+// 不得丢更新。重构前 UpdateStatus 无锁，其 读取-改 Status-写回 与 UpdateVoteCount 的
+// 读取-累加-写回 交错时会互相覆盖（典型 lost-update）。
+func TestKVCandidateStore_UpdateStatus_ConcurrentWithVoteCount(t *testing.T) {
+	store := NewMemoryStore()
+	cs := kv.NewCandidateStore(store)
+	ctx := context.Background()
+
+	if err := cs.Add(ctx, &model.Candidate{ElectionID: "e1", UserID: "u1", VoteCount: 0}); err != nil {
+		t.Fatalf("Add candidate: %v", err)
+	}
+
+	const n = 100
+	var wg sync.WaitGroup
+	for i := 0; i < n; i++ {
+		wg.Add(1)
+		go func(i int) {
+			defer wg.Done()
+			if i%2 == 0 {
+				_ = cs.UpdateVoteCount(ctx, "e1", "u1", 1)
+			} else {
+				_ = cs.UpdateStatus(ctx, "e1", "u1", model.CandidateStatusElected)
+			}
+		}(i)
+	}
+	wg.Wait()
+
+	got, err := cs.Get(ctx, "e1", "u1")
+	if err != nil {
+		t.Fatalf("Get candidate: %v", err)
+	}
+	if got.VoteCount != int32(n/2) {
+		t.Fatalf("VoteCount lost update: got=%d want=%d", got.VoteCount, int32(n/2))
+	}
+	if got.Status != model.CandidateStatusElected {
+		t.Fatalf("Status lost update: got=%v want=Elected", got.Status)
+	}
+}
+
 // TestKVVoteStore_HasVoted_PropagatesError: KV 故障时 HasVoted 必须传播错误，
 // 而非吞掉错误当作"未投"（否则故障期间会允许重复投票）。
 func TestKVVoteStore_HasVoted_PropagatesError(t *testing.T) {
