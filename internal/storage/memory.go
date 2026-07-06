@@ -1,8 +1,7 @@
-// Package storage 提供基于内存的存储实现。
-// 适用于开发和测试环境。
+// Package storage 提供知识库的存储聚合与多种后端实现。
 //
-// Deprecated: 生产环境应使用 NewPersistentStore 创建持久化存储。
-// 内存存储不会持久化数据，重启后数据丢失。
+// 生产环境使用 NewPersistentStore（Pebble/Badger 持久化）；开发与测试环境
+// 可用 NewMemoryStore（纯内存，重启数据丢失）。
 package storage
 
 import (

@@ -120,7 +120,10 @@ type Store struct {
 	kvStore  kv.Store          // underlying KV store for cleanup
 }
 
-// NewMemoryStore 创建内存存储实例
+// NewMemoryStore 创建基于内存的存储聚合，仅适用于开发与测试。
+//
+// Deprecated: 生产环境应使用 NewPersistentStore 创建持久化存储。内存存储不会
+// 持久化数据，重启后数据丢失。
 func NewMemoryStore() (*Store, error) {
 	entryStore := NewMemoryEntryStore()
 	userStore := NewMemoryUserStore()
