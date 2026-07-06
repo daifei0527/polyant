@@ -132,3 +132,24 @@ func (h *StatsHandler) GetRegistrationTrendHandler(w http.ResponseWriter, r *htt
 		Data:    map[string]interface{}{"trend": trend},
 	})
 }
+
+// GetEntryStatsHandler 获取条目统计
+// GET /api/v1/admin/stats/entries
+func (h *StatsHandler) GetEntryStatsHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		writeError(w, awerrors.New(100, awerrors.CategoryAPI, "method not allowed", http.StatusMethodNotAllowed))
+		return
+	}
+
+	stats, err := h.statsSvc.GetEntryStats(r.Context())
+	if err != nil {
+		writeError(w, awerrors.Wrap(800, awerrors.CategoryUser, err.Error(), http.StatusInternalServerError, err))
+		return
+	}
+
+	writeJSON(w, http.StatusOK, &APIResponse{
+		Code:    0,
+		Message: "success",
+		Data:    stats,
+	})
+}

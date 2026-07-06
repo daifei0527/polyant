@@ -493,6 +493,8 @@ func registerAdminRoutes(mux *http.ServeMux, deps *Dependencies, sessionMgr *cor
 		adminAuthMW.Middleware(http.HandlerFunc(adminHandler.GetActivityTrendHandler)))
 	mux.Handle("/api/v1/admin/stats/registrations",
 		adminAuthMW.Middleware(http.HandlerFunc(adminHandler.GetRegistrationTrendHandler)))
+	mux.Handle("/api/v1/admin/stats/entries",
+		adminAuthMW.Middleware(http.HandlerFunc(adminHandler.GetEntryStatsHandler)))
 
 	// 静态文件服务 (管理页面)
 	staticHandler := admin.NewStaticHandler()

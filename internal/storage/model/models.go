@@ -213,6 +213,24 @@ type UserStats struct {
 	TotalRatings  int64 `json:"totalRatings"`  // 总评分数
 }
 
+// EntryStats 条目统计信息（admin 仪表盘 /stats/entries，R3-E）
+type EntryStats struct {
+	TotalEntries   int64            `json:"totalEntries"`   // 总条目数
+	DraftCount     int64            `json:"draftCount"`     // draft
+	PublishedCount int64            `json:"publishedCount"` // published
+	ArchivedCount  int64            `json:"archivedCount"`  // archived
+	DeletedCount   int64            `json:"deletedCount"`   // deleted
+	ReviewCount    int64            `json:"reviewCount"`    // review（未实现，预留）
+	TopCategories  []CategoryCount  `json:"topCategories"`  // 条目数 Top-10 分类
+	ScoreBuckets   map[string]int64 `json:"scoreBuckets"`   // 评分分桶："0-1".."4-5"
+}
+
+// CategoryCount 分类计数（TopCategories 元素）
+type CategoryCount struct {
+	Category string `json:"category"`
+	Count    int64  `json:"count"`
+}
+
 // ==================== 评分 ====================
 
 // Rating 表示对知识条目的评分

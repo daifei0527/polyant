@@ -31,6 +31,9 @@ type StatsService struct {
 	userStats   *model.UserStats
 	userStatsAt time.Time
 
+	entryStats   *model.EntryStats
+	entryStatsAt time.Time
+
 	contrib   map[string]*cachedContrib // sortBy -> 排序后的全量列表
 	contribAt map[string]time.Time
 
@@ -69,6 +72,7 @@ func (s *StatsService) SetCacheTTL(d time.Duration) {
 
 func (s *StatsService) invalidateLocked() {
 	s.userStats = nil
+	s.entryStats = nil
 	s.contrib = make(map[string]*cachedContrib)
 	s.contribAt = make(map[string]time.Time)
 	s.activityTrend = make(map[int][]ActivityTrend)
@@ -318,5 +322,86 @@ func copyActivityTrend(in []ActivityTrend) []ActivityTrend {
 func copyRegistrationTrend(in []RegistrationTrend) []RegistrationTrend {
 	out := make([]RegistrationTrend, len(in))
 	copy(out, in)
+	return out
+}
+
+// GetEntryStats 获取条目统计（按 TTL 缓存）。内存聚合全量条目。
+func (s *StatsService) GetEntryStats(ctx context.Context) (*model.EntryStats, error) {
+	s.mu.RLock()
+	if s.entryStats != nil && s.fresh(s.entryStatsAt) {
+		out := *s.entryStats
+		s.mu.RUnlock()
+		return &out, nil
+	}
+	s.mu.RUnlock()
+
+	entries, total, err := s.store.Entry.List(ctx, storage.EntryFilter{Limit: 100000})
+	if err != nil {
+		return nil, err
+	}
+
+	stats := &model.EntryStats{
+		TotalEntries: int64(total),
+		ScoreBuckets: map[string]int64{"0-1": 0, "1-2": 0, "2-3": 0, "3-4": 0, "4-5": 0},
+	}
+	catCount := make(map[string]int64)
+	for _, e := range entries {
+		switch e.Status {
+		case model.EntryStatusDraft:
+			stats.DraftCount++
+		case model.EntryStatusPublished:
+			stats.PublishedCount++
+		case model.EntryStatusArchived:
+			stats.ArchivedCount++
+		case model.EntryStatusDeleted:
+			stats.DeletedCount++
+		case model.EntryStatusReview:
+			stats.ReviewCount++
+		}
+		if e.Category != "" {
+			catCount[e.Category]++
+		}
+		if e.Score > 0 {
+			switch {
+			case e.Score < 1:
+				stats.ScoreBuckets["0-1"]++
+			case e.Score < 2:
+				stats.ScoreBuckets["1-2"]++
+			case e.Score < 3:
+				stats.ScoreBuckets["2-3"]++
+			case e.Score < 4:
+				stats.ScoreBuckets["3-4"]++
+			default:
+				stats.ScoreBuckets["4-5"]++
+			}
+		}
+	}
+	stats.TopCategories = topCategories(catCount, 10)
+
+	s.mu.Lock()
+	s.entryStats = stats
+	s.entryStatsAt = time.Now()
+	s.mu.Unlock()
+	return stats, nil
+}
+
+// topCategories 按 count 降序取前 n 个分类。
+func topCategories(counts map[string]int64, n int) []model.CategoryCount {
+	type kv struct {
+		cat string
+		cnt int64
+	}
+	list := make([]kv, 0, len(counts))
+	for k, v := range counts {
+		list = append(list, kv{k, v})
+	}
+	sort.Slice(list, func(i, j int) bool { return list[i].cnt > list[j].cnt })
+	if len(list) > n {
+		list = list[:n]
+	}
+	out := make([]model.CategoryCount, len(list))
+	for i, v := range list {
+		out[i] = model.CategoryCount{Category: v.cat, Count: v.cnt}
+	}
 	return out
 }

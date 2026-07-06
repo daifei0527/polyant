@@ -61,3 +61,8 @@ func (h *Handler) GetActivityTrendHandler(w http.ResponseWriter, r *http.Request
 func (h *Handler) GetRegistrationTrendHandler(w http.ResponseWriter, r *http.Request) {
 	h.statsHandler.GetRegistrationTrendHandler(w, r)
 }
+
+// GetEntryStatsHandler 获取条目统计处理器
+func (h *Handler) GetEntryStatsHandler(w http.ResponseWriter, r *http.Request) {
+	h.statsHandler.GetEntryStatsHandler(w, r)
+}

@@ -382,3 +382,51 @@ func TestStatsService_CacheDisabled(t *testing.T) {
 		t.Errorf("cache disabled: expected immediate 2, got %d", s.TotalUsers)
 	}
 }
+
+// TestStatsService_GetEntryStats 验证条目维度统计聚合（R3-E）。
+func TestStatsService_GetEntryStats(t *testing.T) {
+	store := newTestStore(t)
+	service := NewStatsService(store)
+	service.SetCacheTTL(0) // 禁用缓存，确保实时聚合
+	ctx := context.Background()
+
+	mustEntry := func(id, cat string, status string, score float64) {
+		_, err := store.Entry.Create(ctx, &model.KnowledgeEntry{
+			ID: id, Title: "t", Content: "c", Category: cat, Status: status, Score: score,
+		})
+		if err != nil {
+			t.Fatalf("create entry %s: %v", id, err)
+		}
+	}
+	mustEntry("e1", "ai", model.EntryStatusPublished, 4.5)
+	mustEntry("e2", "ai", model.EntryStatusPublished, 3.5)
+	mustEntry("e3", "math", model.EntryStatusDraft, 0)
+	mustEntry("e4", "ai", model.EntryStatusArchived, 2.0)
+
+	stats, err := service.GetEntryStats(ctx)
+	if err != nil {
+		t.Fatalf("GetEntryStats failed: %v", err)
+	}
+
+	if stats.TotalEntries != 4 {
+		t.Errorf("TotalEntries: got %d want 4", stats.TotalEntries)
+	}
+	if stats.PublishedCount != 2 {
+		t.Errorf("PublishedCount: got %d want 2", stats.PublishedCount)
+	}
+	if stats.DraftCount != 1 {
+		t.Errorf("DraftCount: got %d want 1", stats.DraftCount)
+	}
+	if stats.ArchivedCount != 1 {
+		t.Errorf("ArchivedCount: got %d want 1", stats.ArchivedCount)
+	}
+	if len(stats.TopCategories) == 0 || stats.TopCategories[0].Category != "ai" || stats.TopCategories[0].Count != 3 {
+		t.Errorf("TopCategories[0]: got %+v want {ai 3}", stats.TopCategories)
+	}
+	if stats.ScoreBuckets["4-5"] != 1 || stats.ScoreBuckets["3-4"] != 1 || stats.ScoreBuckets["2-3"] != 1 {
+		t.Errorf("ScoreBuckets: got %+v want 4-5=1,3-4=1,2-3=1", stats.ScoreBuckets)
+	}
+	if stats.ScoreBuckets["0-1"] != 0 {
+		t.Errorf("ScoreBuckets[0-1]: got %d want 0 (score=0 不入桶)", stats.ScoreBuckets["0-1"])
+	}
+}
