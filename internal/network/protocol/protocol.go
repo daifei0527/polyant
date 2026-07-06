@@ -29,7 +29,6 @@ type Protocol struct {
 	host    host.Host
 	handler Handler
 	codec   *ProtobufCodec
-	mu      sync.RWMutex
 	wg      sync.WaitGroup // 跟踪异步 goroutine（如镜像消费者）
 }
 
