@@ -511,7 +511,7 @@ Co-Authored-By: Claude <noreply@anthropic.com>"
 - Modify: `internal/api/handler/admin_handler.go` (~line 236 — G109)
 - Modify: `pkg/config/config.go` (lines 18, 566 — G101, G306)
 - Modify: `internal/api/middleware/apikey.go` (line 11 — G101)
-- Modify: `scripts/initdata/main.go` (lines 93, 106 — G306)
+- Modify: `scripts/initdata/main.go` (lines 93, 106 — G306; lines 106, 111 — errcheck, owned here to avoid cross-task conflict)
 - Modify: `internal/core/email/service.go` (line 154 — G402)
 - Modify: `cmd/pactl/client.go` (line 51 — G402)
 
@@ -617,17 +617,26 @@ users, total, err := h.adminSvc.ListUsers(ctx, (page-1)*limit, limit, safeconv.I
 ```
 (Use `safeconv.Int32FromInt`; keep existing error handling for the parse failure.)
 
-- [ ] **Step 5: Fix G306 file permissions**
+- [ ] **Step 5: Fix G306 file permissions (and initdata errcheck — same file, owned here)**
 
 `pkg/config/config.go:566` (`config.Save` — config may contain secrets/API keys): change `0644` → `0600`.
-`scripts/initdata/main.go:93, 106` (generated seed JSON for distribution — world-readable is intended): keep `0644` but add a per-call justification:
+
+`scripts/initdata/main.go` generates seed JSON for distribution (world-readable is intended) — keep `0644`, add `//nolint:gosec`, AND check the WriteFile errors (initdata's errcheck findings live on the same lines, so this task owns them to avoid a cross-task conflict). Three sites:
 ```go
+	// :93 (outputPath) — already error-checked in surrounding code; only add gosec nolint to the WriteFile line:
 	if err := os.WriteFile(outputPath, data, 0644); err != nil { //nolint:gosec // 分发的种子数据，刻意世界可读
+		...existing handling...
+	}
+	// :106 (categoriesPath) — was a bare unchecked call; wrap it:
+	if err := os.WriteFile(categoriesPath, categoriesData, 0644); err != nil { //nolint:gosec // 分发数据，刻意世界可读
+		log.Fatalf("write categories: %v", err)
+	}
+	// :111 (entriesPath) — was a bare unchecked call; wrap it:
+	if err := os.WriteFile(entriesPath, entriesData, 0644); err != nil { //nolint:gosec // 分发数据，刻意世界可读
+		log.Fatalf("write entries: %v", err)
+	}
 ```
-```go
-	os.WriteFile(categoriesPath, categoriesData, 0644) //nolint:gosec,errcheck // 分发数据，世界可读；错误已在上方同类调用处理
-```
-(For line 106 specifically, this also covers its errcheck finding — coordinate with Task 8.)
+Add `"log"` to imports if not present. (Read the current file first — :93 may already be a checked `if err :=` form needing only the nolint; :106/:111 are the bare calls to wrap.)
 
 - [ ] **Step 6: nolint G101 (legitimate placeholders / header names)**
 
@@ -687,7 +696,6 @@ Co-Authored-By: Claude <noreply@anthropic.com>"
 - Modify: `cmd/pactl/service.go` (lines 208, 241, 253, 317)
 - Modify: `cmd/pactl/entry.go` (line 226)
 - Modify: `scripts/integration/main.go` (lines 201, 220, 236)
-- Modify: `scripts/initdata/main.go` (lines 106, 111 — coordinate with Task 7's G306)
 
 - [ ] **Step 1: Propagate election result-persistence errors**
 
@@ -800,7 +808,7 @@ If it can fail meaningfully, propagate. Inspect `StartFn` signature first.
 			fmt.Scanln(&confirm) //nolint:errcheck // 一次性确认提示，读取失败即视为否定
 ```
 
-- [ ] **Step 7: scripts — check json.Unmarshal + initdata WriteFile**
+- [ ] **Step 7: scripts/integration — check json.Unmarshal**
 
 `scripts/integration/main.go` (~201, ~220, ~236):
 ```go
@@ -808,16 +816,7 @@ If it can fail meaningfully, propagate. Inspect `StartFn` signature first.
 		log.Fatalf("unmarshal response: %v", err)
 	}
 ```
-`scripts/initdata/main.go` (~106, ~111) — check WriteFile errors:
-```go
-	if err := os.WriteFile(categoriesPath, categoriesData, 0644); err != nil { //nolint:gosec // 分发数据
-		log.Fatalf("write categories: %v", err)
-	}
-	if err := os.WriteFile(entriesPath, entriesData, 0644); err != nil { //nolint:gosec // 分发数据
-		log.Fatalf("write entries: %v", err)
-	}
-```
-(Coordinate with Task 7 Step 5 so each site is handled exactly once.)
+(Add `"log"` import if not present. `scripts/initdata` is owned entirely by Task 7 Step 5 — do not touch it here.)
 
 - [ ] **Step 8: Verify**
 
