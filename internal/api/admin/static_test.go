@@ -71,3 +71,17 @@ func TestStaticHandler_ServeHTTP_StaticFile(t *testing.T) {
 	ct := rec.Header().Get("Content-Type")
 	assert.True(t, strings.Contains(ct, "javascript"), "JS asset content-type should be javascript, got %q", ct)
 }
+
+// TestStaticHandler_ServeHTTP_DeepRefresh: 深层 SPA 路由刷新（如被删的内容审核入口
+// /admin/entries）必须回 index.html（200，非 404）。锁死 R3-C 清理后仍能正常 fallback。
+func TestStaticHandler_ServeHTTP_DeepRefresh(t *testing.T) {
+	h := NewStaticHandler()
+	req := httptest.NewRequest(http.MethodGet, "/admin/entries", nil)
+	rec := httptest.NewRecorder()
+	h.ServeHTTP(rec, req)
+
+	assert.Equal(t, http.StatusOK, rec.Code)
+	body, err := io.ReadAll(rec.Body)
+	require.NoError(t, err)
+	assert.Contains(t, string(body), `<div id="app">`, "深层 SPA 路由刷新应回 index.html")
+}
