@@ -158,7 +158,7 @@ var serviceRestartCmd = &cobra.Command{
 
 		// 停止
 		if err := stopViaSystemd(name); err != nil {
-			// 忽略停止错误
+			fmt.Fprintf(os.Stderr, "warning: systemd stop failed for %s: %v\n", name, err)
 		}
 
 		// 启动

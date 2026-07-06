@@ -172,7 +172,10 @@ func NewHost(ctx context.Context, cfg *HostConfig) (*P2PHost, error) {
 
 		// 启用自动中继（当无法直连时自动使用中继）
 		if cfg.EnableAutoRelay {
-			opts = append(opts, libp2p.EnableAutoRelay())
+			// TODO(R4+): migrate to EnableAutoRelayWithStaticRelays (configured seed
+			// nodes) or EnableAutoRelayWithPeerSource. Behaviour change — deferred to
+			// a dedicated round with NAT/relay testing.
+			opts = append(opts, libp2p.EnableAutoRelay()) //nolint:staticcheck // migration is a behaviour change, tracked above
 		}
 	}
 

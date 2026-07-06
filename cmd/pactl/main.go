@@ -58,7 +58,7 @@ var rootCmd = &cobra.Command{
 		// 初始化 i18n
 		localesDir := "pkg/i18n/locales"
 		if err := i18n.Init(localesDir, i18n.Lang(langFlag)); err != nil {
-			// 静默失败，使用默认语言
+			fmt.Fprintf(os.Stderr, "warning: i18n init failed: %v\n", err)
 		}
 
 		// 初始化客户端

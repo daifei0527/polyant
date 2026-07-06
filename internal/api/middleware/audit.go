@@ -4,8 +4,10 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
+	"os"
 	"strings"
 	"sync"
 	"time"
@@ -105,7 +107,8 @@ func (m *AuditMiddleware) Middleware(next http.Handler) http.Handler {
 func (m *AuditMiddleware) writeAuditLog(ctx context.Context, log *model.AuditLog) {
 	log.ID = model.NewAuditLog().ID
 	if err := m.auditSvc.Log(ctx, log); err != nil {
-		// 记录失败不影响主流程，只打印日志
+		// 审计写入失败不得静默：记录到 stderr 供运维排查（不影响主请求路径）。
+		fmt.Fprintf(os.Stderr, "audit log write failed: action=%s path=%s err=%v\n", log.ActionType, log.Path, err)
 	}
 }
 
