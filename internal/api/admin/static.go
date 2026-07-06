@@ -64,5 +64,5 @@ func (h *StaticHandler) serveIndexHTML(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	w.Write(data)
+	_, _ = w.Write(data) // HTTP 响应写入；headers 已发，无法恢复
 }

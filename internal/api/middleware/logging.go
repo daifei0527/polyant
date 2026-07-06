@@ -70,7 +70,7 @@ func RecoveryMiddleware(next http.Handler) http.Handler {
 				log.Printf("[PANIC] %s %s: %v", r.Method, r.URL.Path, err)
 				w.Header().Set("Content-Type", "application/json; charset=utf-8")
 				w.WriteHeader(http.StatusInternalServerError)
-				w.Write([]byte(`{"code":500,"message":"internal server error"}`))
+				_, _ = w.Write([]byte(`{"code":500,"message":"internal server error"}`)) // HTTP 响应写入；headers 已发，无法恢复
 			}
 		}()
 		next.ServeHTTP(w, r)

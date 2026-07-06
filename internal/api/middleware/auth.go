@@ -283,7 +283,7 @@ func writeAuthError(w http.ResponseWriter, err *awerrors.AWError) {
 		"code":    err.Code,
 		"message": err.Message,
 	}
-	json.NewEncoder(w).Encode(resp)
+	_ = json.NewEncoder(w).Encode(resp) // HTTP 响应写入；headers 已发，无法恢复
 }
 
 // absInt64 返回 int64 的绝对值

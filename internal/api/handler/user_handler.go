@@ -296,7 +296,11 @@ func (h *UserHandler) VerifyEmailHandler(w http.ResponseWriter, r *http.Request)
 
 	// 发送欢迎邮件
 	if h.emailService != nil && updated.AgentName != "" {
-		go h.emailService.SendWelcomeEmail(updated.Email, updated.AgentName)
+		go func() {
+		if err := h.emailService.SendWelcomeEmail(updated.Email, updated.AgentName); err != nil {
+			log.Printf("[user] welcome email failed: %v", err)
+		}
+	}()
 	}
 
 	writeJSON(w, http.StatusOK, &APIResponse{

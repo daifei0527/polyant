@@ -37,7 +37,7 @@ func ApiKeyMiddleware(validKey string) func(http.Handler) http.Handler {
 func writeJSONError(w http.ResponseWriter, code int, message string) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(code)
-	json.NewEncoder(w).Encode(map[string]interface{}{
+	_ = json.NewEncoder(w).Encode(map[string]interface{}{
 		"code":    code,
 		"message": message,
 	})

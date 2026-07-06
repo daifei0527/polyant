@@ -207,13 +207,13 @@ func isLocalRequest(r *http.Request, localHost string) bool {
 func writeAdminJSON(w http.ResponseWriter, status int, data interface{}) {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.WriteHeader(status)
-	json.NewEncoder(w).Encode(data)
+	_ = json.NewEncoder(w).Encode(data) // HTTP 响应写入；headers 已发，无法恢复
 }
 
 func writeAdminError(w http.ResponseWriter, err *awerrors.AWError) {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.WriteHeader(err.HTTPStatus)
-	json.NewEncoder(w).Encode(map[string]interface{}{
+	_ = json.NewEncoder(w).Encode(map[string]interface{}{
 		"code":    err.Code,
 		"message": err.Message,
 	})

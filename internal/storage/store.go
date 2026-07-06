@@ -142,7 +142,9 @@ func NewMemoryStore() (*Store, error) {
 	for _, e := range entries {
 		titleEntries = append(titleEntries, index.TitleEntry{ID: e.ID, Title: e.Title})
 	}
-	titleIdx.Build(titleEntries)
+	if err := titleIdx.Build(titleEntries); err != nil {
+		log.Printf("[storage] title index build failed: %v", err)
+	}
 
 	return &Store{
 		Entry:    entryStore,
@@ -218,7 +220,9 @@ func NewPersistentStore(cfg *StoreConfig) (*Store, error) {
 		titleEntries = append(titleEntries, index.TitleEntry{ID: e.ID, Title: e.Title})
 		_ = backlinkIdx.UpdateIndex(e.ID, linkparser.ParseLinks(e.Content))
 	}
-	titleIdx.Build(titleEntries)
+	if err := titleIdx.Build(titleEntries); err != nil {
+		log.Printf("[storage] title index build failed: %v", err)
+	}
 	// 重建 published 条目计数器（Create/Update/Delete 增量维护，Count 经它 O(1) 取值）
 	_ = kv.SetEntryPublishedCount(kvStore, int64(len(entries)))
 

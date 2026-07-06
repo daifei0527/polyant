@@ -296,7 +296,7 @@ func (m *RateLimitMiddleware) writeRateLimitError(w http.ResponseWriter, limiter
 	w.Header().Set("X-RateLimit-Reset", fmt.Sprintf("%d", time.Now().Add(retryAfter).Unix()))
 	w.WriteHeader(http.StatusTooManyRequests)
 
-	json.NewEncoder(w).Encode(map[string]interface{}{
+	_ = json.NewEncoder(w).Encode(map[string]interface{}{
 		"code":    42901,
 		"message": "rate limit exceeded, please retry later",
 		"data": map[string]interface{}{

@@ -95,11 +95,15 @@ func (rc *RatingCalculator) SubmitRating(ctx context.Context, entryID string, ra
 	if err == nil && entry != nil {
 		entry.Score = newScore
 		entry.ScoreCount = safeconv.Int32FromInt(len(existing) + 1)
-		rc.store.Entry.Update(ctx, entry)
+		if _, err := rc.store.Entry.Update(ctx, entry); err != nil {
+				return nil, fmt.Errorf("update entry score: %w", err)
+			}
 	}
 
 	rater.RatingCnt++
-	rc.store.User.Update(ctx, rater)
+	if _, err := rc.store.User.Update(ctx, rater); err != nil {
+		return nil, fmt.Errorf("update rater count: %w", err)
+	}
 
 	return rating, nil
 }

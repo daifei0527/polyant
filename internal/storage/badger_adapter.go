@@ -548,7 +548,9 @@ func NewBadgerStore(dataDir string) (*Store, error) {
 		titleEntries = append(titleEntries, index.TitleEntry{ID: e.ID, Title: e.Title})
 		_ = backlinkIndex.UpdateIndex(e.ID, linkparser.ParseLinks(e.Content))
 	}
-	titleIdx.Build(titleEntries)
+	if err := titleIdx.Build(titleEntries); err != nil {
+		log.Printf("[storage] title index build failed: %v", err)
+	}
 	// 重建 published 条目计数器（Create/Update/Delete 增量维护，Count 经它 O(1) 取值，
 	// 取代原先 ListEntries(0,1000000) 全量反序列化）
 	_ = kv.SetEntryPublishedCount(kvStore, int64(len(entries)))
@@ -590,7 +592,9 @@ func NewBadgerStoreWithCloser(dataDir string) (*BadgerStoreWrapper, error) {
 		titleEntries = append(titleEntries, index.TitleEntry{ID: e.ID, Title: e.Title})
 		_ = backlinkIndex.UpdateIndex(e.ID, linkparser.ParseLinks(e.Content))
 	}
-	titleIdx.Build(titleEntries)
+	if err := titleIdx.Build(titleEntries); err != nil {
+		log.Printf("[storage] title index build failed: %v", err)
+	}
 	// 重建 published 条目计数器（详见 NewBadgerStore）
 	_ = kv.SetEntryPublishedCount(kvStore, int64(len(entries)))
 

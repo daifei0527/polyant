@@ -62,7 +62,7 @@ func (h *ExportHandler) ExportHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=\"%s\"", filename))
 	w.Header().Set("Content-Length", fmt.Sprintf("%d", len(zipData)))
 
-	w.Write(zipData)
+	_, _ = w.Write(zipData) // HTTP 响应写入；headers 已发，无法恢复
 }
 
 // ImportHandler 导入数据

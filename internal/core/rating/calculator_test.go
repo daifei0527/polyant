@@ -61,6 +61,7 @@ func TestRatingCalculator_SubmitRating(t *testing.T) {
 		UserLevel: model.UserLevelLv1,
 		Status:    model.UserStatusActive,
 	}
+	_, _ = store.User.Create(context.Background(), user)
 
 	// Test successful rating
 	rating, err := calc.SubmitRating(context.Background(), "test-entry-1", user, 4.5, "Great article")
@@ -135,6 +136,7 @@ func TestRatingCalculator_SubmitRating_DuplicateRating(t *testing.T) {
 		UserLevel: model.UserLevelLv1,
 		Status:    model.UserStatusActive,
 	}
+	_, _ = store.User.Create(context.Background(), user)
 
 	// First rating
 	_, err := calc.SubmitRating(context.Background(), "test-entry-1", user, 4.0, "")
@@ -269,6 +271,7 @@ func TestRatingCalculator_WeightedScore(t *testing.T) {
 		UserLevel: model.UserLevelLv1,
 		Status:    model.UserStatusActive,
 	}
+	_, _ = store.User.Create(context.Background(), user1)
 
 	// Lv5 user rates 1.0 (weight 3.0)
 	user5 := &model.User{
@@ -276,6 +279,7 @@ func TestRatingCalculator_WeightedScore(t *testing.T) {
 		UserLevel: model.UserLevelLv5,
 		Status:    model.UserStatusActive,
 	}
+	_, _ = store.User.Create(context.Background(), user5)
 
 	_, _ = calc.SubmitRating(context.Background(), "test-entry-1", user1, 5.0, "")
 	_, _ = calc.SubmitRating(context.Background(), "test-entry-1", user5, 1.0, "")
@@ -322,6 +326,7 @@ func TestRatingCalculator_SubmitRating_ConcurrentSafe(t *testing.T) {
 				UserLevel: model.UserLevelLv1,
 				Status:    model.UserStatusActive,
 			}
+			_, _ = store.User.Create(context.Background(), rater)
 			if _, err := calc.SubmitRating(context.Background(), "entry-concurrent", rater, 4.0, ""); err != nil {
 				errs <- err
 			}
