@@ -86,8 +86,7 @@ func (s *JSONFileStore) Get(key []byte) ([]byte, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
-	keyStr := string(key)
-	value, exists := s.data[keyStr]
+	value, exists := s.data[string(key)]
 	if !exists {
 		return nil, ErrKeyNotFound
 	}

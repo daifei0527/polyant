@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	coreadmin "github.com/daifei0527/polyant/internal/core/admin"
+	mw "github.com/daifei0527/polyant/internal/api/middleware"
 	awerrors "github.com/daifei0527/polyant/pkg/errors"
 )
 
@@ -45,7 +46,7 @@ func (m *AuthMiddleware) Middleware(next http.Handler) http.Handler {
 		}
 
 		// 将公钥注入上下文
-		ctx := context.WithValue(r.Context(), "public_key", publicKey)
+		ctx := context.WithValue(r.Context(), mw.PublicKeyKey, publicKey)
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
 }

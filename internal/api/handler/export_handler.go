@@ -50,7 +50,7 @@ func (h *ExportHandler) ExportHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// 执行导出
-	zipData, err := h.exporter.Export(opts)
+	zipData, err := h.exporter.Export(r.Context(), opts)
 	if err != nil {
 		writeError(w, awerrors.Wrap(900, awerrors.CategoryAPI, err.Error(), http.StatusInternalServerError, err))
 		return

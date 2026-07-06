@@ -3,6 +3,7 @@ package export
 import (
 	"archive/zip"
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"testing"
@@ -60,7 +61,7 @@ func TestExporter_Export(t *testing.T) {
 		IncludeRatings:    false,
 	}
 
-	zipData, err := exporter.Export(opts)
+	zipData, err := exporter.Export(context.Background(), opts)
 	if err != nil {
 		t.Fatalf("Export failed: %v", err)
 	}
@@ -142,7 +143,7 @@ func TestExporter_ExportAllRecordsNoTruncation(t *testing.T) {
 		}
 	}
 
-	zipData, err := NewExporter(store, "node").Export(ExportOptions{IncludeEntries: true, IncludeRatings: true})
+	zipData, err := NewExporter(store, "node").Export(context.Background(), ExportOptions{IncludeEntries: true, IncludeRatings: true})
 	if err != nil {
 		t.Fatalf("Export: %v", err)
 	}
@@ -189,7 +190,7 @@ func TestExporter_ExportEmpty(t *testing.T) {
 		IncludeEntries: true,
 	}
 
-	zipData, err := exporter.Export(opts)
+	zipData, err := exporter.Export(context.Background(), opts)
 	if err != nil {
 		t.Fatalf("Export failed: %v", err)
 	}
@@ -230,7 +231,7 @@ func TestExporter_ExportWithRatings(t *testing.T) {
 		IncludeRatings: true,
 	}
 
-	zipData, err := exporter.Export(opts)
+	zipData, err := exporter.Export(context.Background(), opts)
 	if err != nil {
 		t.Fatalf("Export failed: %v", err)
 	}
@@ -270,7 +271,7 @@ func TestExporter_ExportUserPrivacy(t *testing.T) {
 		IncludeUsers: true,
 	}
 
-	zipData, err := exporter.Export(opts)
+	zipData, err := exporter.Export(context.Background(), opts)
 	if err != nil {
 		t.Fatalf("Export failed: %v", err)
 	}

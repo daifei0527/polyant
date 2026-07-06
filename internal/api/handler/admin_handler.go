@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"strconv"
 
+	mw "github.com/daifei0527/polyant/internal/api/middleware"
 	"github.com/daifei0527/polyant/internal/core/user"
 	"github.com/daifei0527/polyant/internal/storage"
 	"github.com/daifei0527/polyant/internal/storage/model"
@@ -102,7 +103,7 @@ func (h *AdminHandler) BanUserHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// 从上下文获取管理员公钥
-	adminPublicKey, _ := r.Context().Value("public_key").(string)
+	adminPublicKey, _ := r.Context().Value(mw.PublicKeyKey).(string)
 
 	// 执行封禁
 	ctx := r.Context()
@@ -136,7 +137,7 @@ func (h *AdminHandler) UnbanUserHandler(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	adminPublicKey, _ := r.Context().Value("public_key").(string)
+	adminPublicKey, _ := r.Context().Value(mw.PublicKeyKey).(string)
 
 	ctx := r.Context()
 	if err := h.adminSvc.UnbanUser(ctx, publicKey, adminPublicKey); err != nil {
@@ -171,7 +172,7 @@ func (h *AdminHandler) SetUserLevelHandler(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	adminPublicKey, _ := r.Context().Value("public_key").(string)
+	adminPublicKey, _ := r.Context().Value(mw.PublicKeyKey).(string)
 
 	ctx := r.Context()
 	if err := h.adminSvc.SetUserLevel(ctx, publicKey, req.Level, adminPublicKey, req.Reason); err != nil {

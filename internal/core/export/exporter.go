@@ -4,6 +4,7 @@ package export
 import (
 	"archive/zip"
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"time"
@@ -56,7 +57,7 @@ type ExportOptions struct {
 }
 
 // Export 导出数据到 ZIP 文件
-func (e *Exporter) Export(opts ExportOptions) ([]byte, error) {
+func (e *Exporter) Export(ctx context.Context, opts ExportOptions) ([]byte, error) {
 	buf := new(bytes.Buffer)
 	zipWriter := zip.NewWriter(buf)
 
@@ -70,7 +71,7 @@ func (e *Exporter) Export(opts ExportOptions) ([]byte, error) {
 
 	// 导出条目
 	if opts.IncludeEntries {
-		entries, _, err := e.store.Entry.List(nil, storage.EntryFilter{Limit: exportAllLimit})
+		entries, _, err := e.store.Entry.List(ctx, storage.EntryFilter{Limit: exportAllLimit})
 		if err != nil {
 			zipWriter.Close()
 			return nil, fmt.Errorf("failed to list entries: %w", err)
@@ -84,7 +85,7 @@ func (e *Exporter) Export(opts ExportOptions) ([]byte, error) {
 
 	// 导出分类
 	if opts.IncludeCategories {
-		categories, err := e.store.Category.ListAll(nil)
+		categories, err := e.store.Category.ListAll(ctx)
 		if err != nil {
 			zipWriter.Close()
 			return nil, fmt.Errorf("failed to list categories: %w", err)
@@ -98,7 +99,7 @@ func (e *Exporter) Export(opts ExportOptions) ([]byte, error) {
 
 	// 导出用户
 	if opts.IncludeUsers {
-		users, _, err := e.store.User.List(nil, storage.UserFilter{Limit: exportAllLimit})
+		users, _, err := e.store.User.List(ctx, storage.UserFilter{Limit: exportAllLimit})
 		if err != nil {
 			zipWriter.Close()
 			return nil, fmt.Errorf("failed to list users: %w", err)
@@ -124,7 +125,7 @@ func (e *Exporter) Export(opts ExportOptions) ([]byte, error) {
 	// 导出评分（直接取全部评分，取代原先 entries×ListByEntry 的笛卡尔积——后者既
 	// 是 O(条目数×每条目评分) 又受 100k 条目上限截断，会漏掉超出上限条目的评分）
 	if opts.IncludeRatings {
-		ratings, err := e.store.Rating.ListAll(nil)
+		ratings, err := e.store.Rating.ListAll(ctx)
 		if err != nil {
 			zipWriter.Close()
 			return nil, fmt.Errorf("failed to list ratings: %w", err)

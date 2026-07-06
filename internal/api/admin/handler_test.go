@@ -11,6 +11,7 @@ import (
 	"time"
 
 	coreadmin "github.com/daifei0527/polyant/internal/core/admin"
+	authmw "github.com/daifei0527/polyant/internal/api/middleware"
 	"github.com/daifei0527/polyant/internal/storage"
 	"github.com/daifei0527/polyant/internal/storage/model"
 )
@@ -164,7 +165,7 @@ func TestSessionMiddleware(t *testing.T) {
 	next := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		called = true
 		// Verify public key is in context
-		pk := r.Context().Value("public_key")
+		pk := r.Context().Value(authmw.PublicKeyKey)
 		if pk == nil {
 			t.Error("public_key not found in context")
 		}

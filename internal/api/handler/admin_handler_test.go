@@ -13,6 +13,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	mw "github.com/daifei0527/polyant/internal/api/middleware"
 	"github.com/daifei0527/polyant/internal/storage"
 	"github.com/daifei0527/polyant/internal/storage/model"
 )
@@ -55,7 +56,7 @@ func TestAdminHandler_BanUserHandler(t *testing.T) {
 	body := `{"reason": "Violation of terms", "ban_type": "full"}`
 	req := httptest.NewRequest(http.MethodPost, "/api/v1/admin/users/"+pubKeyB64+"/ban", bytes.NewBufferString(body))
 	req.Header.Set("Content-Type", "application/json")
-	ctx := context.WithValue(req.Context(), "public_key", adminPubKeyB64)
+	ctx := context.WithValue(req.Context(), mw.PublicKeyKey, adminPubKeyB64)
 	req = req.WithContext(ctx)
 	rec := httptest.NewRecorder()
 
@@ -115,7 +116,7 @@ func TestAdminHandler_BanUserHandler_ReadonlyBan(t *testing.T) {
 	body := `{"reason": "Readonly mode", "ban_type": "readonly"}`
 	req := httptest.NewRequest(http.MethodPost, "/api/v1/admin/users/"+pubKeyB64+"/ban", bytes.NewBufferString(body))
 	req.Header.Set("Content-Type", "application/json")
-	ctx := context.WithValue(req.Context(), "public_key", adminPubKeyB64)
+	ctx := context.WithValue(req.Context(), mw.PublicKeyKey, adminPubKeyB64)
 	req = req.WithContext(ctx)
 	rec := httptest.NewRecorder()
 
@@ -156,7 +157,7 @@ func TestAdminHandler_BanUserHandler_DefaultBanType(t *testing.T) {
 	body := `{"reason": "No ban type specified"}`
 	req := httptest.NewRequest(http.MethodPost, "/api/v1/admin/users/"+pubKeyB64+"/ban", bytes.NewBufferString(body))
 	req.Header.Set("Content-Type", "application/json")
-	ctx := context.WithValue(req.Context(), "public_key", adminPubKeyB64)
+	ctx := context.WithValue(req.Context(), mw.PublicKeyKey, adminPubKeyB64)
 	req = req.WithContext(ctx)
 	rec := httptest.NewRecorder()
 
@@ -181,7 +182,7 @@ func TestAdminHandler_BanUserHandler_InvalidBanType(t *testing.T) {
 	body := `{"reason": "Test", "ban_type": "invalid"}`
 	req := httptest.NewRequest(http.MethodPost, "/api/v1/admin/users/somekey/ban", bytes.NewBufferString(body))
 	req.Header.Set("Content-Type", "application/json")
-	ctx := context.WithValue(req.Context(), "public_key", adminPubKeyB64)
+	ctx := context.WithValue(req.Context(), mw.PublicKeyKey, adminPubKeyB64)
 	req = req.WithContext(ctx)
 	rec := httptest.NewRecorder()
 
@@ -228,7 +229,7 @@ func TestAdminHandler_UnbanUserHandler(t *testing.T) {
 
 	// URL should contain the original public key (Base64 encoded)
 	req := httptest.NewRequest(http.MethodPost, "/api/v1/admin/users/"+pubKeyB64+"/unban", nil)
-	ctx := context.WithValue(req.Context(), "public_key", adminPubKeyB64)
+	ctx := context.WithValue(req.Context(), mw.PublicKeyKey, adminPubKeyB64)
 	req = req.WithContext(ctx)
 	rec := httptest.NewRecorder()
 
@@ -272,7 +273,7 @@ func TestAdminHandler_SetUserLevelHandler(t *testing.T) {
 	body := `{"level": 3, "reason": "Promoted for contributions"}`
 	req := httptest.NewRequest(http.MethodPut, "/api/v1/admin/users/"+pubKeyB64+"/level", bytes.NewBufferString(body))
 	req.Header.Set("Content-Type", "application/json")
-	ctx := context.WithValue(req.Context(), "public_key", adminPubKeyB64)
+	ctx := context.WithValue(req.Context(), mw.PublicKeyKey, adminPubKeyB64)
 	req = req.WithContext(ctx)
 	rec := httptest.NewRecorder()
 

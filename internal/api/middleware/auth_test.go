@@ -217,7 +217,7 @@ func TestAuthMiddleware_UserNotFound(t *testing.T) {
 
 func TestGetUserFromContext(t *testing.T) {
 	// Test with nil context
-	user := GetUserFromContext(nil)
+	user := GetUserFromContext(context.TODO())
 	if user != nil {
 		t.Error("Expected nil user for nil context")
 	}
@@ -237,7 +237,7 @@ func TestGetUserFromContext(t *testing.T) {
 	ctx = context.WithValue(ctx, UserKey, testUser)
 	user = GetUserFromContext(ctx)
 	if user == nil {
-		t.Error("Expected user from context")
+		t.Fatal("Expected user from context")
 	}
 	if user.AgentName != "test-agent" {
 		t.Errorf("Expected agent name 'test-agent', got '%s'", user.AgentName)
