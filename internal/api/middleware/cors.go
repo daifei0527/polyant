@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"log"
 	"net/http"
 	"strconv"
 	"strings"
@@ -39,6 +40,19 @@ func NewCORSMiddleware(config CORSConfig) *CORSMiddleware {
 	if len(config.AllowedOrigins) == 0 {
 		config = DefaultCORSConfig()
 	}
+	// R3-D：混合配置（同时含 * 与具体 origin）规范化——剔除 *，白名单优先。
+	// 否则 isOriginAllowed 对任意 origin 返 true，而 Middleware 的"单一 *"判断
+	// 不成立，会走 else 把任意 Origin 反射回 Access-Control-Allow-Origin。
+	if hasOriginWildcard(config.AllowedOrigins) && len(config.AllowedOrigins) > 1 {
+		log.Printf("[CORS] 配置同时含 \"*\" 与具体 origin，剔除 \"*\"（白名单优先）: %v", config.AllowedOrigins)
+		filtered := make([]string, 0, len(config.AllowedOrigins)-1)
+		for _, o := range config.AllowedOrigins {
+			if o != "*" {
+				filtered = append(filtered, o)
+			}
+		}
+		config.AllowedOrigins = filtered
+	}
 	// CORS 规范不允许通配符 origin 与 credentials 同时启用——浏览器会拒绝。
 	// 作为防线，即便配置错误也强制降级。
 	if config.AllowCredentials {
@@ -52,6 +66,16 @@ func NewCORSMiddleware(config CORSConfig) *CORSMiddleware {
 	return &CORSMiddleware{
 		config: config,
 	}
+}
+
+// hasOriginWildcard 报告 origins 是否含 "*"。
+func hasOriginWildcard(origins []string) bool {
+	for _, o := range origins {
+		if o == "*" {
+			return true
+		}
+	}
+	return false
 }
 
 // Middleware 返回 HTTP 中间件处理函数

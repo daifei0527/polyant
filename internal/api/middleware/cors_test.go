@@ -238,3 +238,41 @@ func TestCORSMiddleware_WildcardWithCredentialsDowngraded(t *testing.T) {
 		t.Errorf("expected wildcard origin, got %q", got)
 	}
 }
+
+// TestCORSMiddleware_MixedWildcardNotReflected: 混合 ["*","https://x"] 配置下，
+// 任意 Origin 不得被反射（R3-D：NewCORSMiddleware 应剔除 *，等价纯白名单）。
+func TestCORSMiddleware_MixedWildcardNotReflected(t *testing.T) {
+	mw := NewCORSMiddleware(CORSConfig{
+		AllowedOrigins: []string{"*", "https://allowed.com"},
+	})
+
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/test", nil)
+	req.Header.Set("Origin", "https://evil.com")
+	rec := httptest.NewRecorder()
+	mw.Middleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	})).ServeHTTP(rec, req)
+
+	if got := rec.Header().Get("Access-Control-Allow-Origin"); got == "https://evil.com" || got == "*" {
+		t.Errorf("混合配置不得反射任意 origin，got %q", got)
+	}
+}
+
+// TestCORSMiddleware_MixedWildcardStillAllowsWhitelisted: 混合配置剔除 * 后，
+// 白名单内的 origin 仍正常反射。
+func TestCORSMiddleware_MixedWildcardStillAllowsWhitelisted(t *testing.T) {
+	mw := NewCORSMiddleware(CORSConfig{
+		AllowedOrigins: []string{"*", "https://allowed.com"},
+	})
+
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/test", nil)
+	req.Header.Set("Origin", "https://allowed.com")
+	rec := httptest.NewRecorder()
+	mw.Middleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	})).ServeHTTP(rec, req)
+
+	if got := rec.Header().Get("Access-Control-Allow-Origin"); got != "https://allowed.com" {
+		t.Errorf("白名单 origin 应被反射，got %q", got)
+	}
+}
