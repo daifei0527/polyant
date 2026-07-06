@@ -29,7 +29,7 @@ const (
 	EntryStatusPublished = "published" // 已发布
 	EntryStatusArchived  = "archived"  // 已归档
 	EntryStatusDeleted   = "deleted"   // 已删除
-	EntryStatusReview    = "review"    // 审核中
+	EntryStatusReview    = "review"    // 审核中（未实现，完整审核流程见 R4）
 )
 
 // ==================== 节点类型常量 ====================

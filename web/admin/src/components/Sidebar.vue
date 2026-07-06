@@ -18,10 +18,6 @@
         <el-icon><User /></el-icon>
         <span>用户管理</span>
       </el-menu-item>
-      <el-menu-item index="/entries" v-if="hasPermission(4)">
-        <el-icon><Document /></el-icon>
-        <span>内容审核</span>
-      </el-menu-item>
     </el-menu>
   </div>
 </template>
@@ -29,7 +25,7 @@
 <script setup>
 import { computed } from 'vue'
 import { useRoute } from 'vue-router'
-import { DataLine, User, Document } from '@element-plus/icons-vue'
+import { DataLine, User } from '@element-plus/icons-vue'
 import { useAdminStore } from '@/stores/admin'
 
 const route = useRoute()
