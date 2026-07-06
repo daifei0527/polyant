@@ -127,7 +127,7 @@ func (m *UserManager) SetEmail(ctx context.Context, publicKey, email string) err
 	return err
 }
 
-func (m *UserManager) CheckLevelUpgrade(ctx context.Context, user *model.User) (int32, bool) {
+func (m *UserManager) CheckLevelUpgrade(ctx context.Context, user *model.User) (int32, bool, error) {
 	newLevel := user.UserLevel
 
 	switch user.UserLevel {
@@ -147,11 +147,13 @@ func (m *UserManager) CheckLevelUpgrade(ctx context.Context, user *model.User) (
 
 	if newLevel > user.UserLevel {
 		user.UserLevel = newLevel
-		m.store.User.Update(ctx, user)
-		return newLevel, true
+		if _, err := m.store.User.Update(ctx, user); err != nil {
+			return 0, false, fmt.Errorf("update user level: %w", err)
+		}
+		return newLevel, true, nil
 	}
 
-	return user.UserLevel, false
+	return user.UserLevel, false, nil
 }
 
 func (m *UserManager) IncrementContribution(ctx context.Context, publicKey string) error {
@@ -161,8 +163,12 @@ func (m *UserManager) IncrementContribution(ctx context.Context, publicKey strin
 	}
 
 	user.ContributionCnt++
-	m.store.User.Update(ctx, user)
-	m.CheckLevelUpgrade(ctx, user)
+	if _, err := m.store.User.Update(ctx, user); err != nil {
+		return fmt.Errorf("update user contribution: %w", err)
+	}
+	if _, _, err := m.CheckLevelUpgrade(ctx, user); err != nil {
+		return fmt.Errorf("check level upgrade: %w", err)
+	}
 	return nil
 }
 

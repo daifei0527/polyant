@@ -288,8 +288,8 @@ func (s *RemoteQueryService) cacheRemoteEntries(ctx context.Context, entries []*
 		// 建立索引
 		if s.store.Search != nil {
 			if err := s.store.Search.IndexEntry(entry); err != nil {
-					log.Printf("[RemoteQuery] Failed to index entry %s: %v", entry.ID, err)
-				}
+				log.Printf("[RemoteQuery] Failed to index entry %s: %v", entry.ID, err)
+			}
 		}
 	}
 }

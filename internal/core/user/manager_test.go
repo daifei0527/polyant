@@ -230,7 +230,10 @@ func TestUserManager_CheckLevelUpgrade(t *testing.T) {
 			}
 			store.User.Create(context.Background(), user)
 
-			newLevel, upgraded := mgr.CheckLevelUpgrade(context.Background(), user)
+			newLevel, upgraded, err := mgr.CheckLevelUpgrade(context.Background(), user)
+			if err != nil {
+				t.Fatalf("CheckLevelUpgrade failed: %v", err)
+			}
 
 			if upgraded != tt.expectUpgrade {
 				t.Errorf("Expected upgrade %v, got %v", tt.expectUpgrade, upgraded)
