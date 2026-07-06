@@ -17,8 +17,8 @@ import (
 	"github.com/daifei0527/polyant/internal/core/email"
 	"github.com/daifei0527/polyant/internal/storage"
 	"github.com/daifei0527/polyant/internal/storage/model"
-	"github.com/daifei0527/polyant/pkg/safeconv"
 	awerrors "github.com/daifei0527/polyant/pkg/errors"
+	"github.com/daifei0527/polyant/pkg/safeconv"
 )
 
 // UserHandler 用户 HTTP 处理器
@@ -297,10 +297,10 @@ func (h *UserHandler) VerifyEmailHandler(w http.ResponseWriter, r *http.Request)
 	// 发送欢迎邮件
 	if h.emailService != nil && updated.AgentName != "" {
 		go func() {
-		if err := h.emailService.SendWelcomeEmail(updated.Email, updated.AgentName); err != nil {
-			log.Printf("[user] welcome email failed: %v", err)
-		}
-	}()
+			if err := h.emailService.SendWelcomeEmail(updated.Email, updated.AgentName); err != nil {
+				log.Printf("[user] welcome email failed: %v", err)
+			}
+		}()
 	}
 
 	writeJSON(w, http.StatusOK, &APIResponse{

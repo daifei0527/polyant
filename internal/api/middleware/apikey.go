@@ -40,5 +40,5 @@ func writeJSONError(w http.ResponseWriter, code int, message string) {
 	_ = json.NewEncoder(w).Encode(map[string]interface{}{
 		"code":    code,
 		"message": message,
-	})
+	}) // HTTP 响应写入；headers 已发，无法恢复
 }

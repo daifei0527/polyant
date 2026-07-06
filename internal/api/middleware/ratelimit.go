@@ -302,7 +302,7 @@ func (m *RateLimitMiddleware) writeRateLimitError(w http.ResponseWriter, limiter
 		"data": map[string]interface{}{
 			"retry_after": int(retryAfter.Seconds()),
 		},
-	})
+	}) // HTTP 响应写入；headers 已发，无法恢复
 }
 
 // GetUserFromContextFromRateLimit 从上下文获取用户（避免循环导入）

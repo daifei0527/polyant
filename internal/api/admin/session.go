@@ -216,5 +216,5 @@ func writeAdminError(w http.ResponseWriter, err *awerrors.AWError) {
 	_ = json.NewEncoder(w).Encode(map[string]interface{}{
 		"code":    err.Code,
 		"message": err.Message,
-	})
+	}) // HTTP 响应写入；headers 已发，无法恢复
 }
