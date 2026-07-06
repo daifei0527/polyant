@@ -1,9 +1,12 @@
 package audit
 
 import (
+	"context"
 	"testing"
 
+	"github.com/daifei0527/polyant/internal/storage/model"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestMaskSensitiveFields(t *testing.T) {
@@ -25,7 +28,7 @@ func TestMaskSensitiveFields(t *testing.T) {
 		{
 			name:     "mask verification_code",
 			input:    `{"email":"test@example.com","code":"123456"}`,
-			expected: `{"email":"test@example.com","code": "***"}`,
+			expected: `{"email": "***","code": "***"}`, // R3-A: email 也脱敏
 		},
 		{
 			name:     "no sensitive fields",
@@ -36,6 +39,28 @@ func TestMaskSensitiveFields(t *testing.T) {
 			name:     "empty string",
 			input:    "",
 			expected: "",
+		},
+		// R3-A: 标量值（数字/布尔/null）也要掩
+		{
+			name:     "mask numeric token",
+			input:    `{"token":123456789}`,
+			expected: `{"token": "***"}`,
+		},
+		{
+			name:     "mask boolean secret",
+			input:    `{"secret":true}`,
+			expected: `{"secret": "***"}`,
+		},
+		{
+			name:     "mask null api_key",
+			input:    `{"api_key":null}`,
+			expected: `{"api_key": "***"}`,
+		},
+		// R3-A: 新增字段表项
+		{
+			name:     "mask new_password",
+			input:    `{"new_password":"abc"}`,
+			expected: `{"new_password": "***"}`,
 		},
 	}
 
@@ -163,4 +188,43 @@ func TestIsSensitiveOperation(t *testing.T) {
 	assert.True(t, IsSensitiveOperation("POST", "/api/v1/admin/users/user-pk/ban"))
 	assert.False(t, IsSensitiveOperation("GET", "/api/v1/search"))
 	assert.False(t, IsSensitiveOperation("GET", "/api/v1/entry/entry-123"))
+}
+
+// fakeAuditStore 捕获 Create 收到的 AuditLog，用于断言脱敏后的 body。
+type fakeAuditStore struct {
+	got *model.AuditLog
+}
+
+func (s *fakeAuditStore) Create(ctx context.Context, log *model.AuditLog) error {
+	s.got = log
+	return nil
+}
+func (s *fakeAuditStore) Get(ctx context.Context, id string) (*model.AuditLog, error) {
+	return nil, nil
+}
+func (s *fakeAuditStore) List(ctx context.Context, filter model.AuditFilter) ([]*model.AuditLog, int64, error) {
+	return nil, 0, nil
+}
+func (s *fakeAuditStore) DeleteBefore(ctx context.Context, ts int64) (int64, error) { return 0, nil }
+func (s *fakeAuditStore) GetStats(ctx context.Context) (*model.AuditStats, error)   { return nil, nil }
+
+// TestService_Log_MasksBothBodies: RequestBody 与 ResponseBody 都必须脱敏。
+func TestService_Log_MasksBothBodies(t *testing.T) {
+	store := &fakeAuditStore{}
+	svc := NewService(store)
+
+	err := svc.Log(context.Background(), &model.AuditLog{
+		RequestBody:  `{"password":"secret","email":"u@example.com"}`,
+		ResponseBody: `{"token":"abc123","api_key":"k"}`,
+	})
+	require.NoError(t, err)
+
+	assert.Contains(t, store.got.RequestBody, `"password": "***"`)
+	assert.NotContains(t, store.got.RequestBody, "secret")
+	assert.Contains(t, store.got.RequestBody, `"email": "***"`)
+	assert.NotContains(t, store.got.RequestBody, "u@example.com")
+
+	assert.Contains(t, store.got.ResponseBody, `"token": "***"`)
+	assert.NotContains(t, store.got.ResponseBody, "abc123")
+	assert.Contains(t, store.got.ResponseBody, `"api_key": "***"`)
 }

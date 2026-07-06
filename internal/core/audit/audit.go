@@ -13,9 +13,13 @@ import (
 // 敏感字段脱敏规则
 var sensitiveFields = []string{
 	"password", "passwd", "pwd",
+	"new_password", "old_password", "confirm_password",
 	"private_key", "privateKey", "private-key",
 	"secret", "token", "api_key", "apiKey",
+	"access_token", "refresh_token",
 	"code", "verification_code",
+	"email",
+	"passphrase", "mnemonic", "seed",
 }
 
 // 脱敏正则
@@ -42,9 +46,12 @@ var sensitiveOps = map[string]map[string]string{
 
 func init() {
 	for _, field := range sensitiveFields {
-		// 匹配 "field": "value" 或 "field":"value"
-		pattern := regexp.MustCompile(`(?i)"` + field + `"\s*:\s*"[^"]*"`)
-		sensitivePatterns = append(sensitivePatterns, pattern)
+		// 字符串值："field": "value"
+		sensitivePatterns = append(sensitivePatterns,
+			regexp.MustCompile(`(?i)"`+field+`"\s*:\s*"[^"]*"`))
+		// 标量值（数字/布尔/null）："field": 123 / true / false / null
+		sensitivePatterns = append(sensitivePatterns,
+			regexp.MustCompile(`(?i)"`+field+`"\s*:\s*(?:-?\d+(?:\.\d+)?|true|false|null)`))
 	}
 }
 
@@ -60,8 +67,9 @@ func NewService(store kv.AuditStore) *Service {
 
 // Log 记录审计日志
 func (s *Service) Log(ctx context.Context, log *model.AuditLog) error {
-	// 脱敏请求体
+	// R3-A：RequestBody 与 ResponseBody 均脱敏（含 email/密钥/token 的字符串与标量形式）
 	log.RequestBody = MaskSensitiveFields(log.RequestBody)
+	log.ResponseBody = MaskSensitiveFields(log.ResponseBody)
 	log.ResponseBody = TruncateString(log.ResponseBody, 4096) // 4KB
 	log.RequestBody = TruncateString(log.RequestBody, 16384)  // 16KB
 
