@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"io"
 	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
@@ -173,20 +172,4 @@ func TestExportHandler_ImportHandler_MethodNotAllowed(t *testing.T) {
 	if rec.Code != http.StatusMethodNotAllowed {
 		t.Errorf("Expected status %d, got %d", http.StatusMethodNotAllowed, rec.Code)
 	}
-}
-
-// Helper function to create multipart body for testing
-func createMultipartBody(fieldName, filename string, fileContent []byte, fields map[string]string) (io.Reader, string) {
-	body := &bytes.Buffer{}
-	writer := multipart.NewWriter(body)
-
-	part, _ := writer.CreateFormFile(fieldName, filename)
-	part.Write(fileContent)
-
-	for key, value := range fields {
-		writer.WriteField(key, value)
-	}
-
-	writer.Close()
-	return body, writer.FormDataContentType()
 }

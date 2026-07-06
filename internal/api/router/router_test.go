@@ -10,7 +10,6 @@ import (
 	"github.com/daifei0527/polyant/internal/core/email"
 	"github.com/daifei0527/polyant/internal/storage"
 	"github.com/daifei0527/polyant/internal/storage/index"
-	"github.com/daifei0527/polyant/internal/storage/model"
 	"github.com/daifei0527/polyant/pkg/config"
 )
 
@@ -379,12 +378,4 @@ type mockRemoteQuerier struct {
 
 func (m *mockRemoteQuerier) SearchWithRemote(ctx context.Context, query index.SearchQuery) (*index.SearchResult, error) {
 	return m.result, m.err
-}
-
-type mockEntryPusher struct {
-	err error
-}
-
-func (m *mockEntryPusher) PushEntry(entry *model.KnowledgeEntry, signature []byte) error {
-	return m.err
 }

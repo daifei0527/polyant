@@ -2,15 +2,12 @@
 package protocol_test
 
 import (
-	"bytes"
 	"context"
 	"testing"
 	"time"
 
 	"github.com/daifei0527/polyant/internal/network/protocol"
 	libp2p "github.com/libp2p/go-libp2p"
-	"github.com/libp2p/go-libp2p/core/network"
-	libp2p_protocol "github.com/libp2p/go-libp2p/core/protocol"
 	mocknet "github.com/libp2p/go-libp2p/p2p/net/mock"
 )
 
@@ -445,28 +442,6 @@ func TestProtocolHandlerMirrorRequest(t *testing.T) {
 }
 
 // ==================== ProcessMessage 测试 (使用模拟流) ====================
-
-// mockStream 实现 network.Stream 接口用于测试
-type mockStream struct {
-	r *bytes.Buffer
-	w *bytes.Buffer
-}
-
-func (m *mockStream) Read(b []byte) (n int, err error)   { return m.r.Read(b) }
-func (m *mockStream) Write(b []byte) (n int, err error)  { return m.w.Write(b) }
-func (m *mockStream) Close() error                       { return nil }
-func (m *mockStream) Reset() error                       { return nil }
-func (m *mockStream) SetDeadline(t time.Time) error      { return nil }
-func (m *mockStream) SetReadDeadline(t time.Time) error  { return nil }
-func (m *mockStream) SetWriteDeadline(t time.Time) error { return nil }
-func (m *mockStream) ID() string                         { return "mock-stream" }
-func (m *mockStream) Protocol() libp2p_protocol.ID {
-	return libp2p_protocol.ID(protocol.AWSPProtocolID)
-}
-func (m *mockStream) SetProtocol(p libp2p_protocol.ID) {}
-func (m *mockStream) Conn() network.Conn               { return nil }
-func (m *mockStream) Scope() network.StreamScope       { return nil }
-func (m *mockStream) Stat() network.Stats              { return network.Stats{} }
 
 // TestSendHandshakeError 测试发送握手失败场景
 func TestSendHandshakeError(t *testing.T) {
