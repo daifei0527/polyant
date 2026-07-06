@@ -38,7 +38,9 @@ func GetLevelWeight(level int32) float64 {
 
 type RatingCalculator struct {
 	store *storage.Store
-	mu    sync.RWMutex
+	// mu 串行化 SubmitRating 的读-改-写链（评分查重 + 条目分数/计票重算 + rater 计数），
+	// 防止并发评分丢失更新。注：全局锁简化实现；如成热点可改为 per-entry 锁。
+	mu sync.RWMutex
 }
 
 func NewRatingCalculator(store *storage.Store) *RatingCalculator {
@@ -48,6 +50,9 @@ func NewRatingCalculator(store *storage.Store) *RatingCalculator {
 }
 
 func (rc *RatingCalculator) SubmitRating(ctx context.Context, entryID string, rater *model.User, score float64, comment string) (*model.Rating, error) {
+	rc.mu.Lock()
+	defer rc.mu.Unlock()
+
 	if score < 1.0 || score > 5.0 {
 		return nil, ErrScoreOutOfRange
 	}

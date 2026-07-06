@@ -2,6 +2,8 @@ package rating
 
 import (
 	"context"
+	"fmt"
+	"sync"
 	"testing"
 
 	"github.com/daifei0527/polyant/internal/storage"
@@ -289,5 +291,59 @@ func TestRatingCalculator_WeightedScore(t *testing.T) {
 	// Should be exactly 2.0
 	if result < 1.9 || result > 2.1 {
 		t.Errorf("Expected score ~2.0, got %f", result)
+	}
+}
+
+func TestRatingCalculator_SubmitRating_ConcurrentSafe(t *testing.T) {
+	store := newTestStore(t)
+	calc := NewRatingCalculator(store)
+
+	entry := &model.KnowledgeEntry{
+		ID:       "entry-concurrent",
+		Title:    "Concurrent",
+		Content:  "x",
+		Category: "test",
+		Status:   model.EntryStatusPublished,
+	}
+	if _, err := store.Entry.Create(context.Background(), entry); err != nil {
+		t.Fatalf("create entry: %v", err)
+	}
+
+	const n = 25
+	var wg sync.WaitGroup
+	errs := make(chan error, n)
+	for i := 0; i < n; i++ {
+		wg.Add(1)
+		go func(i int) {
+			defer wg.Done()
+			rater := &model.User{
+				PublicKey: fmt.Sprintf("rater-%d", i),
+				AgentName: fmt.Sprintf("rater-%d", i),
+				UserLevel: model.UserLevelLv1,
+				Status:    model.UserStatusActive,
+			}
+			if _, err := calc.SubmitRating(context.Background(), "entry-concurrent", rater, 4.0, ""); err != nil {
+				errs <- err
+			}
+		}(i)
+	}
+	wg.Wait()
+	close(errs)
+
+	for err := range errs {
+		t.Fatalf("SubmitRating error under concurrency: %v", err)
+	}
+
+	ratings, err := store.Rating.ListByEntry(context.Background(), "entry-concurrent")
+	if err != nil {
+		t.Fatalf("ListByEntry: %v", err)
+	}
+	if len(ratings) != n {
+		t.Fatalf("expected %d ratings, got %d (concurrent SubmitRating lost writes)", n, len(ratings))
+	}
+
+	got, _ := store.Entry.Get(context.Background(), "entry-concurrent")
+	if got == nil || got.ScoreCount != int32(n) {
+		t.Fatalf("expected ScoreCount=%d, got %v", n, got)
 	}
 }
