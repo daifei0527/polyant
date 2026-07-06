@@ -94,6 +94,10 @@ func TestRecoveryMiddleware_WithPanic(t *testing.T) {
 	if resp["message"] != "internal server error" {
 		t.Errorf("Expected error message, got '%v'", resp["message"])
 	}
+	// R3-B：panic 响应 code 必须非 0（0=成功），避免前端把 panic 当成功放行
+	if resp["code"] == nil || resp["code"].(float64) == 0 {
+		t.Errorf("panic 响应 code 必须非 0（假成功），got %v", resp["code"])
+	}
 }
 
 func TestRequestIDMiddleware_ExistingID(t *testing.T) {
