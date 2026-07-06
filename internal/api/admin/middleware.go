@@ -6,8 +6,8 @@ import (
 	"net/http"
 	"strings"
 
-	coreadmin "github.com/daifei0527/polyant/internal/core/admin"
 	mw "github.com/daifei0527/polyant/internal/api/middleware"
+	coreadmin "github.com/daifei0527/polyant/internal/core/admin"
 	awerrors "github.com/daifei0527/polyant/pkg/errors"
 )
 

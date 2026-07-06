@@ -14,8 +14,8 @@ import (
 	"github.com/blevesearch/bleve/v2/index/upsidedown/store/boltdb"
 	"github.com/blevesearch/bleve/v2/mapping"
 
-	"github.com/daifei0527/polyant/pkg/safeconv"
 	"github.com/daifei0527/polyant/internal/storage/model"
+	"github.com/daifei0527/polyant/pkg/safeconv"
 )
 
 const (
