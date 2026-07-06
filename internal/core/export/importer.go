@@ -3,6 +3,7 @@ package export
 import (
 	"archive/zip"
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -143,7 +144,7 @@ func (i *Importer) importCategories(data []byte, opts ImportOptions, result *Imp
 	}
 
 	for _, cat := range categories {
-		_, err := i.store.Category.Get(nil, cat.Path)
+		_, err := i.store.Category.Get(context.Background(), cat.Path)
 		if err == nil {
 			// 分类已存在
 			switch opts.ConflictStrategy {
@@ -165,7 +166,7 @@ func (i *Importer) importCategories(data []byte, opts ImportOptions, result *Imp
 			}
 		} else {
 			// 分类不存在，创建
-			if _, err := i.store.Category.Create(nil, cat); err != nil {
+			if _, err := i.store.Category.Create(context.Background(), cat); err != nil {
 				result.Errors = append(result.Errors, ImportError{
 					Type:    "category",
 					ID:      cat.Path,
@@ -203,7 +204,7 @@ func (i *Importer) importUsers(data []byte, opts ImportOptions, result *ImportRe
 			continue
 		}
 
-		existing, err := i.store.User.Get(nil, eu.PublicKey)
+		existing, err := i.store.User.Get(context.Background(), eu.PublicKey)
 		if err == nil {
 			// 用户已存在
 			switch opts.ConflictStrategy {
@@ -220,7 +221,7 @@ func (i *Importer) importUsers(data []byte, opts ImportOptions, result *ImportRe
 				// 只更新公开字段，不修改等级
 				existing.AgentName = eu.AgentName
 				existing.Status = eu.Status
-				if _, err := i.store.User.Update(nil, existing); err != nil {
+				if _, err := i.store.User.Update(context.Background(), existing); err != nil {
 					result.Errors = append(result.Errors, ImportError{
 						Type:    "user",
 						ID:      eu.PublicKey,
@@ -239,7 +240,7 @@ func (i *Importer) importUsers(data []byte, opts ImportOptions, result *ImportRe
 				RegisteredAt: eu.RegisteredAt,
 				Status:       eu.Status,
 			}
-			if _, err := i.store.User.Create(nil, user); err != nil {
+			if _, err := i.store.User.Create(context.Background(), user); err != nil {
 				result.Errors = append(result.Errors, ImportError{
 					Type:    "user",
 					ID:      eu.PublicKey,
@@ -266,7 +267,7 @@ func (i *Importer) importEntries(data []byte, opts ImportOptions, result *Import
 	}
 
 	for _, entry := range entries {
-		existing, err := i.store.Entry.Get(nil, entry.ID)
+		existing, err := i.store.Entry.Get(context.Background(), entry.ID)
 		if err == nil {
 			// 条目已存在
 			switch opts.ConflictStrategy {
@@ -280,7 +281,7 @@ func (i *Importer) importEntries(data []byte, opts ImportOptions, result *Import
 				})
 				continue
 			case ConflictOverwrite:
-				if _, err := i.store.Entry.Update(nil, entry); err != nil {
+				if _, err := i.store.Entry.Update(context.Background(), entry); err != nil {
 					result.Errors = append(result.Errors, ImportError{
 						Type:    "entry",
 						ID:      entry.ID,
@@ -292,7 +293,7 @@ func (i *Importer) importEntries(data []byte, opts ImportOptions, result *Import
 			case ConflictMerge:
 				// 比较 version，保留更高版本
 				if entry.Version > existing.Version {
-					if _, err := i.store.Entry.Update(nil, entry); err != nil {
+					if _, err := i.store.Entry.Update(context.Background(), entry); err != nil {
 						result.Errors = append(result.Errors, ImportError{
 							Type:    "entry",
 							ID:      entry.ID,
@@ -309,7 +310,7 @@ func (i *Importer) importEntries(data []byte, opts ImportOptions, result *Import
 			result.Summary.EntriesUpdated++
 		} else {
 			// 条目不存在，创建
-			if _, err := i.store.Entry.Create(nil, entry); err != nil {
+			if _, err := i.store.Entry.Create(context.Background(), entry); err != nil {
 				result.Errors = append(result.Errors, ImportError{
 					Type:    "entry",
 					ID:      entry.ID,
@@ -337,7 +338,7 @@ func (i *Importer) importRatings(data []byte, opts ImportOptions, result *Import
 
 	for _, rating := range ratings {
 		// 检查是否已存在评分
-		existing, _ := i.store.Rating.GetByRater(nil, rating.EntryId, rating.RaterPubkey)
+		existing, _ := i.store.Rating.GetByRater(context.Background(), rating.EntryId, rating.RaterPubkey)
 		if existing != nil {
 			switch opts.ConflictStrategy {
 			case ConflictSkip:
@@ -357,7 +358,7 @@ func (i *Importer) importRatings(data []byte, opts ImportOptions, result *Import
 				continue
 			}
 		} else {
-			if _, err := i.store.Rating.Create(nil, rating); err != nil {
+			if _, err := i.store.Rating.Create(context.Background(), rating); err != nil {
 				result.Errors = append(result.Errors, ImportError{
 					Type:    "rating",
 					ID:      rating.ID,
