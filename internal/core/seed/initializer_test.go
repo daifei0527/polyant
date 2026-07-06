@@ -91,7 +91,7 @@ func TestSeedDataInitializer_ImportFromFile(t *testing.T) {
 	testFile := filepath.Join(tmpDir, "test_entries.jsonl")
 	testData := `{"id":"entry-1","title":"Test Entry 1","content":"Content 1","category":"test","status":"published"}
 {"id":"entry-2","title":"Test Entry 2","content":"Content 2","category":"test","status":"published"}`
-	err = os.WriteFile(testFile, []byte(testData), 0644)
+	err = os.WriteFile(testFile, []byte(testData), 0644) //nolint:gosec // test helper file, permissions irrelevant
 	if err != nil {
 		t.Fatalf("Failed to write test file: %v", err)
 	}
@@ -138,7 +138,7 @@ func TestSeedDataInitializer_ImportFromFile_InvalidJSON(t *testing.T) {
 	defer os.RemoveAll(tmpDir)
 
 	testFile := filepath.Join(tmpDir, "invalid.jsonl")
-	err = os.WriteFile(testFile, []byte("invalid json\n{not valid}"), 0644)
+	err = os.WriteFile(testFile, []byte("invalid json\n{not valid}"), 0644) //nolint:gosec // test helper file, permissions irrelevant
 	if err != nil {
 		t.Fatalf("Failed to write test file: %v", err)
 	}
@@ -182,7 +182,7 @@ func TestSeedDataInitializer_GetSeedEntriesCount_WithFile(t *testing.T) {
 	testData := `{"id":"entry-1","title":"Test"}
 {"id":"entry-2","title":"Test"}
 {"id":"entry-3","title":"Test"}`
-	err = os.WriteFile(testFile, []byte(testData), 0644)
+	err = os.WriteFile(testFile, []byte(testData), 0644) //nolint:gosec // test helper file, permissions irrelevant
 	if err != nil {
 		t.Fatalf("Failed to write test file: %v", err)
 	}

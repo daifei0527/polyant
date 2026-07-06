@@ -36,7 +36,7 @@ func TestLoadConfig_WithFile(t *testing.T) {
 		}
 	}`
 	configFile := filepath.Join(tmpDir, "config.json")
-	err = os.WriteFile(configFile, []byte(configContent), 0644)
+	err = os.WriteFile(configFile, []byte(configContent), 0644) //nolint:gosec // test helper file, permissions irrelevant
 	if err != nil {
 		t.Fatalf("Failed to write config file: %v", err)
 	}

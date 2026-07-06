@@ -8,6 +8,7 @@ import (
 
 	"github.com/daifei0527/polyant/internal/storage"
 	"github.com/daifei0527/polyant/internal/storage/model"
+	"github.com/daifei0527/polyant/pkg/safeconv"
 	awerrors "github.com/daifei0527/polyant/pkg/errors"
 )
 
@@ -206,7 +207,7 @@ func (h *CategoryHandler) CreateCategoryHandler(w http.ResponseWriter, r *http.R
 		}
 	} else {
 		// 从路径计算层级
-		level = int32(strings.Count(req.Path, "/"))
+		level = safeconv.Int32FromInt(strings.Count(req.Path, "/"))
 	}
 
 	// 创建分类

@@ -48,7 +48,7 @@ func NewInsecureClient(baseURL string) *Client {
 			Timeout: 30 * time.Second,
 			Transport: &http.Transport{
 				TLSClientConfig: &tls.Config{
-					InsecureSkipVerify: true,
+					InsecureSkipVerify: true, //nolint:gosec // NewInsecureClient 是显式命名的 opt-in，仅用于自签名证书场景
 				},
 			},
 		},

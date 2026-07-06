@@ -27,7 +27,7 @@ func TestLoadConfig_FromFile(t *testing.T) {
         "network": {"listen_port": 9000, "api_port": 8080},
         "seed": {"domain": "test.example.com"}
     }`
-	err := os.WriteFile(cfgPath, []byte(cfgContent), 0644)
+	err := os.WriteFile(cfgPath, []byte(cfgContent), 0644) //nolint:gosec // test helper file, permissions irrelevant
 	require.NoError(t, err)
 
 	*configFile = cfgPath

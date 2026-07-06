@@ -16,6 +16,7 @@ import (
 	"github.com/daifei0527/polyant/internal/storage/index"
 	"github.com/daifei0527/polyant/internal/storage/model"
 	"github.com/daifei0527/polyant/pkg/crypto"
+	"github.com/daifei0527/polyant/pkg/safeconv"
 	"github.com/libp2p/go-libp2p/core/peer"
 )
 
@@ -401,7 +402,7 @@ func (se *SyncEngine) updateEntryScore(ctx context.Context, entryID string) {
 	}
 
 	entry.Score = avgScore
-	entry.ScoreCount = int32(len(ratings))
+	entry.ScoreCount = safeconv.Int32FromInt(len(ratings))
 
 	if _, err := se.store.Entry.Update(ctx, entry); err != nil {
 		log.Printf("[Sync] Failed to update entry score %s: %v", entryID, err)
@@ -598,8 +599,8 @@ func (se *SyncEngine) HandleMirrorRequest(ctx context.Context, req *protocolpkg.
 			select {
 			case dataCh <- &protocolpkg.MirrorData{
 				RequestID:    req.RequestID,
-				BatchIndex:   int32(i),
-				TotalBatches: int32(totalBatches),
+				BatchIndex:   safeconv.Int32FromInt(i),
+				TotalBatches: safeconv.Int32FromInt(totalBatches),
 				Entries:      entryData,
 			}:
 			case <-prodCtx.Done():
@@ -699,7 +700,7 @@ func (se *SyncEngine) HandleQuery(ctx context.Context, q *protocolpkg.Query) (*p
 	return &protocolpkg.QueryResult{
 		QueryID:    q.QueryID,
 		Entries:    entries,
-		TotalCount: int32(result.TotalCount),
+		TotalCount: safeconv.Int32FromInt(result.TotalCount),
 		HasMore:    result.HasMore,
 	}, nil
 }

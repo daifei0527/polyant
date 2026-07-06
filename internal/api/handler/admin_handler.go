@@ -7,6 +7,7 @@ import (
 
 	mw "github.com/daifei0527/polyant/internal/api/middleware"
 	"github.com/daifei0527/polyant/internal/core/user"
+	"github.com/daifei0527/polyant/pkg/safeconv"
 	"github.com/daifei0527/polyant/internal/storage"
 	"github.com/daifei0527/polyant/internal/storage/model"
 	awerrors "github.com/daifei0527/polyant/pkg/errors"
@@ -234,7 +235,7 @@ func (h *AdminHandler) ListUsersHandler(w http.ResponseWriter, r *http.Request) 
 
 	// 获取用户列表
 	ctx := r.Context()
-	users, total, err := h.adminSvc.ListUsers(ctx, (page-1)*limit, limit, int32(level), search)
+	users, total, err := h.adminSvc.ListUsers(ctx, (page-1)*limit, limit, safeconv.Int32FromInt(level), search)
 	if err != nil {
 		writeError(w, awerrors.Wrap(800, awerrors.CategoryUser, err.Error(), http.StatusInternalServerError, err))
 		return

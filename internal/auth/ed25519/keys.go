@@ -127,7 +127,7 @@ func SaveKeyPair(privateKey, publicKey []byte, dir string) error {
 	}
 
 	pubPath := filepath.Join(dir, "public_key.json")
-	if err := os.WriteFile(pubPath, pubData, 0644); err != nil {
+	if err := os.WriteFile(pubPath, pubData, 0644); err != nil { //nolint:gosec // 公钥文件刻意世界可读
 		return fmt.Errorf("写入公钥文件失败: %w", err)
 	}
 

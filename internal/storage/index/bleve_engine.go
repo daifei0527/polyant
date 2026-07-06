@@ -13,6 +13,8 @@ import (
 	"github.com/blevesearch/bleve/v2/index/upsidedown"
 	"github.com/blevesearch/bleve/v2/index/upsidedown/store/boltdb"
 	"github.com/blevesearch/bleve/v2/mapping"
+
+	"github.com/daifei0527/polyant/pkg/safeconv"
 	"github.com/daifei0527/polyant/internal/storage/model"
 )
 
@@ -354,8 +356,8 @@ func (e *BleveEngine) Search(ctx context.Context, query SearchQuery) (*SearchRes
 	}
 
 	return &SearchResult{
-		TotalCount: int(searchResult.Total),
-		HasMore:    int(searchResult.Total) > query.Offset+query.Limit,
+		TotalCount: safeconv.IntFromUint64(searchResult.Total),
+		HasMore:    safeconv.IntFromUint64(searchResult.Total) > query.Offset+query.Limit,
 		Entries:    entries,
 	}, nil
 }

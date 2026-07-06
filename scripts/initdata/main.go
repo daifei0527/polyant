@@ -8,6 +8,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"log"
 	"os"
 	"path/filepath"
 	"time"
@@ -90,7 +91,7 @@ func main() {
 
 	// 写入文件
 	outputPath := filepath.Join(outputDir, "seed_data.json")
-	if err := os.WriteFile(outputPath, data, 0644); err != nil {
+	if err := os.WriteFile(outputPath, data, 0644); err != nil { //nolint:gosec // 分发的种子数据，刻意世界可读
 		fmt.Fprintf(os.Stderr, "错误: 写入文件失败: %v\n", err)
 		os.Exit(1)
 	}
@@ -103,12 +104,16 @@ func main() {
 	// 同时分别输出分类和条目文件
 	categoriesData, _ := json.MarshalIndent(seedData.Categories, "", "  ")
 	categoriesPath := filepath.Join(outputDir, "seed_categories.json")
-	os.WriteFile(categoriesPath, categoriesData, 0644)
+	if err := os.WriteFile(categoriesPath, categoriesData, 0644); err != nil { //nolint:gosec // 分发数据，刻意世界可读
+		log.Fatalf("write categories: %v", err)
+	}
 	fmt.Printf("  分类文件: %s\n", categoriesPath)
 
 	entriesData, _ := json.MarshalIndent(seedData.Entries, "", "  ")
 	entriesPath := filepath.Join(outputDir, "seed_entries.json")
-	os.WriteFile(entriesPath, entriesData, 0644)
+	if err := os.WriteFile(entriesPath, entriesData, 0644); err != nil { //nolint:gosec // 分发数据，刻意世界可读
+		log.Fatalf("write entries: %v", err)
+	}
 	fmt.Printf("  条目文件: %s\n", entriesPath)
 }
 

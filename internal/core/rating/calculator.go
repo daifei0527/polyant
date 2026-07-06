@@ -8,6 +8,7 @@ import (
 
 	"github.com/daifei0527/polyant/internal/core/user"
 	"github.com/daifei0527/polyant/internal/storage"
+	"github.com/daifei0527/polyant/pkg/safeconv"
 	"github.com/daifei0527/polyant/internal/storage/model"
 )
 
@@ -93,7 +94,7 @@ func (rc *RatingCalculator) SubmitRating(ctx context.Context, entryID string, ra
 	entry, err := rc.store.Entry.Get(ctx, entryID)
 	if err == nil && entry != nil {
 		entry.Score = newScore
-		entry.ScoreCount = int32(len(existing) + 1)
+		entry.ScoreCount = safeconv.Int32FromInt(len(existing) + 1)
 		rc.store.Entry.Update(ctx, entry)
 	}
 

@@ -136,7 +136,7 @@ var keyExportCmd = &cobra.Command{
 		}
 
 		// 写入文件
-		if err := os.WriteFile(output, []byte(content+"\n"), 0644); err != nil {
+		if err := os.WriteFile(output, []byte(content+"\n"), 0644); err != nil { //nolint:gosec // 公钥输出文件，刻意世界可读
 			return fmt.Errorf("写入文件失败: %w", err)
 		}
 

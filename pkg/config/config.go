@@ -15,7 +15,7 @@ import (
 
 // PlaceholderApiKey 是 configs/*.json 中占位的 API key。仓库公开，任何人可见，
 // 因此绝不能在生产使用。Validate() 会拒绝它，启动 fail-fast。
-const PlaceholderApiKey = "sk_live_YOUR_API_KEY_HERE"
+const PlaceholderApiKey = "sk_live_YOUR_API_KEY_HERE" //nolint:gosec // 占位示例常量，非真实凭据
 
 // NodeConfig 节点配置
 type NodeConfig struct {
@@ -563,7 +563,7 @@ func Save(config *Config, path string) error {
 	}
 
 	// 写入文件
-	if err := os.WriteFile(path, data, 0644); err != nil {
+	if err := os.WriteFile(path, data, 0600); err != nil {
 		return fmt.Errorf("写入配置文件失败: %w", err)
 	}
 

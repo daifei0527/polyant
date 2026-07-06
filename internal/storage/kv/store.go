@@ -180,7 +180,7 @@ func (s *JSONFileStore) save() error {
 
 	// 原子写入：先写临时文件，再重命名
 	tmpPath := s.filePath + ".tmp"
-	if err := os.WriteFile(tmpPath, data, 0644); err != nil {
+	if err := os.WriteFile(tmpPath, data, 0644); err != nil { //nolint:gosec // 原子写入的临时文件，随后 rename 为目标路径
 		return err
 	}
 

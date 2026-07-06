@@ -286,7 +286,7 @@ func TestLoadValidJSON(t *testing.T) {
 		}
 	}`
 
-	if err := os.WriteFile(configPath, []byte(configContent), 0644); err != nil {
+	if err := os.WriteFile(configPath, []byte(configContent), 0644); err != nil { //nolint:gosec // test helper file, permissions irrelevant
 		t.Fatalf("写入配置文件失败: %v", err)
 	}
 
@@ -315,7 +315,7 @@ func TestLoadInvalidJSON(t *testing.T) {
 	defer os.RemoveAll(tmpDir)
 
 	configPath := filepath.Join(tmpDir, "config.json")
-	if err := os.WriteFile(configPath, []byte("invalid json"), 0644); err != nil {
+	if err := os.WriteFile(configPath, []byte("invalid json"), 0644); err != nil { //nolint:gosec // test helper file, permissions irrelevant
 		t.Fatalf("写入配置文件失败: %v", err)
 	}
 
@@ -340,7 +340,7 @@ func TestLoadPartialJSON(t *testing.T) {
 		}
 	}`
 
-	if err := os.WriteFile(configPath, []byte(configContent), 0644); err != nil {
+	if err := os.WriteFile(configPath, []byte(configContent), 0644); err != nil { //nolint:gosec // test helper file, permissions irrelevant
 		t.Fatalf("写入配置文件失败: %v", err)
 	}
 

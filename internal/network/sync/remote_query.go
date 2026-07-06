@@ -14,6 +14,8 @@ import (
 	"github.com/daifei0527/polyant/internal/storage/index"
 	"github.com/daifei0527/polyant/internal/storage/model"
 	"github.com/libp2p/go-libp2p/core/peer"
+
+	"github.com/daifei0527/polyant/pkg/safeconv"
 )
 
 // RemoteQueryService 远程查询服务
@@ -208,8 +210,8 @@ func (s *RemoteQueryService) queryPeer(ctx context.Context, peerID peer.ID, quer
 		QueryID:    generateQueryID(),
 		Keyword:    query.Keyword,
 		Categories: query.Categories,
-		Limit:      int32(query.Limit),
-		Offset:     int32(query.Offset),
+		Limit:      safeconv.Int32FromInt(query.Limit),
+		Offset:     safeconv.Int32FromInt(query.Offset),
 		QueryType:  protocol.QueryTypeGlobal,
 	}
 

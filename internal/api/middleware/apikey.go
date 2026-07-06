@@ -8,7 +8,7 @@ import (
 
 const (
 	// headerApiKey API Key 请求头
-	headerApiKey = "X-Polyant-Api-Key"
+	headerApiKey = "X-Polyant-Api-Key" //nolint:gosec // HTTP 头名称，非凭据
 )
 
 // ApiKeyMiddleware 验证 API Key

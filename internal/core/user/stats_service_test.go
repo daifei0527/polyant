@@ -170,7 +170,7 @@ func TestStatsService_GetContributionStats_Pagination(t *testing.T) {
 		store.User.Create(ctx, &model.User{
 			PublicKey:       string(rune('a' + i)),
 			AgentName:       "User",
-			ContributionCnt: int32(i + 1),
+			ContributionCnt: int32(i + 1), //nolint:gosec // 测试中 i 范围极小，不会溢出
 		})
 	}
 

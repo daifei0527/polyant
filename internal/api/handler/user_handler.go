@@ -17,6 +17,7 @@ import (
 	"github.com/daifei0527/polyant/internal/core/email"
 	"github.com/daifei0527/polyant/internal/storage"
 	"github.com/daifei0527/polyant/internal/storage/model"
+	"github.com/daifei0527/polyant/pkg/safeconv"
 	awerrors "github.com/daifei0527/polyant/pkg/errors"
 )
 
@@ -496,7 +497,7 @@ func (h *UserHandler) RateEntryHandler(w http.ResponseWriter, r *http.Request) {
 				if sumW > 0 {
 					entry.Score = sumWS / sumW
 				}
-				entry.ScoreCount = int32(len(ratings))
+				entry.ScoreCount = safeconv.Int32FromInt(len(ratings))
 				if _, uerr := h.entryStore.Update(r.Context(), entry); uerr != nil {
 					log.Printf("[UserHandler] recompute entry %s score failed: %v", entryID, uerr)
 				}

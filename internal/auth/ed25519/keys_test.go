@@ -284,7 +284,7 @@ func TestLoadKeyPairFromSeparateFiles(t *testing.T) {
 	pubData := `{"public_key": "` + authed25519.PublicKeyToString(pub) + `"}`
 	privData := `{"private_key": "` + authed25519.PrivateKeyToString(priv) + `"}`
 
-	if err := os.WriteFile(pubPath, []byte(pubData), 0644); err != nil {
+	if err := os.WriteFile(pubPath, []byte(pubData), 0644); err != nil { //nolint:gosec // 测试中公钥文件刻意世界可读
 		t.Fatalf("写入公钥文件失败: %v", err)
 	}
 	if err := os.WriteFile(privPath, []byte(privData), 0600); err != nil {

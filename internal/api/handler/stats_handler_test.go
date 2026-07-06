@@ -89,8 +89,8 @@ func TestStatsHandler_GetContributionStatsHandler(t *testing.T) {
 			AgentName:       "contributor-" + string(rune('a'+i)),
 			UserLevel:       model.UserLevelLv1,
 			Status:          model.UserStatusActive,
-			ContributionCnt: int32((i + 1) * 10),
-			RatingCnt:       int32((i + 1) * 5),
+			ContributionCnt: int32((i + 1) * 10), //nolint:gosec // test data, range is tiny
+			RatingCnt:       int32((i + 1) * 5), //nolint:gosec // test data, range is tiny
 		}
 		store.User.Create(context.Background(), user)
 	}

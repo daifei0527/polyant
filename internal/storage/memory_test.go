@@ -568,7 +568,7 @@ func TestMemoryUserStore_List(t *testing.T) {
 		user := &model.User{
 			PublicKey:    string(rune('a' + i)),
 			AgentName:    "User",
-			UserLevel:    int32(i % 3),
+			UserLevel:    int32(i % 3), //nolint:gosec // 测试中 i 范围极小，不会溢出
 			RegisteredAt: int64(1000 + i*100),
 			Status:       model.UserStatusActive,
 		}

@@ -384,7 +384,7 @@ func TestLogger_rotate_WithMaxBackups(t *testing.T) {
 	// Create some backup files
 	for i := 1; i <= 3; i++ {
 		backupPath := logPath + "." + string(rune('0'+i))
-		os.WriteFile(backupPath, []byte("backup"), 0644)
+		os.WriteFile(backupPath, []byte("backup"), 0644) //nolint:gosec // 测试辅助文件，权限无关紧要
 	}
 
 	config := &LoggerConfig{

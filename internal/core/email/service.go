@@ -151,7 +151,7 @@ func (s *Service) buildMessage(email *Email) ([]byte, error) {
 func (s *Service) sendWithTLS(addr string, to []string, msg []byte) error {
 	// TLS配置
 	tlsConfig := &tls.Config{
-		InsecureSkipVerify: s.config.SkipTLSVerify,
+		InsecureSkipVerify: s.config.SkipTLSVerify, //nolint:gosec // 配置驱动，默认 false（仅测试/自签场景开启）
 		ServerName:         s.config.Host,
 	}
 

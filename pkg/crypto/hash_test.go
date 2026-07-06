@@ -187,7 +187,7 @@ func TestComputeFileSHA256(t *testing.T) {
 	testFile := filepath.Join(tmpDir, "test.txt")
 	testContent := []byte("test file content for hashing")
 
-	if err := os.WriteFile(testFile, testContent, 0644); err != nil {
+	if err := os.WriteFile(testFile, testContent, 0644); err != nil { //nolint:gosec // test helper file, permissions irrelevant
 		t.Fatalf("写入测试文件失败: %v", err)
 	}
 
@@ -226,7 +226,7 @@ func TestComputeFileSHA256Empty(t *testing.T) {
 	defer os.RemoveAll(tmpDir)
 
 	emptyFile := filepath.Join(tmpDir, "empty.txt")
-	if err := os.WriteFile(emptyFile, []byte{}, 0644); err != nil {
+	if err := os.WriteFile(emptyFile, []byte{}, 0644); err != nil { //nolint:gosec // test helper file, permissions irrelevant
 		t.Fatalf("创建空文件失败: %v", err)
 	}
 
