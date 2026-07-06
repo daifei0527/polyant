@@ -198,7 +198,9 @@ func testNodeStatus() error {
 		return fmt.Errorf("code=%d msg=%s", resp.Code, resp.Message)
 	}
 	var data map[string]interface{}
-	json.Unmarshal(resp.Data, &data)
+	if err := json.Unmarshal(resp.Data, &data); err != nil {
+		return fmt.Errorf("unmarshal node status response: %w", err)
+	}
 	if _, ok := data["node_id"]; !ok {
 		return fmt.Errorf("缺少 node_id 字段")
 	}
@@ -217,7 +219,9 @@ func testCategoryList() error {
 		return fmt.Errorf("code=%d msg=%s", resp.Code, resp.Message)
 	}
 	var data []interface{}
-	json.Unmarshal(resp.Data, &data)
+	if err := json.Unmarshal(resp.Data, &data); err != nil {
+		return fmt.Errorf("unmarshal category list response: %w", err)
+	}
 	if len(data) < 10 {
 		return fmt.Errorf("分类数量不足: %d", len(data))
 	}
@@ -233,7 +237,9 @@ func testSearchEmpty() error {
 		return fmt.Errorf("code=%d msg=%s", resp.Code, resp.Message)
 	}
 	var data map[string]interface{}
-	json.Unmarshal(resp.Data, &data)
+	if err := json.Unmarshal(resp.Data, &data); err != nil {
+		return fmt.Errorf("unmarshal search response: %w", err)
+	}
 	if count, ok := data["total_count"].(float64); ok && count != 0 {
 		return fmt.Errorf("空搜索应返回0条结果，实际: %d", int(count))
 	}
@@ -283,7 +289,9 @@ func testSearchHit() error {
 		return fmt.Errorf("code=%d msg=%s", resp.Code, resp.Message)
 	}
 	var data map[string]interface{}
-	json.Unmarshal(resp.Data, &data)
+	if err := json.Unmarshal(resp.Data, &data); err != nil {
+		return fmt.Errorf("unmarshal search hit response: %w", err)
+	}
 	if count, ok := data["total_count"].(float64); ok && count == 0 {
 		return fmt.Errorf("搜索'测试'应有结果")
 	}
@@ -297,7 +305,9 @@ func testGetEntry() error {
 		return err
 	}
 	var data map[string]interface{}
-	json.Unmarshal(resp.Data, &data)
+	if err := json.Unmarshal(resp.Data, &data); err != nil {
+		return fmt.Errorf("unmarshal search result response: %w", err)
+	}
 	items, ok := data["items"].([]interface{})
 	if !ok || len(items) == 0 {
 		return fmt.Errorf("没有可获取的条目")
@@ -318,7 +328,9 @@ func testGetEntry() error {
 	}
 
 	var entry map[string]interface{}
-	json.Unmarshal(resp.Data, &entry)
+	if err := json.Unmarshal(resp.Data, &entry); err != nil {
+		return fmt.Errorf("unmarshal entry detail response: %w", err)
+	}
 	if _, ok := entry["title"]; !ok {
 		return fmt.Errorf("条目缺少 title 字段")
 	}

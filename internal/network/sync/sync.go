@@ -210,7 +210,9 @@ func (se *SyncEngine) syncLoop(ctx context.Context) {
 		case <-ctx.Done():
 			return
 		case <-ticker.C:
-			se.IncrementalSync(ctx)
+			if err := se.IncrementalSync(ctx); err != nil {
+				log.Printf("[SyncEngine] incremental sync failed: %v", err)
+			}
 		}
 	}
 }

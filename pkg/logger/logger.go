@@ -154,11 +154,15 @@ func (l *Logger) rotate() error {
 		for i := l.maxBackups - 1; i >= 1; i-- {
 			oldName := fmt.Sprintf("%s.%d", l.filePath, i)
 			newName := fmt.Sprintf("%s.%d", l.filePath, i+1)
-			os.Rename(oldName, newName)
+			if err := os.Rename(oldName, newName); err != nil {
+				fmt.Fprintf(os.Stderr, "log rotate rename %s->%s failed: %v\n", oldName, newName, err)
+			}
 		}
 
 		// 将当前日志文件重命名为第一个备份
-		os.Rename(l.filePath, l.filePath+".1")
+		if err := os.Rename(l.filePath, l.filePath+".1"); err != nil {
+			fmt.Fprintf(os.Stderr, "log rotate rename %s->%s failed: %v\n", l.filePath, l.filePath+".1", err)
+		}
 	}
 
 	// 重新打开日志文件

@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"strings"
 	"sync"
 	"time"
@@ -283,7 +284,9 @@ func (vm *VerificationManager) Invalidate(code string) {
 // generateRandomCode 生成随机验证码
 func (vm *VerificationManager) generateRandomCode() string {
 	bytes := make([]byte, vm.codeLength/2+1)
-	rand.Read(bytes)
+	if _, err := rand.Read(bytes); err != nil {
+		panic(fmt.Sprintf("crypto/rand for verification code failed: %v", err))
+	}
 	return hex.EncodeToString(bytes)[:vm.codeLength]
 }
 

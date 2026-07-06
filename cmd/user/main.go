@@ -493,10 +493,14 @@ func (app *UserApp) Stop() error {
 
 	// 停止各组件
 	if app.pushService != nil {
-		app.pushService.Stop()
+		if err := app.pushService.Stop(); err != nil {
+			app.logger.Warn("pushService stop failed", zap.Error(err))
+		}
 	}
 	if app.syncEngine != nil {
-		app.syncEngine.Stop()
+		if err := app.syncEngine.Stop(); err != nil {
+			app.logger.Warn("syncEngine stop failed", zap.Error(err))
+		}
 	}
 	if app.dhtNode != nil {
 		if err := app.dhtNode.Close(); err != nil {

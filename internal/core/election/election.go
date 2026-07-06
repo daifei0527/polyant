@@ -176,7 +176,9 @@ func (s *ElectionService) Vote(ctx context.Context, electionID, voterID, candida
 
 	// 检查是否自动当选
 	if election.ShouldAutoElect() && newVoteCount >= election.VoteThreshold {
-		s.candidateStore.UpdateStatus(ctx, electionID, candidateID, model.CandidateStatusElected)
+		if err := s.candidateStore.UpdateStatus(ctx, electionID, candidateID, model.CandidateStatusElected); err != nil {
+			return nil, fmt.Errorf("auto-elect: update candidate status: %w", err)
+		}
 		result.AutoElected = true
 		result.Message = "恭喜！候选人已自动当选"
 	}
@@ -216,17 +218,23 @@ func (s *ElectionService) CloseElection(ctx context.Context, electionID string) 
 	for _, c := range candidates {
 		if c.VoteCount >= election.VoteThreshold {
 			c.Status = model.CandidateStatusElected
-			s.candidateStore.UpdateStatus(ctx, electionID, c.UserID, model.CandidateStatusElected)
+			if err := s.candidateStore.UpdateStatus(ctx, electionID, c.UserID, model.CandidateStatusElected); err != nil {
+				return nil, fmt.Errorf("close election: mark elected: %w", err)
+			}
 			elected = append(elected, c)
 		} else {
 			c.Status = model.CandidateStatusRejected
-			s.candidateStore.UpdateStatus(ctx, electionID, c.UserID, model.CandidateStatusRejected)
+			if err := s.candidateStore.UpdateStatus(ctx, electionID, c.UserID, model.CandidateStatusRejected); err != nil {
+				return nil, fmt.Errorf("close election: mark rejected: %w", err)
+			}
 		}
 	}
 
 	// 更新选举状态
 	election.Status = model.ElectionStatusClosed
-	s.electionStore.Update(ctx, election)
+	if err := s.electionStore.Update(ctx, election); err != nil {
+		return nil, fmt.Errorf("close election: update election: %w", err)
+	}
 
 	return elected, nil
 }

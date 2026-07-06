@@ -484,19 +484,29 @@ func (app *SeedApp) Stop() error {
 
 	// 停止各组件
 	if app.pushService != nil {
-		app.pushService.Stop()
+		if err := app.pushService.Stop(); err != nil {
+			app.logger.Warn("pushService stop failed", zap.Error(err))
+		}
 	}
 	if app.syncEngine != nil {
-		app.syncEngine.Stop()
+		if err := app.syncEngine.Stop(); err != nil {
+			app.logger.Warn("syncEngine stop failed", zap.Error(err))
+		}
 	}
 	if app.levelChecker != nil {
-		app.levelChecker.Stop()
+		if err := app.levelChecker.Stop(); err != nil {
+			app.logger.Warn("levelChecker stop failed", zap.Error(err))
+		}
 	}
 	if app.electionCloser != nil {
-		app.electionCloser.Stop()
+		if err := app.electionCloser.Stop(); err != nil {
+			app.logger.Warn("electionCloser stop failed", zap.Error(err))
+		}
 	}
 	if app.integrityChecker != nil {
-		app.integrityChecker.Stop()
+		if err := app.integrityChecker.Stop(); err != nil {
+			app.logger.Warn("integrityChecker stop failed", zap.Error(err))
+		}
 	}
 	if app.dhtNode != nil {
 		if err := app.dhtNode.Close(); err != nil {

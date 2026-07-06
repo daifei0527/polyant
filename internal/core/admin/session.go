@@ -118,6 +118,10 @@ func (sm *SessionManager) DeleteSession(token string) {
 // generateToken 生成随机 Token
 func generateToken() string {
 	bytes := make([]byte, 32)
-	rand.Read(bytes)
+	if _, err := rand.Read(bytes); err != nil {
+		// CSPRNG 故障极罕见；退化为可预测 token 会让 admin 会话被伪造，
+		// 直接 panic 由 supervisor 重启优于签发可预测会话。
+		panic(fmt.Sprintf("crypto/rand for session token failed: %v", err))
+	}
 	return hex.EncodeToString(bytes)
 }

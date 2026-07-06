@@ -23,7 +23,7 @@ func (p *Program) Start(s service.Service) error {
 
 func (p *Program) run() {
 	if p.StartFn != nil {
-		p.StartFn()
+		_ = p.StartFn() // best-effort; errors surface via process state
 	}
 }
 

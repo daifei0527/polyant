@@ -205,7 +205,9 @@ var serviceStatusCmd = &cobra.Command{
 		pidFile := fmt.Sprintf("/var/run/%s.pid", name)
 		if data, err := os.ReadFile(pidFile); err == nil {
 			var pid int
-			fmt.Sscanf(string(data), "%d", &pid)
+			if _, err := fmt.Sscanf(string(data), "%d", &pid); err != nil {
+				return fmt.Errorf("parse pid from %s: %w", pidFile, err)
+			}
 			if pid > 0 && processExists(pid) {
 				fmt.Printf("服务状态: 运行中 (PID: %d)\n", pid)
 				return nil
@@ -238,7 +240,7 @@ var serviceLogsCmd = &cobra.Command{
 					args = append(args, "-n", fmt.Sprintf("%d", tail))
 				}
 
-				exec.Command(journalctlPath, args...).Run()
+				exec.Command(journalctlPath, args...).Run() //nolint:errcheck // best-effort log fetch
 				return nil
 			}
 		}
@@ -250,7 +252,7 @@ var serviceLogsCmd = &cobra.Command{
 			if follow {
 				args = []string{"-f", logFile}
 			}
-			exec.Command("tail", args...).Run()
+			exec.Command("tail", args...).Run() //nolint:errcheck // best-effort log fetch
 			return nil
 		}
 
@@ -314,7 +316,9 @@ func stopViaSystemd(name string) error {
 	pidFile := fmt.Sprintf("/var/run/%s.pid", name)
 	if data, err := os.ReadFile(pidFile); err == nil {
 		var pid int
-		fmt.Sscanf(string(data), "%d", &pid)
+		if _, err := fmt.Sscanf(string(data), "%d", &pid); err != nil {
+			return fmt.Errorf("parse pid from %s: %w", pidFile, err)
+		}
 		if pid > 0 {
 			if err := terminateProcess(pid); err != nil {
 				return fmt.Errorf("停止进程失败: %w", err)

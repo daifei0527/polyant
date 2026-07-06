@@ -223,7 +223,7 @@ var entryDeleteCmd = &cobra.Command{
 		if !force {
 			fmt.Printf("确定要删除条目 %s 吗? (y/n): ", id)
 			var confirm string
-			fmt.Scanln(&confirm)
+			fmt.Scanln(&confirm) //nolint:errcheck // 一次性确认提示，读取失败即视为否定
 			if confirm != "y" && confirm != "Y" {
 				fmt.Println("已取消")
 				return nil
