@@ -158,8 +158,9 @@ vet:
 	$(GOVET) ./...
 	@echo ">>> 静态分析完成"
 
-## lint: 代码检查（fmt + vet）
+## lint: 代码检查（fmt + vet + golangci-lint）
 lint: fmt vet
+	golangci-lint run ./...
 
 ## help: 显示帮助信息
 help:
