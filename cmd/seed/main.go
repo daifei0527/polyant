@@ -12,6 +12,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"syscall"
 	"time"
 
@@ -393,6 +394,16 @@ func (app *SeedApp) Start() error {
 		}
 	}
 
+	// 默认 BackupDir 为 <dataDir>/backups，避免空字符串导致 MkdirAll 无效
+	backupDir := app.config.Storage.BackupDir
+	if backupDir == "" {
+		dd := app.config.Node.DataDir
+		if dd == "" {
+			dd = "./data/seed"
+		}
+		backupDir = filepath.Join(dd, "backups")
+	}
+
 	// 创建 API 路由
 	app.apiRouter, err = router.NewRouterWithDeps(&router.Dependencies{
 		Store:           app.store,
@@ -413,7 +424,7 @@ func (app *SeedApp) Start() error {
 		ApiKey:          app.config.Network.ApiKey,
 		CORSConfig:      router.CORSConfigFromConfig(app.config),
 		AdminListenAddr: app.config.Admin.Listen,
-		BackupDir:       app.config.Storage.BackupDir,
+		BackupDir:       backupDir,
 		KVType:          app.config.Storage.KVType,
 	})
 	if err != nil {
