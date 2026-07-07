@@ -57,6 +57,7 @@ func (s *Service) CreateBackup(ctx context.Context) (*BackupResult, error) {
 	meta := BackupMeta{Dir: dir, Engine: s.engine, CreatedAt: ts, SizeBytes: size, KeyCount: count}
 	mb, _ := json.MarshalIndent(meta, "", "  ")
 	if err := os.WriteFile(filepath.Join(dir, "manifest.json"), mb, 0o600); err != nil { //nolint:gosec // backup directory
+		_ = os.RemoveAll(dir)
 		return nil, fmt.Errorf("write manifest: %w", err)
 	}
 	return &BackupResult{BackupMeta: meta}, nil
