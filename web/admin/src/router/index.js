@@ -34,6 +34,12 @@ const routes = [
         name: 'UserDetail',
         component: () => import('@/views/users/Detail.vue'),
         meta: { permission: 4, title: '用户详情' }
+      },
+      {
+        path: 'reviews',
+        name: 'Reviews',
+        component: () => import('@/views/reviews/List.vue'),
+        meta: { permission: 4, title: '内容审核' }
       }
     ]
   }

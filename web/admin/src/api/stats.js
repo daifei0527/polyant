@@ -15,3 +15,7 @@ export function getActivityTrend(days = 30) {
 export function getRegistrationTrend(days = 30) {
   return request.get('/admin/stats/registrations', { params: { days } })
 }
+
+export function getEntryStats() {
+  return request.get('/admin/stats/entries')
+}

@@ -68,26 +68,27 @@
 
 <script setup>
 import { ref, onMounted } from 'vue'
-import { getUserStats, getActivityTrend, getContributionStats } from '@/api/stats'
+import { getUserStats, getActivityTrend, getContributionStats, getEntryStats } from '@/api/stats'
 
 const userStats = ref({})
 const activityTrend = ref([])
 const contributionStats = ref({})
 
-// 模拟数据
 const entryStats = ref({ total: 0 })
 const ratingStats = ref({ total: 0 })
 
 const fetchData = async () => {
   try {
-    const [userRes, activityRes, contribRes] = await Promise.all([
+    const [userRes, activityRes, contribRes, entryRes] = await Promise.all([
       getUserStats(),
       getActivityTrend(7),
-      getContributionStats({ limit: 1 })
+      getContributionStats({ limit: 1 }),
+      getEntryStats()
     ])
     userStats.value = userRes || {}
     activityTrend.value = activityRes?.trend || []
     contributionStats.value = contribRes || {}
+    entryStats.value = entryRes || {}
   } catch (error) {
     console.error('Failed to fetch stats:', error)
   }
