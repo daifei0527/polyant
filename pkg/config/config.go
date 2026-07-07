@@ -125,6 +125,7 @@ type APIConfig struct {
 type StorageConfig struct {
 	KVType     string `json:"kv_type"`     // KV 存储类型: pebble, badger
 	SearchType string `json:"search_type"` // 搜索引擎类型: bleve, memory
+	BackupDir  string `json:"backup_dir"`  // R4c：备份目录，默认 <DataDir>/backups（节点 main 兜底）
 }
 
 // I18nConfig 国际化配置
