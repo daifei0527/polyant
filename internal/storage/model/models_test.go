@@ -1,6 +1,7 @@
 package model
 
 import (
+	"encoding/json"
 	"strconv"
 	"testing"
 )
@@ -534,5 +535,36 @@ func TestKnowledgeEntry_ProjectToLang(t *testing.T) {
 	}
 	if got := e.ProjectToLang(""); got != e {
 		t.Error("ProjectToLang(\"\") should return the original entry")
+	}
+}
+
+func TestKnowledgeEntry_ReviewerFieldsJSON(t *testing.T) {
+	e := KnowledgeEntry{
+		ID:           "e1",
+		ReviewedBy:   "pubkey-abc",
+		ReviewedAt:   1700000000000,
+		ReviewReason: "spam",
+	}
+	data, err := json.Marshal(e)
+	if err != nil {
+		t.Fatalf("marshal: %v", err)
+	}
+	var m map[string]json.RawMessage
+	if err := json.Unmarshal(data, &m); err != nil {
+		t.Fatalf("unmarshal: %v", err)
+	}
+	for _, key := range []string{"reviewedBy", "reviewedAt", "reviewReason"} {
+		if _, ok := m[key]; !ok {
+			t.Errorf("missing json key %q (camelCase); got keys: reviewedBy/reviewedAt/reviewReason must exist", key)
+		}
+	}
+
+	// backward-compat: zero-value entry (no review yet) must still serialize
+	zero := KnowledgeEntry{ID: "e2"}
+	zd, _ := json.Marshal(zero)
+	var zm map[string]json.RawMessage
+	json.Unmarshal(zd, &zm)
+	if _, ok := zm["id"]; !ok {
+		t.Error("zero-value entry lost id field")
 	}
 }

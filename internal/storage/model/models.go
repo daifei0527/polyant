@@ -63,6 +63,9 @@ type KnowledgeEntry struct {
 	Status        string                   `json:"status"`                  // 条目状态
 	License       string                   `json:"license"`                 // 许可证
 	SourceRef     string                   `json:"sourceRef"`               // 来源引用
+	ReviewedBy    string                   `json:"reviewedBy"`              // 审核者公钥（最后一次 approve/reject/takedown）
+	ReviewedAt    int64                    `json:"reviewedAt"`              // 审核时间（Unix 毫秒）
+	ReviewReason  string                   `json:"reviewReason,omitempty"`  // 拒绝/下架原因（approve 时可空）
 	// 多语言支持
 	Lang        string            `json:"lang,omitempty"`        // 条目主语言
 	TitleI18n   map[string]string `json:"titleI18n,omitempty"`   // 多语言标题 {"zh-CN": "标题", "en-US": "Title"}
