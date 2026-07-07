@@ -42,6 +42,15 @@ func contentSignatureError() *awerrors.AWError {
 	return awerrors.New(401, awerrors.CategoryAPI, "invalid or missing content signature", http.StatusUnauthorized)
 }
 
+// entryStatusForCreator decides the initial status: trusted users (Lv3+) publish
+// directly; lower-level users go to the review queue.
+func entryStatusForCreator(level int32) string {
+	if level >= model.UserLevelLv3 {
+		return model.EntryStatusPublished
+	}
+	return model.EntryStatusReview
+}
+
 // RemoteQuerier 远程查询接口
 type RemoteQuerier interface {
 	SearchWithRemote(ctx context.Context, query index.SearchQuery) (*index.SearchResult, error)
@@ -284,7 +293,7 @@ func (h *EntryHandler) CreateEntryHandler(w http.ResponseWriter, r *http.Request
 		CreatedBy:  user.PublicKey,
 		Score:      0,
 		ScoreCount: 0,
-		Status:     model.EntryStatusPublished,
+		Status:     entryStatusForCreator(user.UserLevel),
 		License:    req.License,
 		SourceRef:  req.SourceRef,
 
@@ -305,22 +314,25 @@ func (h *EntryHandler) CreateEntryHandler(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	// 建立全文索引
-	if h.searchEngine != nil {
-		if err := h.searchEngine.IndexEntry(created); err != nil {
-			log.Printf("[EntryHandler] index entry %s failed: %v", created.ID, err)
+	// 仅 published 条目建立索引（review 等状态不进搜索/标题/反向链接）
+	if created.Status == model.EntryStatusPublished {
+		// 建立全文索引
+		if h.searchEngine != nil {
+			if err := h.searchEngine.IndexEntry(created); err != nil {
+				log.Printf("[EntryHandler] index entry %s failed: %v", created.ID, err)
+			}
 		}
-	}
 
-	// 更新标题索引
-	if h.enricher != nil {
-		_ = h.enricher.titleIndex.Add(index.TitleEntry{ID: created.ID, Title: created.Title})
-	}
+		// 更新标题索引
+		if h.enricher != nil {
+			_ = h.enricher.titleIndex.Add(index.TitleEntry{ID: created.ID, Title: created.Title})
+		}
 
-	// 建立反向链接索引
-	if h.backlink != nil {
-		linkedEntryIDs := linkparser.ParseLinks(created.Content)
-		_ = h.backlink.UpdateIndex(created.ID, linkedEntryIDs)
+		// 建立反向链接索引
+		if h.backlink != nil {
+			linkedEntryIDs := linkparser.ParseLinks(created.Content)
+			_ = h.backlink.UpdateIndex(created.ID, linkedEntryIDs)
+		}
 	}
 
 	// 异步推送到种子节点（失败仅记日志，不阻塞主流程）

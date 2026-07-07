@@ -17,6 +17,69 @@ import (
 	"github.com/daifei0527/polyant/internal/storage/model"
 )
 
+// ========== Trust-based entry creation (R4b Task 2) ==========
+
+// TestCreateEntry_LowLevelUserEntersReview: Lv1 creator → entry gets status "review"
+// and must NOT appear in the search index.
+func TestCreateEntry_LowLevelUserEntersReview(t *testing.T) {
+	memStore, err := storage.NewMemoryStore()
+	require.NoError(t, err)
+	h := NewEntryHandler(memStore.Entry, memStore.Search, memStore.Backlink, memStore.User, memStore.TitleIdx)
+
+	user, priv := createTestUserWithKey(t, memStore, "lv1-author", model.UserLevelLv1)
+	sig := signContentB64(t, priv, "ReviewTitle", "ReviewContent", "test")
+	body := `{"title":"ReviewTitle","content":"ReviewContent","category":"test","creator_signature":"` + sig + `"}`
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/entry", bytes.NewBufferString(body))
+	req.Header.Set("Content-Type", "application/json")
+	req = req.WithContext(setUserInContext(req.Context(), user))
+	rec := httptest.NewRecorder()
+
+	h.CreateEntryHandler(rec, req)
+
+	require.Equal(t, http.StatusCreated, rec.Result().StatusCode, "create must succeed for Lv1 user")
+
+	// Verify entry status is "review"
+	entryID := extractIDFromCreateResp(t, rec.Body.Bytes())
+	stored, err := memStore.Entry.Get(context.Background(), entryID)
+	require.NoError(t, err)
+	if stored.Status != model.EntryStatusReview {
+		t.Fatalf("lv1 create: want status %q, got %q", model.EntryStatusReview, stored.Status)
+	}
+
+	// Review entries must NOT be in the search index
+	res, _ := memStore.Search.Search(context.Background(), index.SearchQuery{Keyword: "ReviewTitle", Limit: 10})
+	if res != nil && res.TotalCount > 0 {
+		t.Errorf("review entry leaked into search index: total=%d", res.TotalCount)
+	}
+}
+
+// TestCreateEntry_TrustedUserPublishes: Lv3+ creator → entry gets status "published".
+func TestCreateEntry_TrustedUserPublishes(t *testing.T) {
+	memStore, err := storage.NewMemoryStore()
+	require.NoError(t, err)
+	h := NewEntryHandler(memStore.Entry, memStore.Search, memStore.Backlink, memStore.User, memStore.TitleIdx)
+
+	user, priv := createTestUserWithKey(t, memStore, "lv3-author", model.UserLevelLv3)
+	sig := signContentB64(t, priv, "PubTitle", "PubContent", "test")
+	body := `{"title":"PubTitle","content":"PubContent","category":"test","creator_signature":"` + sig + `"}`
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/entry", bytes.NewBufferString(body))
+	req.Header.Set("Content-Type", "application/json")
+	req = req.WithContext(setUserInContext(req.Context(), user))
+	rec := httptest.NewRecorder()
+
+	h.CreateEntryHandler(rec, req)
+
+	require.Equal(t, http.StatusCreated, rec.Result().StatusCode, "create must succeed for Lv3 user")
+
+	// Verify entry status is "published"
+	entryID := extractIDFromCreateResp(t, rec.Body.Bytes())
+	stored, err := memStore.Entry.Get(context.Background(), entryID)
+	require.NoError(t, err)
+	if stored.Status != model.EntryStatusPublished {
+		t.Fatalf("lv3 create: want status %q, got %q", model.EntryStatusPublished, stored.Status)
+	}
+}
+
 // ========== Search Integration Tests (Graph + Keyword Indexing) ==========
 
 // TestSearchHandler_WithGraph is an end-to-end test: create cross-referencing entries,
@@ -154,7 +217,7 @@ func TestCreateEntryHandler_IndexFailureDoesNotBlock(t *testing.T) {
 	mock := &mockSearchEngine{indexErr: assertErrIndexFail}
 	h.searchEngine = mock
 
-	user, priv := createTestUserWithKey(t, memStore, "author", model.UserLevelLv1)
+	user, priv := createTestUserWithKey(t, memStore, "author", model.UserLevelLv3) // Lv3 → published → indexing attempted
 	sig := signContentB64(t, priv, "T", "C", "cat")
 	body := `{"title":"T","content":"C","category":"cat","creator_signature":"` + sig + `"}`
 	req := httptest.NewRequest(http.MethodPost, "/api/v1/entry/create", bytes.NewBufferString(body))
