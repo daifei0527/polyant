@@ -1,33 +1,24 @@
 package handler
 
 import (
-	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"strconv"
-	"strings"
 
 	mw "github.com/daifei0527/polyant/internal/api/middleware"
+	"github.com/daifei0527/polyant/internal/core/review"
 	"github.com/daifei0527/polyant/internal/storage/model"
 	awerrors "github.com/daifei0527/polyant/pkg/errors"
 )
 
-// ReviewService is the interface the ReviewHandler depends on.
-// Concrete implementation is review.Service (internal/core/review).
-type ReviewService interface {
-	ListQueue(ctx context.Context, status string, limit, offset int) ([]*model.KnowledgeEntry, int, error)
-	Approve(ctx context.Context, entryID, reviewerPubkey string) (*model.KnowledgeEntry, error)
-	Reject(ctx context.Context, entryID, reviewerPubkey, reason string) (*model.KnowledgeEntry, error)
-	Takedown(ctx context.Context, entryID, reviewerPubkey, reason string) (*model.KnowledgeEntry, error)
-}
-
 // ReviewHandler exposes the content-review admin endpoints.
 type ReviewHandler struct {
-	svc ReviewService
+	svc *review.Service
 }
 
-// NewReviewHandler creates a ReviewHandler backed by a ReviewService.
-func NewReviewHandler(svc ReviewService) *ReviewHandler {
+// NewReviewHandler creates a ReviewHandler backed by a review.Service.
+func NewReviewHandler(svc *review.Service) *ReviewHandler {
 	return &ReviewHandler{svc: svc}
 }
 
@@ -133,15 +124,11 @@ func EntryIDFromPath(path string) string {
 }
 
 // httpStatusForReviewErr maps review service errors to HTTP status codes.
-// Uses string matching because review sentinel errors cannot be imported
-// (review package imports handler, creating a cycle). The sentinel messages
-// ("entry not found", "illegal status transition") are stable.
 func httpStatusForReviewErr(err error) int {
-	msg := err.Error()
-	if strings.Contains(msg, "entry not found") {
+	if errors.Is(err, review.ErrEntryNotFound) {
 		return http.StatusNotFound
 	}
-	if strings.Contains(msg, "illegal status transition") {
+	if errors.Is(err, review.ErrIllegalTransition) {
 		return http.StatusConflict
 	}
 	return http.StatusInternalServerError

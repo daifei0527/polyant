@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/daifei0527/polyant/internal/api/handler"
 	"github.com/daifei0527/polyant/internal/storage"
 	"github.com/daifei0527/polyant/internal/storage/model"
 )
@@ -15,14 +14,19 @@ var (
 	ErrIllegalTransition = errors.New("illegal status transition")
 )
 
+// Pusher propagates entry updates to peers (satisfied structurally by handler.EntryPusher).
+type Pusher interface {
+	PushEntry(entry *model.KnowledgeEntry, signature []byte) error
+}
+
 // Service implements the entry content-review workflow.
 type Service struct {
 	store  *storage.Store
-	pusher handler.EntryPusher
+	pusher Pusher
 }
 
 // NewService creates a review service. pusher may be nil (push is skipped).
-func NewService(store *storage.Store, pusher handler.EntryPusher) *Service {
+func NewService(store *storage.Store, pusher Pusher) *Service {
 	return &Service{store: store, pusher: pusher}
 }
 
