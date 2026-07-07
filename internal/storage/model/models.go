@@ -29,7 +29,7 @@ const (
 	EntryStatusPublished = "published" // 已发布
 	EntryStatusArchived  = "archived"  // 已归档
 	EntryStatusDeleted   = "deleted"   // 已删除
-	EntryStatusReview    = "review"    // 审核中（未实现，完整审核流程见 R4）
+	EntryStatusReview    = "review"    // 审核中（R4b：Lv1/2 创建进队列，admin approve/reject/takedown）
 )
 
 // ==================== 节点类型常量 ====================
@@ -223,7 +223,7 @@ type EntryStats struct {
 	PublishedCount int64            `json:"publishedCount"` // published
 	ArchivedCount  int64            `json:"archivedCount"`  // archived
 	DeletedCount   int64            `json:"deletedCount"`   // deleted
-	ReviewCount    int64            `json:"reviewCount"`    // review（未实现，预留）
+	ReviewCount    int64            `json:"reviewCount"`    // review（R4b：待审核条目数）
 	TopCategories  []CategoryCount  `json:"topCategories"`  // 条目数 Top-10 分类
 	ScoreBuckets   map[string]int64 `json:"scoreBuckets"`   // 评分分桶："0-1".."4-5"
 }
