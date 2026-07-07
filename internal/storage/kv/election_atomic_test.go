@@ -18,6 +18,8 @@ func (s *errStore) Get(k []byte) ([]byte, error)             { return nil, s.err
 func (s *errStore) Delete(k []byte) error                    { return nil }
 func (s *errStore) Scan(p []byte) (map[string][]byte, error) { return nil, nil }
 func (s *errStore) Close() error                             { return nil }
+func (s *errStore) Backup(destDir string) error              { return nil }
+func (s *errStore) RunGC() error                             { return nil }
 
 // TestKVCandidateStore_UpdateVoteCount_Concurrent: 并发投票计数不得丢失。
 func TestKVCandidateStore_UpdateVoteCount_Concurrent(t *testing.T) {

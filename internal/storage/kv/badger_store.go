@@ -2,6 +2,10 @@
 package kv
 
 import (
+	"fmt"
+	"os"
+	"path/filepath"
+
 	"github.com/dgraph-io/badger/v4"
 )
 
@@ -88,7 +92,30 @@ func (s *BadgerStore) Close() error {
 }
 
 // RunGC 运行 BadgerDB 垃圾回收
-// 应该定期调用以回收空间
+// 循环调用 RunValueLogGC 直到无更多可回收空间，最多 10 轮。
 func (s *BadgerStore) RunGC() error {
-	return s.db.RunValueLogGC(0.7)
+	for i := 0; i < 10; i++ {
+		err := s.db.RunValueLogGC(0.7)
+		if err != nil {
+			if err == badger.ErrNoRewrite {
+				return nil
+			}
+			return err
+		}
+	}
+	return nil
+}
+
+// Backup 将数据库备份到 destDir/backup.bak（Badger 原生 backup 格式）。
+func (s *BadgerStore) Backup(destDir string) error {
+	if err := os.MkdirAll(destDir, 0o750); err != nil {
+		return fmt.Errorf("create backup dir: %w", err)
+	}
+	f, err := os.Create(filepath.Join(destDir, "backup.bak"))
+	if err != nil {
+		return fmt.Errorf("create backup file: %w", err)
+	}
+	defer f.Close()
+	_, err = s.db.Backup(f, 0)
+	return err
 }

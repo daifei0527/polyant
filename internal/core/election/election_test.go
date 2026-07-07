@@ -58,6 +58,9 @@ func (s *MemoryStore) Close() error {
 	return nil
 }
 
+func (s *MemoryStore) Backup(destDir string) error { return nil }
+func (s *MemoryStore) RunGC() error                { return nil }
+
 // 确保实现 kv.Store 接口
 var _ kv.Store = (*MemoryStore)(nil)
 

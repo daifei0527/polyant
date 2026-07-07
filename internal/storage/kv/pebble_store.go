@@ -127,3 +127,13 @@ func (s *PebbleStore) Flush() error {
 func (s *PebbleStore) Compact() error {
 	return s.db.Compact(nil, nil, false)
 }
+
+// Backup 创建一致性快照到 destDir（Pebble Checkpoint，在线、不停机）。
+func (s *PebbleStore) Backup(destDir string) error {
+	return s.db.Checkpoint(destDir)
+}
+
+// RunGC 触发全量压缩回收空间（满足 kv.Store 接口）。
+func (s *PebbleStore) RunGC() error {
+	return s.db.Compact(nil, []byte{0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff}, false)
+}

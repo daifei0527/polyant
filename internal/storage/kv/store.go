@@ -3,7 +3,9 @@ package kv
 
 import (
 	"encoding/json"
+	"fmt"
 	"os"
+	"path/filepath"
 	"sort"
 	"strings"
 	"sync"
@@ -37,6 +39,10 @@ type Store interface {
 	Scan(prefix []byte) (map[string][]byte, error)
 	// Close 关闭存储
 	Close() error
+	// Backup 写入一致性快照到 destDir（目录格式）。R4c。
+	Backup(destDir string) error
+	// RunGC 周期空间回收（Pebble Compact / Badger RunValueLogGC）。R4c。
+	RunGC() error
 }
 
 // ==================== JSONFileStore实现 ====================
@@ -139,6 +145,21 @@ func (s *JSONFileStore) Close() error {
 	}
 	return nil
 }
+
+// Backup 复制当前 JSON 持久化文件到 destDir/。
+func (s *JSONFileStore) Backup(destDir string) error {
+	if err := os.MkdirAll(destDir, 0o750); err != nil {
+		return fmt.Errorf("create backup dir: %w", err)
+	}
+	in, err := os.ReadFile(s.filePath)
+	if err != nil {
+		return err
+	}
+	return os.WriteFile(filepath.Join(destDir, filepath.Base(s.filePath)), in, 0o600) //nolint:gosec // 备份目录内文件
+}
+
+// RunGC JSON 文件存储无需回收。
+func (s *JSONFileStore) RunGC() error { return nil }
 
 // load 从文件加载数据
 func (s *JSONFileStore) load() error {

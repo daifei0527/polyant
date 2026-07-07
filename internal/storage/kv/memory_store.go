@@ -1,6 +1,10 @@
 package kv
 
 import (
+	"encoding/json"
+	"fmt"
+	"os"
+	"path/filepath"
 	"strings"
 	"sync"
 )
@@ -78,5 +82,26 @@ func (s *MemoryStore) Scan(prefix []byte) (map[string][]byte, error) {
 func (s *MemoryStore) Close() error {
 	return nil
 }
+
+// Backup dump 内存键值到 destDir/dump.json。
+func (s *MemoryStore) Backup(destDir string) error {
+	if err := os.MkdirAll(destDir, 0o750); err != nil {
+		return fmt.Errorf("create backup dir: %w", err)
+	}
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	dump := make(map[string]string, len(s.data))
+	for k, v := range s.data {
+		dump[k] = string(v)
+	}
+	b, err := json.MarshalIndent(dump, "", "  ")
+	if err != nil {
+		return err
+	}
+	return os.WriteFile(filepath.Join(destDir, "dump.json"), b, 0o600) //nolint:gosec // 备份目录内文件
+}
+
+// RunGC 内存存储无需回收。
+func (s *MemoryStore) RunGC() error { return nil }
 
 var _ Store = (*MemoryStore)(nil)
