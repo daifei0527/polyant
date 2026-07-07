@@ -123,9 +123,10 @@ type APIConfig struct {
 
 // StorageConfig 存储配置
 type StorageConfig struct {
-	KVType     string `json:"kv_type"`     // KV 存储类型: pebble, badger
-	SearchType string `json:"search_type"` // 搜索引擎类型: bleve, memory
-	BackupDir  string `json:"backup_dir"`  // R4c：备份目录，默认 <DataDir>/backups（节点 main 兜底）
+	KVType      string `json:"kv_type"`       // KV 存储类型: pebble, badger
+	SearchType  string `json:"search_type"`   // 搜索引擎类型: bleve, memory
+	BackupDir   string `json:"backup_dir"`    // R4c：备份目录，默认 <DataDir>/backups（节点 main 兜底）
+	GCIntervalS int    `json:"gc_interval_s"` // R4c：GC 间隔秒，默认 3600；<=0 禁用
 }
 
 // I18nConfig 国际化配置
@@ -235,8 +236,9 @@ func DefaultConfig() *Config {
 			BodyLimitBytes: 1 << 20, // 默认 1MB
 		},
 		Storage: StorageConfig{
-			KVType:     "pebble",
-			SearchType: "bleve",
+			KVType:      "pebble",
+			SearchType:  "bleve",
+			GCIntervalS: 3600,
 		},
 		I18n: I18nConfig{
 			DefaultLang:    "zh-CN",
