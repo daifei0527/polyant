@@ -154,6 +154,16 @@ func GetActionType(method, path string) string {
 		if strings.HasPrefix(path, "/api/v1/elections/") && strings.HasSuffix(path, "/close") {
 			return "election.close"
 		}
+		// 内容审核操作
+		if strings.HasPrefix(path, "/api/v1/admin/entries/") && strings.HasSuffix(path, "/approve") {
+			return "entry.approve"
+		}
+		if strings.HasPrefix(path, "/api/v1/admin/entries/") && strings.HasSuffix(path, "/reject") {
+			return "entry.reject"
+		}
+		if strings.HasPrefix(path, "/api/v1/admin/entries/") && strings.HasSuffix(path, "/takedown") {
+			return "entry.takedown"
+		}
 	}
 	if method == "PUT" {
 		if strings.HasPrefix(path, "/api/v1/admin/users/") && strings.HasSuffix(path, "/level") {
@@ -164,7 +174,6 @@ func GetActionType(method, path string) string {
 	return ""
 }
 
-// IsSensitiveOperation 检查是否为敏感操作
 func IsSensitiveOperation(method, path string) bool {
 	return GetActionType(method, path) != ""
 }
@@ -175,6 +184,7 @@ func ExtractTargetID(path string) string {
 	if len(parts) >= 5 {
 		// /api/v1/entry/update/entry-id
 		// /api/v1/admin/users/user-pk/ban
+		// /api/v1/admin/entries/entry-id/approve
 		switch {
 		case strings.HasPrefix(path, "/api/v1/entry/"):
 			return parts[4] // entry-id
@@ -184,6 +194,10 @@ func ExtractTargetID(path string) string {
 			}
 		case strings.HasPrefix(path, "/api/v1/elections/"):
 			return parts[4] // election-id
+		case strings.HasPrefix(path, "/api/v1/admin/entries/"):
+			if len(parts) >= 6 {
+				return parts[5] // entry-id
+			}
 		}
 	}
 	return ""

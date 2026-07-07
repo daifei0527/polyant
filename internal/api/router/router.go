@@ -453,7 +453,7 @@ func registerAuthRoutes(mux *http.ServeMux, authMW *middleware.AuthMiddleware, e
 func registerAdminRoutes(mux *http.ServeMux, deps *Dependencies, sessionMgr *coreadmin.SessionManager) {
 	// 创建 handlers
 	sessionHandler := admin.NewSessionHandler(sessionMgr, deps.UserStore, deps.AdminListenAddr)
-	adminHandler := admin.NewHandler(deps.Store)
+	adminHandler := admin.NewHandler(deps.Store, deps.EntryPusher)
 	adminAuthMW := admin.NewAuthMiddleware(sessionMgr)
 
 	// Session API
@@ -495,6 +495,24 @@ func registerAdminRoutes(mux *http.ServeMux, deps *Dependencies, sessionMgr *cor
 		adminAuthMW.Middleware(http.HandlerFunc(adminHandler.GetRegistrationTrendHandler)))
 	mux.Handle("/api/v1/admin/stats/entries",
 		adminAuthMW.Middleware(http.HandlerFunc(adminHandler.GetEntryStatsHandler)))
+
+	// 内容审核 API（admin session-token 认证）
+	mux.Handle("/api/v1/admin/entries",
+		adminAuthMW.Middleware(http.HandlerFunc(adminHandler.ListReviewQueueHandler)))
+	mux.Handle("/api/v1/admin/entries/",
+		adminAuthMW.Middleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			path := r.URL.Path
+			switch {
+			case strings.HasSuffix(path, "/approve"):
+				adminHandler.ApproveEntryHandler(w, r)
+			case strings.HasSuffix(path, "/reject"):
+				adminHandler.RejectEntryHandler(w, r)
+			case strings.HasSuffix(path, "/takedown"):
+				adminHandler.TakedownEntryHandler(w, r)
+			default:
+				http.NotFound(w, r)
+			}
+		})))
 
 	// 静态文件服务 (管理页面)
 	staticHandler := admin.NewStaticHandler()

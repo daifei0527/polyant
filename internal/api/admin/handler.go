@@ -5,20 +5,24 @@ import (
 	"net/http"
 
 	"github.com/daifei0527/polyant/internal/api/handler"
+	"github.com/daifei0527/polyant/internal/core/review"
 	"github.com/daifei0527/polyant/internal/storage"
 )
 
 // Handler Admin API 处理器
 type Handler struct {
-	adminHandler *handler.AdminHandler
-	statsHandler *handler.StatsHandler
+	adminHandler  *handler.AdminHandler
+	statsHandler  *handler.StatsHandler
+	reviewHandler *handler.ReviewHandler
 }
 
 // NewHandler 创建 Admin 处理器
-func NewHandler(store *storage.Store) *Handler {
+func NewHandler(store *storage.Store, entryPusher handler.EntryPusher) *Handler {
+	reviewSvc := review.NewService(store, entryPusher)
 	return &Handler{
-		adminHandler: handler.NewAdminHandler(store),
-		statsHandler: handler.NewStatsHandler(store),
+		adminHandler:  handler.NewAdminHandler(store),
+		statsHandler:  handler.NewStatsHandler(store),
+		reviewHandler: handler.NewReviewHandler(reviewSvc),
 	}
 }
 
@@ -65,4 +69,24 @@ func (h *Handler) GetRegistrationTrendHandler(w http.ResponseWriter, r *http.Req
 // GetEntryStatsHandler 获取条目统计处理器
 func (h *Handler) GetEntryStatsHandler(w http.ResponseWriter, r *http.Request) {
 	h.statsHandler.GetEntryStatsHandler(w, r)
+}
+
+// ListReviewQueueHandler 列出审核队列处理器
+func (h *Handler) ListReviewQueueHandler(w http.ResponseWriter, r *http.Request) {
+	h.reviewHandler.ListReviewQueueHandler(w, r)
+}
+
+// ApproveEntryHandler 审核通过处理器
+func (h *Handler) ApproveEntryHandler(w http.ResponseWriter, r *http.Request) {
+	h.reviewHandler.ApproveEntryHandler(w, r)
+}
+
+// RejectEntryHandler 审核拒绝处理器
+func (h *Handler) RejectEntryHandler(w http.ResponseWriter, r *http.Request) {
+	h.reviewHandler.RejectEntryHandler(w, r)
+}
+
+// TakedownEntryHandler 下架处理器
+func (h *Handler) TakedownEntryHandler(w http.ResponseWriter, r *http.Request) {
+	h.reviewHandler.TakedownEntryHandler(w, r)
 }

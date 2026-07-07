@@ -319,7 +319,7 @@ func TestLocalOnlyMiddleware_LocalRequest(t *testing.T) {
 // TestNewHandler tests creating a Handler
 func TestNewHandler(t *testing.T) {
 	store, _ := storage.NewMemoryStore()
-	handler := NewHandler(store)
+	handler := NewHandler(store, nil)
 
 	if handler == nil {
 		t.Fatal("NewHandler should not return nil")
@@ -329,7 +329,7 @@ func TestNewHandler(t *testing.T) {
 // TestListUsersHandler_Success tests successfully listing users
 func TestListUsersHandler_Success(t *testing.T) {
 	store, _ := storage.NewMemoryStore()
-	handler := NewHandler(store)
+	handler := NewHandler(store, nil)
 
 	// Create test users
 	for i := 0; i < 3; i++ {
@@ -377,7 +377,7 @@ func TestListUsersHandler_Success(t *testing.T) {
 // TestListUsersHandler_Empty tests empty user list
 func TestListUsersHandler_Empty(t *testing.T) {
 	store, _ := storage.NewMemoryStore()
-	handler := NewHandler(store)
+	handler := NewHandler(store, nil)
 
 	req := httptest.NewRequest(http.MethodGet, "/api/v1/admin/users", nil)
 	w := httptest.NewRecorder()
@@ -418,7 +418,7 @@ func TestListUsersHandler_Empty(t *testing.T) {
 // TestBanUserHandler_Success tests successfully banning a user
 func TestBanUserHandler_Success(t *testing.T) {
 	store, _ := storage.NewMemoryStore()
-	handler := NewHandler(store)
+	handler := NewHandler(store, nil)
 
 	// Create a test user
 	user := &model.User{
@@ -454,7 +454,7 @@ func TestBanUserHandler_Success(t *testing.T) {
 // TestBanUserHandler_NotFound tests banning a non-existent user
 func TestBanUserHandler_NotFound(t *testing.T) {
 	store, _ := storage.NewMemoryStore()
-	handler := NewHandler(store)
+	handler := NewHandler(store, nil)
 
 	body := `{"reason": "test", "ban_type": "full"}`
 	req := httptest.NewRequest(http.MethodPost, "/api/v1/admin/users/non-existent-pk/ban", bytes.NewBufferString(body))
@@ -471,7 +471,7 @@ func TestBanUserHandler_NotFound(t *testing.T) {
 // TestUnbanUserHandler_Success tests successfully unbanning a user
 func TestUnbanUserHandler_Success(t *testing.T) {
 	store, _ := storage.NewMemoryStore()
-	handler := NewHandler(store)
+	handler := NewHandler(store, nil)
 
 	// Create a banned user
 	user := &model.User{
@@ -506,7 +506,7 @@ func TestUnbanUserHandler_Success(t *testing.T) {
 // TestSetUserLevelHandler_Success tests successfully setting user level
 func TestSetUserLevelHandler_Success(t *testing.T) {
 	store, _ := storage.NewMemoryStore()
-	handler := NewHandler(store)
+	handler := NewHandler(store, nil)
 
 	// Create a test user
 	user := &model.User{
@@ -544,7 +544,7 @@ func TestSetUserLevelHandler_Success(t *testing.T) {
 // TestGetUserStatsHandler_Success tests getting user statistics
 func TestGetUserStatsHandler_Success(t *testing.T) {
 	store, _ := storage.NewMemoryStore()
-	handler := NewHandler(store)
+	handler := NewHandler(store, nil)
 
 	// Create test users
 	for i := 0; i < 5; i++ {
@@ -573,7 +573,7 @@ func TestGetUserStatsHandler_Success(t *testing.T) {
 // TestGetContributionStatsHandler_Success tests getting contribution statistics
 func TestGetContributionStatsHandler_Success(t *testing.T) {
 	store, _ := storage.NewMemoryStore()
-	handler := NewHandler(store)
+	handler := NewHandler(store, nil)
 
 	req := httptest.NewRequest(http.MethodGet, "/api/v1/admin/stats/contributions", nil)
 	w := httptest.NewRecorder()
@@ -588,7 +588,7 @@ func TestGetContributionStatsHandler_Success(t *testing.T) {
 // TestGetActivityTrendHandler_Success tests getting activity trend
 func TestGetActivityTrendHandler_Success(t *testing.T) {
 	store, _ := storage.NewMemoryStore()
-	handler := NewHandler(store)
+	handler := NewHandler(store, nil)
 
 	req := httptest.NewRequest(http.MethodGet, "/api/v1/admin/stats/activity", nil)
 	w := httptest.NewRecorder()
@@ -603,7 +603,7 @@ func TestGetActivityTrendHandler_Success(t *testing.T) {
 // TestGetRegistrationTrendHandler_Success tests getting registration trend
 func TestGetRegistrationTrendHandler_Success(t *testing.T) {
 	store, _ := storage.NewMemoryStore()
-	handler := NewHandler(store)
+	handler := NewHandler(store, nil)
 
 	req := httptest.NewRequest(http.MethodGet, "/api/v1/admin/stats/registrations", nil)
 	w := httptest.NewRecorder()
