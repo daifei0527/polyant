@@ -18,6 +18,7 @@ import (
 
 	"github.com/daifei0527/polyant/internal/api/router"
 	"github.com/daifei0527/polyant/internal/core/category"
+	gcstorage "github.com/daifei0527/polyant/internal/core/storage"
 	"github.com/daifei0527/polyant/internal/network/detect"
 	"github.com/daifei0527/polyant/internal/network/dht"
 	"github.com/daifei0527/polyant/internal/network/host"
@@ -49,21 +50,22 @@ const (
 
 // UserApp 用户节点应用
 type UserApp struct {
-	config        *config.Config
-	logger        *zap.Logger
-	store         *storage.Store
-	p2pHost       *host.P2PHost
-	dhtNode       *dht.DHTNode
-	syncEngine    *networksync.SyncEngine
-	pushService   *networksync.PushService
-	remoteQuery   *networksync.RemoteQueryService
-	syncQueue     *queuesync.SyncQueue
-	httpServer    *http.Server
-	apiRouter     *router.Router
-	cancel        context.CancelFunc
-	serviceMode   bool
-	networkCap    *detect.NetworkCapability
-	seedNodeAddrs []string
+	config           *config.Config
+	logger           *zap.Logger
+	store            *storage.Store
+	p2pHost          *host.P2PHost
+	dhtNode          *dht.DHTNode
+	syncEngine       *networksync.SyncEngine
+	pushService      *networksync.PushService
+	remoteQuery      *networksync.RemoteQueryService
+	syncQueue        *queuesync.SyncQueue
+	httpServer       *http.Server
+	apiRouter        *router.Router
+	garbageCollector *gcstorage.GarbageCollector
+	cancel           context.CancelFunc
+	serviceMode      bool
+	networkCap       *detect.NetworkCapability
+	seedNodeAddrs    []string
 }
 
 func main() {
@@ -273,6 +275,15 @@ func (app *UserApp) initData(ctx context.Context) error {
 // Start 启动服务
 func (app *UserApp) Start() error {
 	ctx := context.Background()
+
+	// 启动周期 GC：回收 KV 存储空间（Pebble Compact / Badger RunValueLogGC）
+	gcInterval := time.Duration(app.config.Storage.GCIntervalS) * time.Second
+	app.garbageCollector = gcstorage.NewGarbageCollector(app.store.KVStore(), gcInterval)
+	if err := app.garbageCollector.Start(ctx); err != nil {
+		app.logger.Warn("Garbage collector start failed", zap.Error(err))
+	} else {
+		app.logger.Info("Garbage collector started")
+	}
 
 	// 创建 P2P Host 配置
 	hostCfg := &host.HostConfig{
@@ -513,6 +524,11 @@ func (app *UserApp) Stop() error {
 	if app.syncEngine != nil {
 		if err := app.syncEngine.Stop(); err != nil {
 			app.logger.Warn("syncEngine stop failed", zap.Error(err))
+		}
+	}
+	if app.garbageCollector != nil {
+		if err := app.garbageCollector.Stop(); err != nil {
+			app.logger.Warn("garbageCollector stop failed", zap.Error(err))
 		}
 	}
 	if app.dhtNode != nil {
