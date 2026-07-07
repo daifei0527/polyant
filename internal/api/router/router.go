@@ -53,6 +53,8 @@ type Dependencies struct {
 	AdminListenAddr           string                // admin 本地访问校验用的监听地址（默认 127.0.0.1:18531）
 	BodyLimitBytes            int64                 // R1-C2: 请求体大小上限（<=0 不限制）
 	TrustedProxies            []string              // R1-D1: 受信反代 IP/CIDR
+	BackupDir                 string                // R4c: 备份目录
+	KVType                    string                // R4c: KV 引擎类型（pebble/badger）
 }
 
 // Router 包装已注册路由与中间件链，并暴露 Close 以便优雅停机时
@@ -453,7 +455,7 @@ func registerAuthRoutes(mux *http.ServeMux, authMW *middleware.AuthMiddleware, e
 func registerAdminRoutes(mux *http.ServeMux, deps *Dependencies, sessionMgr *coreadmin.SessionManager) {
 	// 创建 handlers
 	sessionHandler := admin.NewSessionHandler(sessionMgr, deps.UserStore, deps.AdminListenAddr)
-	adminHandler := admin.NewHandler(deps.Store, deps.EntryPusher)
+	adminHandler := admin.NewHandler(deps.Store, deps.EntryPusher, deps.BackupDir, deps.KVType)
 	adminAuthMW := admin.NewAuthMiddleware(sessionMgr)
 
 	// Session API
@@ -513,6 +515,12 @@ func registerAdminRoutes(mux *http.ServeMux, deps *Dependencies, sessionMgr *cor
 				http.NotFound(w, r)
 			}
 		})))
+
+	// KV 备份 API（admin session-token 认证）
+	mux.Handle("/api/v1/admin/backup",
+		adminAuthMW.Middleware(http.HandlerFunc(adminHandler.CreateBackupHandler)))
+	mux.Handle("/api/v1/admin/backups",
+		adminAuthMW.Middleware(http.HandlerFunc(adminHandler.ListBackupsHandler)))
 
 	// 静态文件服务 (管理页面)
 	staticHandler := admin.NewStaticHandler()

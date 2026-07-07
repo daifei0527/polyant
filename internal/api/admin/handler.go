@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/daifei0527/polyant/internal/api/handler"
+	"github.com/daifei0527/polyant/internal/core/backup"
 	"github.com/daifei0527/polyant/internal/core/review"
 	"github.com/daifei0527/polyant/internal/storage"
 )
@@ -14,16 +15,21 @@ type Handler struct {
 	adminHandler  *handler.AdminHandler
 	statsHandler  *handler.StatsHandler
 	reviewHandler *handler.ReviewHandler
+	backupHandler *handler.BackupHandler
 }
 
 // NewHandler 创建 Admin 处理器
-func NewHandler(store *storage.Store, entryPusher handler.EntryPusher) *Handler {
+func NewHandler(store *storage.Store, entryPusher handler.EntryPusher, backupDir, engine string) *Handler {
 	reviewSvc := review.NewService(store, entryPusher)
-	return &Handler{
+	h := &Handler{
 		adminHandler:  handler.NewAdminHandler(store),
 		statsHandler:  handler.NewStatsHandler(store),
 		reviewHandler: handler.NewReviewHandler(reviewSvc),
 	}
+	if store != nil {
+		h.backupHandler = handler.NewBackupHandler(backup.NewService(store.KVStore(), backupDir, engine))
+	}
+	return h
 }
 
 // ListUsersHandler 用户列表处理器
@@ -89,4 +95,14 @@ func (h *Handler) RejectEntryHandler(w http.ResponseWriter, r *http.Request) {
 // TakedownEntryHandler 下架处理器
 func (h *Handler) TakedownEntryHandler(w http.ResponseWriter, r *http.Request) {
 	h.reviewHandler.TakedownEntryHandler(w, r)
+}
+
+// CreateBackupHandler 创建备份处理器
+func (h *Handler) CreateBackupHandler(w http.ResponseWriter, r *http.Request) {
+	h.backupHandler.CreateBackupHandler(w, r)
+}
+
+// ListBackupsHandler 列出备份处理器
+func (h *Handler) ListBackupsHandler(w http.ResponseWriter, r *http.Request) {
+	h.backupHandler.ListBackupsHandler(w, r)
 }

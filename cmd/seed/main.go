@@ -413,6 +413,8 @@ func (app *SeedApp) Start() error {
 		ApiKey:          app.config.Network.ApiKey,
 		CORSConfig:      router.CORSConfigFromConfig(app.config),
 		AdminListenAddr: app.config.Admin.Listen,
+		BackupDir:       app.config.Storage.BackupDir,
+		KVType:          app.config.Storage.KVType,
 	})
 	if err != nil {
 		return fmt.Errorf("failed to create API router: %w", err)
