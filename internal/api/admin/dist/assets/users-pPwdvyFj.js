@@ -1,0 +1,1 @@
+import{x as n}from"./index-Cl3M6qHq.js";function u(s){return n.get("/admin/users",{params:s})}function a(s,e,r="full"){return n.post(`/admin/users/${s}/ban`,{reason:e,ban_type:r})}function i(s){return n.post(`/admin/users/${s}/unban`)}function o(s,e,r){return n.put(`/admin/users/${s}/level`,{level:e,reason:r})}export{a as b,u as l,o as s,i as u};

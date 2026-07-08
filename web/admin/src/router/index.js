@@ -42,6 +42,18 @@ const routes = [
         meta: { permission: 4, title: '内容审核' }
       },
       {
+        path: 'elections',
+        name: 'Elections',
+        component: () => import('@/views/elections/List.vue'),
+        meta: { permission: 4, title: '选举管理' }
+      },
+      {
+        path: 'elections/:id',
+        name: 'ElectionDetail',
+        component: () => import('@/views/elections/Detail.vue'),
+        meta: { permission: 4, title: '选举详情' }
+      },
+      {
         path: 'data',
         name: 'Data',
         component: () => import('@/views/data/Index.vue'),
