@@ -22,6 +22,10 @@
         <el-icon><Checked /></el-icon>
         <span>内容审核</span>
       </el-menu-item>
+      <el-menu-item index="/data" v-if="hasPermission(4)">
+        <el-icon><Download /></el-icon>
+        <span>导入导出</span>
+      </el-menu-item>
     </el-menu>
   </div>
 </template>
@@ -29,7 +33,7 @@
 <script setup>
 import { computed } from 'vue'
 import { useRoute } from 'vue-router'
-import { DataLine, User, Checked } from '@element-plus/icons-vue'
+import { DataLine, User, Checked, Download } from '@element-plus/icons-vue'
 import { useAdminStore } from '@/stores/admin'
 
 const route = useRoute()
