@@ -106,8 +106,8 @@ func TestHandleListTools(t *testing.T) {
 	}
 
 	expectedNames := map[string]bool{
-		"polyant_search": true, "polyant_create": true, "polyant_rate": true,
-		"polyant_get": true, "polyant_update": true, "polyant_delete": true, "polyant_list_categories": true,
+		"polyant_search": false, "polyant_create": false, "polyant_rate": false,
+		"polyant_get": false, "polyant_update": false, "polyant_delete": false, "polyant_list_categories": false,
 	}
 	for _, tool := range tools {
 		if _, ok := expectedNames[tool.Name]; ok {
