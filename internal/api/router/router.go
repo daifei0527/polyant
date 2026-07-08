@@ -163,12 +163,6 @@ func NewRouterWithDeps(deps *Dependencies) (*Router, error) {
 		auditMW = middleware.NewAuditMiddleware(deps.Store.Audit)
 	}
 
-	// 创建导出/导入 handler
-	var exportHandler *handler.ExportHandler
-	if deps.Store != nil {
-		exportHandler = handler.NewExportHandler(deps.Store, deps.NodeID)
-	}
-
 	// 创建统计 handler
 	var statsHandler *handler.StatsHandler
 	if deps.Store != nil {
@@ -204,7 +198,7 @@ func NewRouterWithDeps(deps *Dependencies) (*Router, error) {
 	registerPublicRoutes(mux, deps.ApiKey, entryHandler, userHandler, categoryHandler, nodeHandler, electionHandler)
 
 	// 注册认证路由（需要 Ed25519 签名认证）
-	registerAuthRoutes(mux, authMW, entryHandler, userHandler, categoryHandler, nodeHandler, adminHandler, electionHandler, batchHandler, exportHandler, auditHandler, statsHandler)
+	registerAuthRoutes(mux, authMW, entryHandler, userHandler, categoryHandler, nodeHandler, adminHandler, electionHandler, batchHandler, auditHandler, statsHandler)
 
 	// 注册 Admin 路由（Session Token 认证）
 	registerAdminRoutes(mux, deps, sessionMgr)
@@ -350,7 +344,7 @@ func registerPublicRoutes(mux *http.ServeMux, apiKey string, eh *handler.EntryHa
 }
 
 // registerAuthRoutes 注册需要认证的路由
-func registerAuthRoutes(mux *http.ServeMux, authMW *middleware.AuthMiddleware, eh *handler.EntryHandler, uh *handler.UserHandler, ch *handler.CategoryHandler, nh *handler.NodeHandler, ah *handler.AdminHandler, elh *handler.ElectionHandler, bh *handler.BatchHandler, exh *handler.ExportHandler, auh *handler.AuditHandler, sh *handler.StatsHandler) {
+func registerAuthRoutes(mux *http.ServeMux, authMW *middleware.AuthMiddleware, eh *handler.EntryHandler, uh *handler.UserHandler, ch *handler.CategoryHandler, nh *handler.NodeHandler, ah *handler.AdminHandler, elh *handler.ElectionHandler, bh *handler.BatchHandler, auh *handler.AuditHandler, sh *handler.StatsHandler) {
 	// 创建条目（POST /api/v1/entry）
 	mux.Handle("/api/v1/entry/create", authMW.Middleware(http.HandlerFunc(eh.CreateEntryHandler)))
 
@@ -397,15 +391,6 @@ func registerAuthRoutes(mux *http.ServeMux, authMW *middleware.AuthMiddleware, e
 
 		// 删除审计日志 DELETE /api/v1/admin/audit/logs - Lv5 (SuperAdmin)
 		mux.Handle("/api/v1/admin/audit/logs/delete", authMW.Middleware(authMW.RequirePermission(rbac.PermAdmin, http.HandlerFunc(auh.DeleteAuditLogsHandler))))
-	}
-
-	// ==================== 数据导出/导入路由 ====================
-	if exh != nil {
-		// 数据导出 GET /api/v1/admin/export - Lv4+ (Admin)
-		mux.Handle("/api/v1/admin/export", authMW.Middleware(authMW.RequirePermission(rbac.PermManageUser, http.HandlerFunc(exh.ExportHandler))))
-
-		// 数据导入 POST /api/v1/admin/import - Lv4+ (Admin)
-		mux.Handle("/api/v1/admin/import", authMW.Middleware(authMW.RequirePermission(rbac.PermManageUser, http.HandlerFunc(exh.ImportHandler))))
 	}
 
 	// ==================== 管理员账户路由 ====================
@@ -521,6 +506,13 @@ func registerAdminRoutes(mux *http.ServeMux, deps *Dependencies, sessionMgr *cor
 		adminAuthMW.Middleware(http.HandlerFunc(adminHandler.CreateBackupHandler)))
 	mux.Handle("/api/v1/admin/backups",
 		adminAuthMW.Middleware(http.HandlerFunc(adminHandler.ListBackupsHandler)))
+
+	// 数据导出/导入（R4d：迁移到 session-token，admin SPA 可达）
+	dataExh := handler.NewExportHandler(deps.Store, deps.NodeID)
+	mux.Handle("/api/v1/admin/export",
+		adminAuthMW.Middleware(http.HandlerFunc(dataExh.ExportHandler)))
+	mux.Handle("/api/v1/admin/import",
+		adminAuthMW.Middleware(http.HandlerFunc(dataExh.ImportHandler)))
 
 	// 静态文件服务 (管理页面)
 	staticHandler := admin.NewStaticHandler()

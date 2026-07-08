@@ -7,8 +7,10 @@ import (
 	"strings"
 	"time"
 
+	mw "github.com/daifei0527/polyant/internal/api/middleware"
 	"github.com/daifei0527/polyant/internal/core/export"
 	"github.com/daifei0527/polyant/internal/storage"
+	"github.com/daifei0527/polyant/internal/storage/model"
 	awerrors "github.com/daifei0527/polyant/pkg/errors"
 )
 
@@ -111,11 +113,13 @@ func (h *ExportHandler) ImportHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// 获取操作者等级（用于权限检查）
-	user := getUserFromContext(r.Context())
-	var operatorLevel int32
-	if user != nil {
-		operatorLevel = user.UserLevel
+	// OperatorLevel from the admin session: look up the admin user by publicKey
+	adminPubKey, _ := r.Context().Value(mw.PublicKeyKey).(string)
+	operatorLevel := int32(model.UserLevelLv4) // fallback (admin sessions are Lv4+)
+	if adminPubKey != "" {
+		if adminUser, err := h.store.User.Get(r.Context(), adminPubKey); err == nil && adminUser != nil {
+			operatorLevel = adminUser.UserLevel
+		}
 	}
 
 	// 执行导入
