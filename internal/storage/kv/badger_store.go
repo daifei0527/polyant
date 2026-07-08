@@ -111,7 +111,7 @@ func (s *BadgerStore) Backup(destDir string) error {
 	if err := os.MkdirAll(destDir, 0o750); err != nil {
 		return fmt.Errorf("create backup dir: %w", err)
 	}
-	f, err := os.Create(filepath.Join(destDir, "backup.bak"))
+	f, err := os.OpenFile(filepath.Join(destDir, "backup.bak"), os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0o600)
 	if err != nil {
 		return fmt.Errorf("create backup file: %w", err)
 	}
