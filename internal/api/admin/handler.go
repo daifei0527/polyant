@@ -6,16 +6,19 @@ import (
 
 	"github.com/daifei0527/polyant/internal/api/handler"
 	"github.com/daifei0527/polyant/internal/core/backup"
+	"github.com/daifei0527/polyant/internal/core/election"
 	"github.com/daifei0527/polyant/internal/core/review"
 	"github.com/daifei0527/polyant/internal/storage"
+	"github.com/daifei0527/polyant/internal/storage/kv"
 )
 
 // Handler Admin API 处理器
 type Handler struct {
-	adminHandler  *handler.AdminHandler
-	statsHandler  *handler.StatsHandler
-	reviewHandler *handler.ReviewHandler
-	backupHandler *handler.BackupHandler
+	adminHandler    *handler.AdminHandler
+	statsHandler    *handler.StatsHandler
+	reviewHandler   *handler.ReviewHandler
+	backupHandler   *handler.BackupHandler
+	electionHandler *handler.AdminElectionHandler
 }
 
 // NewHandler 创建 Admin 处理器
@@ -28,6 +31,11 @@ func NewHandler(store *storage.Store, entryPusher handler.EntryPusher, backupDir
 	}
 	if store != nil {
 		h.backupHandler = handler.NewBackupHandler(backup.NewService(store.KVStore(), backupDir, engine))
+		kvStore := store.KVStore()
+		if kvStore != nil {
+			electionSvc := election.NewElectionService(kv.NewElectionStore(kvStore), kv.NewCandidateStore(kvStore), kv.NewVoteStore(kvStore))
+			h.electionHandler = handler.NewAdminElectionHandler(electionSvc)
+		}
 	}
 	return h
 }
@@ -105,4 +113,24 @@ func (h *Handler) CreateBackupHandler(w http.ResponseWriter, r *http.Request) {
 // ListBackupsHandler 列出备份处理器
 func (h *Handler) ListBackupsHandler(w http.ResponseWriter, r *http.Request) {
 	h.backupHandler.ListBackupsHandler(w, r)
+}
+
+// CreateElectionHandler 创建选举处理器（admin session-token）
+func (h *Handler) CreateElectionHandler(w http.ResponseWriter, r *http.Request) {
+	h.electionHandler.CreateElectionHandler(w, r)
+}
+
+// ListElectionsHandler 列出选举处理器（admin session-token）
+func (h *Handler) ListElectionsHandler(w http.ResponseWriter, r *http.Request) {
+	h.electionHandler.ListElectionsHandler(w, r)
+}
+
+// GetElectionHandler 获取选举详情处理器（admin session-token）
+func (h *Handler) GetElectionHandler(w http.ResponseWriter, r *http.Request) {
+	h.electionHandler.GetElectionHandler(w, r)
+}
+
+// CloseElectionHandler 关闭选举处理器（admin session-token）
+func (h *Handler) CloseElectionHandler(w http.ResponseWriter, r *http.Request) {
+	h.electionHandler.CloseElectionHandler(w, r)
 }

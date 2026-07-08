@@ -514,6 +514,27 @@ func registerAdminRoutes(mux *http.ServeMux, deps *Dependencies, sessionMgr *cor
 	mux.Handle("/api/v1/admin/import",
 		adminAuthMW.Middleware(http.HandlerFunc(dataExh.ImportHandler)))
 
+	// 选举管理（R4e：session-token，admin SPA 可达）
+	mux.Handle("/api/v1/admin/elections",
+		adminAuthMW.Middleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			switch r.Method {
+			case http.MethodGet:
+				adminHandler.ListElectionsHandler(w, r)
+			case http.MethodPost:
+				adminHandler.CreateElectionHandler(w, r)
+			default:
+				http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+			}
+		})))
+	mux.Handle("/api/v1/admin/elections/",
+		adminAuthMW.Middleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if strings.HasSuffix(r.URL.Path, "/close") {
+				adminHandler.CloseElectionHandler(w, r)
+				return
+			}
+			adminHandler.GetElectionHandler(w, r)
+		})))
+
 	// 静态文件服务 (管理页面)
 	staticHandler := admin.NewStaticHandler()
 	mux.Handle("/admin/", staticHandler)
