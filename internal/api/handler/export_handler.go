@@ -129,13 +129,8 @@ func (h *ExportHandler) ImportHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	result := h.importer.Import(zipData, opts)
 
-	// 返回结果
-	status := http.StatusOK
-	if !result.Success {
-		status = http.StatusBadRequest
-	}
-
-	writeJSON(w, status, &APIResponse{
+	// 返回结果 - always 200 with ImportResult regardless of success/failure
+	writeJSON(w, http.StatusOK, &APIResponse{
 		Code:    0,
 		Message: "import completed",
 		Data:    result,
