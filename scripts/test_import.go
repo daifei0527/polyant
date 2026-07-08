@@ -44,6 +44,7 @@ func main() {
 	fmt.Println("========================================\n")
 
 	// ==================== 步骤 1: 导出数据 ====================
+	// NOTE: /api/v1/admin/export|import migrated to session-token (R4d); these Ed25519 calls are stale.
 	fmt.Println("【步骤 1】导出数据")
 	exportTimestamp := strconv.FormatInt(time.Now().UnixMilli(), 10)
 	exportSignature := signRequest("GET", "/api/v1/admin/export", exportTimestamp, "", keys.TestUserPrivateKey)

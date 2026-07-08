@@ -160,6 +160,7 @@ func main() {
 	}
 
 	// ============ 测试 3: 导出数据 ============
+	// NOTE: /api/v1/admin/export migrated to session-token (R4d); this Ed25519 call is stale.
 	fmt.Println("【测试 3】导出数据 (Lv4+)")
 	// 导出 API 直接返回 ZIP 文件，不返回 JSON
 	// 注意：签名只使用路径，不包含查询参数

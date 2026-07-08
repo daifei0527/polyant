@@ -462,6 +462,7 @@ func main() {
 	}
 
 	// ==================== 测试 11: 数据导出和导入 ====================
+	// NOTE: /api/v1/admin/export|import migrated to session-token (R4d); these Ed25519 calls are stale.
 	fmt.Println("【测试 11】数据导出 (用于导入测试)")
 	// 导出数据
 	exportTimestamp := strconv.FormatInt(time.Now().UnixMilli(), 10)
