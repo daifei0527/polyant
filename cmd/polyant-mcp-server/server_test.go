@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"encoding/json"
+	"strings"
 	"testing"
 
 	"github.com/daifei0527/polyant/pkg/polysdk"
@@ -100,14 +101,13 @@ func TestHandleListTools(t *testing.T) {
 		tools = toolsList
 	}
 
-	if len(tools) != 3 {
-		t.Fatalf("期望 3 个工具，实际为 %d", len(tools))
+	if len(tools) != 7 {
+		t.Fatalf("期望 7 个工具，实际为 %d", len(tools))
 	}
 
 	expectedNames := map[string]bool{
-		"polyant_search": false,
-		"polyant_create": false,
-		"polyant_rate":   false,
+		"polyant_search": true, "polyant_create": true, "polyant_rate": true,
+		"polyant_get": true, "polyant_update": true, "polyant_delete": true, "polyant_list_categories": true,
 	}
 	for _, tool := range tools {
 		if _, ok := expectedNames[tool.Name]; ok {
@@ -211,4 +211,56 @@ func TestFormatEntries(t *testing.T) {
 			t.Error("结果中应包含 ID")
 		}
 	})
+}
+
+func TestFormatEntry(t *testing.T) {
+	e := &polysdk.Entry{ID: "e1", Title: "T", Content: "C", Category: "x", Score: 4.5, ScoreCount: 10}
+	result := formatEntry(e)
+	if !strings.Contains(result, "T") || !strings.Contains(result, "e1") {
+		t.Errorf("formatEntry missing fields: %s", result)
+	}
+	if formatEntry(nil) != "条目不存在" {
+		t.Error("formatEntry(nil) should return 不存在")
+	}
+}
+
+func TestFormatCategories(t *testing.T) {
+	cats := []polysdk.Category{{ID: "x", Name: "Cat1", Description: "D"}}
+	result := formatCategories(cats)
+	if !strings.Contains(result, "Cat1") || !strings.Contains(result, "x") {
+		t.Errorf("formatCategories missing fields: %s", result)
+	}
+	if formatCategories(nil) != "暂无分类" {
+		t.Error("formatCategories(nil) should return 暂无分类")
+	}
+}
+
+func TestHandleDeleteConfirmRequired(t *testing.T) {
+	server := setupTestServer(t)
+	// confirm=false → should NOT call DeleteEntry (no real API), returns prompt
+	resp := sendRequest(t, server, "tools/call", map[string]interface{}{
+		"name":      "polyant_delete",
+		"arguments": map[string]interface{}{"id": "e1", "confirm": false},
+	})
+	if resp.Error != nil {
+		t.Fatalf("unexpected error: %v", resp.Error)
+	}
+	resultStr := ""
+	if m, ok := resp.Result.(map[string]interface{}); ok {
+		switch content := m["content"].(type) {
+		case []interface{}:
+			if len(content) > 0 {
+				if tm, ok := content[0].(map[string]interface{}); ok {
+					resultStr, _ = tm["text"].(string)
+				}
+			}
+		case []map[string]interface{}:
+			if len(content) > 0 {
+				resultStr, _ = content[0]["text"].(string)
+			}
+		}
+	}
+	if !strings.Contains(resultStr, "confirm=true") {
+		t.Errorf("confirm=false should prompt, got: %s", resultStr)
+	}
 }
