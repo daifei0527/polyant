@@ -19,8 +19,8 @@
         <el-table-column prop="status" label="状态" width="100">
           <template #default="{ row }"><el-tag :type="row.status === 'active' ? 'success' : 'info'">{{ row.status === 'active' ? '进行中' : '已关闭' }}</el-tag></template>
         </el-table-column>
-        <el-table-column prop="vote_threshold" label="阈值" width="80" />
-        <el-table-column prop="auto_elect" label="自动当选" width="100"><template #default="{ row }">{{ row.auto_elect ? '是' : '否' }}</template></el-table-column>
+        <el-table-column prop="voteThreshold" label="阈值" width="80" />
+        <el-table-column prop="autoElect" label="自动当选" width="100"><template #default="{ row }">{{ row.autoElect ? '是' : '否' }}</template></el-table-column>
         <el-table-column label="操作" fixed="right" width="180">
           <template #default="{ row }">
             <el-button size="small" @click="router.push(`/elections/${row.id}`)">详情</el-button>

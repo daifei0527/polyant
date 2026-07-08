@@ -1,1 +1,0 @@
-import{x as t}from"./index-Cl3M6qHq.js";function o(e){return t.get("/admin/elections",{params:e})}function i(e){return t.get(`/admin/elections/${e}`)}function c(e){return t.post("/admin/elections",e)}function s(e){return t.post(`/admin/elections/${e}/close`)}export{c as a,s as c,i as g,o as l};

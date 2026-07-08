@@ -6,16 +6,16 @@
         <el-descriptions-item label="标题">{{ election.title }}</el-descriptions-item>
         <el-descriptions-item label="状态">{{ election.status === 'active' ? '进行中' : '已关闭' }}</el-descriptions-item>
         <el-descriptions-item label="描述">{{ election.description }}</el-descriptions-item>
-        <el-descriptions-item label="当选阈值">{{ election.vote_threshold }}</el-descriptions-item>
-        <el-descriptions-item label="自动当选">{{ election.auto_elect ? '是' : '否' }}</el-descriptions-item>
-        <el-descriptions-item label="创建者">{{ (election.created_by || '').slice(0, 16) }}</el-descriptions-item>
+        <el-descriptions-item label="当选阈值">{{ election.voteThreshold }}</el-descriptions-item>
+        <el-descriptions-item label="自动当选">{{ election.autoElect ? '是' : '否' }}</el-descriptions-item>
+        <el-descriptions-item label="创建者">{{ (election.createdBy || '').slice(0, 16) }}</el-descriptions-item>
       </el-descriptions>
     </el-card>
     <el-card>
       <template #header><span>候选人</span></template>
       <el-table :data="candidates" v-loading="loading">
-        <el-table-column prop="user_name" label="名称" />
-        <el-table-column prop="vote_count" label="票数" width="100" />
+        <el-table-column prop="userName" label="名称" />
+        <el-table-column prop="voteCount" label="票数" width="100" />
         <el-table-column prop="status" label="状态" width="120"><template #default="{ row }"><el-tag :type="row.status === 'elected' ? 'success' : row.status === 'rejected' ? 'danger' : ''">{{ row.status }}</el-tag></template></el-table-column>
         <el-table-column prop="confirmed" label="已确认" width="100"><template #default="{ row }">{{ row.confirmed ? '是' : '否' }}</template></el-table-column>
       </el-table>

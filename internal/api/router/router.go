@@ -529,7 +529,15 @@ func registerAdminRoutes(mux *http.ServeMux, deps *Dependencies, sessionMgr *cor
 	mux.Handle("/api/v1/admin/elections/",
 		adminAuthMW.Middleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			if strings.HasSuffix(r.URL.Path, "/close") {
+				if r.Method != http.MethodPost {
+					http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+					return
+				}
 				adminHandler.CloseElectionHandler(w, r)
+				return
+			}
+			if r.Method != http.MethodGet {
+				http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 				return
 			}
 			adminHandler.GetElectionHandler(w, r)
