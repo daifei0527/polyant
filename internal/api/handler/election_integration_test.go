@@ -8,6 +8,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	mw "github.com/daifei0527/polyant/internal/api/middleware"
 	"github.com/daifei0527/polyant/internal/storage/kv"
 	"github.com/daifei0527/polyant/internal/storage/model"
 )
@@ -25,7 +26,7 @@ func TestElectionHandler_CompleteFlow(t *testing.T) {
 		body := `{"title": "年度最佳贡献者选举", "description": "选举年度最佳贡献者", "vote_threshold": 3, "auto_elect": true}`
 		req := httptest.NewRequest(http.MethodPost, "/api/v1/elections", bytes.NewBufferString(body))
 		req.Header.Set("Content-Type", "application/json")
-		ctx := context.WithValue(req.Context(), "public_key", "admin-key")
+		ctx := context.WithValue(req.Context(), mw.PublicKeyKey, "admin-key")
 		req = req.WithContext(ctx)
 		rec := httptest.NewRecorder()
 
@@ -46,7 +47,7 @@ func TestElectionHandler_CompleteFlow(t *testing.T) {
 		body := `{"user_name": "候选人张三", "self_nominated": true}`
 		req := httptest.NewRequest(http.MethodPost, "/api/v1/elections/"+electionID+"/candidates", bytes.NewBufferString(body))
 		req.Header.Set("Content-Type", "application/json")
-		ctx := context.WithValue(req.Context(), "public_key", "candidate-zhangsan")
+		ctx := context.WithValue(req.Context(), mw.PublicKeyKey, "candidate-zhangsan")
 		req = req.WithContext(ctx)
 		rec := httptest.NewRecorder()
 
@@ -69,7 +70,7 @@ func TestElectionHandler_CompleteFlow(t *testing.T) {
 		body := `{"user_id": "candidate-lisi", "user_name": "候选人李四", "self_nominated": false}`
 		req := httptest.NewRequest(http.MethodPost, "/api/v1/elections/"+electionID+"/candidates", bytes.NewBufferString(body))
 		req.Header.Set("Content-Type", "application/json")
-		ctx := context.WithValue(req.Context(), "public_key", "nominator-wangwu")
+		ctx := context.WithValue(req.Context(), mw.PublicKeyKey, "nominator-wangwu")
 		req = req.WithContext(ctx)
 		rec := httptest.NewRecorder()
 
@@ -90,7 +91,7 @@ func TestElectionHandler_CompleteFlow(t *testing.T) {
 	// Step 4: Confirm peer nomination
 	t.Run("ConfirmNomination", func(t *testing.T) {
 		req := httptest.NewRequest(http.MethodPost, "/api/v1/elections/"+electionID+"/candidates/candidate-lisi/confirm", nil)
-		ctx := context.WithValue(req.Context(), "public_key", "candidate-lisi")
+		ctx := context.WithValue(req.Context(), mw.PublicKeyKey, "candidate-lisi")
 		req = req.WithContext(ctx)
 		rec := httptest.NewRecorder()
 
@@ -115,7 +116,7 @@ func TestElectionHandler_CompleteFlow(t *testing.T) {
 			body := `{"candidate_id": "candidate-zhangsan"}`
 			req := httptest.NewRequest(http.MethodPost, "/api/v1/elections/"+electionID+"/vote", bytes.NewBufferString(body))
 			req.Header.Set("Content-Type", "application/json")
-			ctx := context.WithValue(req.Context(), "public_key", "voter-"+string(rune('0'+i)))
+			ctx := context.WithValue(req.Context(), mw.PublicKeyKey, "voter-"+string(rune('0'+i)))
 			req = req.WithContext(ctx)
 			rec := httptest.NewRecorder()
 			handler.VoteHandler(rec, req)
@@ -129,7 +130,7 @@ func TestElectionHandler_CompleteFlow(t *testing.T) {
 		body := `{"candidate_id": "candidate-lisi"}`
 		req := httptest.NewRequest(http.MethodPost, "/api/v1/elections/"+electionID+"/vote", bytes.NewBufferString(body))
 		req.Header.Set("Content-Type", "application/json")
-		ctx := context.WithValue(req.Context(), "public_key", "voter-3")
+		ctx := context.WithValue(req.Context(), mw.PublicKeyKey, "voter-3")
 		req = req.WithContext(ctx)
 		rec := httptest.NewRecorder()
 		handler.VoteHandler(rec, req)
@@ -144,7 +145,7 @@ func TestElectionHandler_CompleteFlow(t *testing.T) {
 		body := `{"candidate_id": "candidate-zhangsan"}`
 		req := httptest.NewRequest(http.MethodPost, "/api/v1/elections/"+electionID+"/vote", bytes.NewBufferString(body))
 		req.Header.Set("Content-Type", "application/json")
-		ctx := context.WithValue(req.Context(), "public_key", "voter-1") // Same voter
+		ctx := context.WithValue(req.Context(), mw.PublicKeyKey, "voter-1") // Same voter
 		req = req.WithContext(ctx)
 		rec := httptest.NewRecorder()
 
@@ -158,7 +159,7 @@ func TestElectionHandler_CompleteFlow(t *testing.T) {
 	// Step 7: Close election
 	t.Run("CloseElection", func(t *testing.T) {
 		req := httptest.NewRequest(http.MethodPost, "/api/v1/elections/"+electionID+"/close", nil)
-		ctx := context.WithValue(req.Context(), "public_key", "admin-key")
+		ctx := context.WithValue(req.Context(), mw.PublicKeyKey, "admin-key")
 		req = req.WithContext(ctx)
 		rec := httptest.NewRecorder()
 
@@ -223,7 +224,7 @@ func TestElectionHandler_CompleteFlowWithAutoElect(t *testing.T) {
 	body := `{"title": "自动选举测试", "description": "测试自动选举", "vote_threshold": 1, "auto_elect": true}`
 	req := httptest.NewRequest(http.MethodPost, "/api/v1/elections", bytes.NewBufferString(body))
 	req.Header.Set("Content-Type", "application/json")
-	ctx := context.WithValue(req.Context(), "public_key", "admin-key")
+	ctx := context.WithValue(req.Context(), mw.PublicKeyKey, "admin-key")
 	req = req.WithContext(ctx)
 	rec := httptest.NewRecorder()
 	handler.CreateElectionHandler(rec, req)
@@ -237,7 +238,7 @@ func TestElectionHandler_CompleteFlowWithAutoElect(t *testing.T) {
 	nominateBody := `{"user_name": "Auto-Elect Candidate", "self_nominated": true}`
 	req = httptest.NewRequest(http.MethodPost, "/api/v1/elections/"+electionID+"/candidates", bytes.NewBufferString(nominateBody))
 	req.Header.Set("Content-Type", "application/json")
-	ctx = context.WithValue(req.Context(), "public_key", "candidate-auto")
+	ctx = context.WithValue(req.Context(), mw.PublicKeyKey, "candidate-auto")
 	req = req.WithContext(ctx)
 	rec = httptest.NewRecorder()
 	handler.NominateCandidateHandler(rec, req)
@@ -246,7 +247,7 @@ func TestElectionHandler_CompleteFlowWithAutoElect(t *testing.T) {
 	voteBody := `{"candidate_id": "candidate-auto"}`
 	req = httptest.NewRequest(http.MethodPost, "/api/v1/elections/"+electionID+"/vote", bytes.NewBufferString(voteBody))
 	req.Header.Set("Content-Type", "application/json")
-	ctx = context.WithValue(req.Context(), "public_key", "voter-auto-1")
+	ctx = context.WithValue(req.Context(), mw.PublicKeyKey, "voter-auto-1")
 	req = req.WithContext(ctx)
 	rec = httptest.NewRecorder()
 	handler.VoteHandler(rec, req)

@@ -8,6 +8,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	mw "github.com/daifei0527/polyant/internal/api/middleware"
 	"github.com/daifei0527/polyant/internal/storage/kv"
 )
 
@@ -22,7 +23,7 @@ func TestElectionHandler_CreateElectionHandler(t *testing.T) {
 	body := `{"title": "Test Election", "description": "Test Description", "vote_threshold": 5, "auto_elect": true}`
 	req := httptest.NewRequest(http.MethodPost, "/api/v1/elections", bytes.NewBufferString(body))
 	req.Header.Set("Content-Type", "application/json")
-	ctx := context.WithValue(req.Context(), "public_key", "admin-key")
+	ctx := context.WithValue(req.Context(), mw.PublicKeyKey, "admin-key")
 	req = req.WithContext(ctx)
 	rec := httptest.NewRecorder()
 
@@ -68,7 +69,7 @@ func TestElectionHandler_ListElectionsHandler(t *testing.T) {
 	body := `{"title": "Test Election", "description": "Test", "vote_threshold": 3}`
 	req := httptest.NewRequest(http.MethodPost, "/api/v1/elections", bytes.NewBufferString(body))
 	req.Header.Set("Content-Type", "application/json")
-	ctx := context.WithValue(req.Context(), "public_key", "admin-key")
+	ctx := context.WithValue(req.Context(), mw.PublicKeyKey, "admin-key")
 	req = req.WithContext(ctx)
 	rec := httptest.NewRecorder()
 	handler.CreateElectionHandler(rec, req)
@@ -103,7 +104,7 @@ func TestElectionHandler_GetElectionHandler(t *testing.T) {
 	body := `{"title": "Test Election", "description": "Test", "vote_threshold": 3}`
 	req := httptest.NewRequest(http.MethodPost, "/api/v1/elections", bytes.NewBufferString(body))
 	req.Header.Set("Content-Type", "application/json")
-	ctx := context.WithValue(req.Context(), "public_key", "admin-key")
+	ctx := context.WithValue(req.Context(), mw.PublicKeyKey, "admin-key")
 	req = req.WithContext(ctx)
 	rec := httptest.NewRecorder()
 	handler.CreateElectionHandler(rec, req)
@@ -156,7 +157,7 @@ func TestElectionHandler_NominateCandidateHandler_SelfNomination(t *testing.T) {
 	body := `{"title": "Test Election", "description": "Test", "vote_threshold": 3}`
 	req := httptest.NewRequest(http.MethodPost, "/api/v1/elections", bytes.NewBufferString(body))
 	req.Header.Set("Content-Type", "application/json")
-	ctx := context.WithValue(req.Context(), "public_key", "admin-key")
+	ctx := context.WithValue(req.Context(), mw.PublicKeyKey, "admin-key")
 	req = req.WithContext(ctx)
 	rec := httptest.NewRecorder()
 	handler.CreateElectionHandler(rec, req)
@@ -170,7 +171,7 @@ func TestElectionHandler_NominateCandidateHandler_SelfNomination(t *testing.T) {
 	nominateBody := `{"user_name": "Candidate Name", "self_nominated": true}`
 	req = httptest.NewRequest(http.MethodPost, "/api/v1/elections/"+electionID+"/candidates", bytes.NewBufferString(nominateBody))
 	req.Header.Set("Content-Type", "application/json")
-	ctx = context.WithValue(req.Context(), "public_key", "candidate-key")
+	ctx = context.WithValue(req.Context(), mw.PublicKeyKey, "candidate-key")
 	req = req.WithContext(ctx)
 	rec = httptest.NewRecorder()
 
@@ -206,7 +207,7 @@ func TestElectionHandler_VoteHandler(t *testing.T) {
 	body := `{"title": "Test Election", "description": "Test", "vote_threshold": 2, "auto_elect": true}`
 	req := httptest.NewRequest(http.MethodPost, "/api/v1/elections", bytes.NewBufferString(body))
 	req.Header.Set("Content-Type", "application/json")
-	ctx := context.WithValue(req.Context(), "public_key", "admin-key")
+	ctx := context.WithValue(req.Context(), mw.PublicKeyKey, "admin-key")
 	req = req.WithContext(ctx)
 	rec := httptest.NewRecorder()
 	handler.CreateElectionHandler(rec, req)
@@ -220,7 +221,7 @@ func TestElectionHandler_VoteHandler(t *testing.T) {
 	nominateBody := `{"user_name": "Candidate", "self_nominated": true}`
 	req = httptest.NewRequest(http.MethodPost, "/api/v1/elections/"+electionID+"/candidates", bytes.NewBufferString(nominateBody))
 	req.Header.Set("Content-Type", "application/json")
-	ctx = context.WithValue(req.Context(), "public_key", "candidate-key")
+	ctx = context.WithValue(req.Context(), mw.PublicKeyKey, "candidate-key")
 	req = req.WithContext(ctx)
 	rec = httptest.NewRecorder()
 	handler.NominateCandidateHandler(rec, req)
@@ -229,7 +230,7 @@ func TestElectionHandler_VoteHandler(t *testing.T) {
 	voteBody := `{"candidate_id": "candidate-key"}`
 	req = httptest.NewRequest(http.MethodPost, "/api/v1/elections/"+electionID+"/vote", bytes.NewBufferString(voteBody))
 	req.Header.Set("Content-Type", "application/json")
-	ctx = context.WithValue(req.Context(), "public_key", "voter-key")
+	ctx = context.WithValue(req.Context(), mw.PublicKeyKey, "voter-key")
 	req = req.WithContext(ctx)
 	rec = httptest.NewRecorder()
 
@@ -247,7 +248,7 @@ func TestElectionHandler_CloseElectionHandler(t *testing.T) {
 	body := `{"title": "Test Election", "description": "Test", "vote_threshold": 2}`
 	req := httptest.NewRequest(http.MethodPost, "/api/v1/elections", bytes.NewBufferString(body))
 	req.Header.Set("Content-Type", "application/json")
-	ctx := context.WithValue(req.Context(), "public_key", "admin-key")
+	ctx := context.WithValue(req.Context(), mw.PublicKeyKey, "admin-key")
 	req = req.WithContext(ctx)
 	rec := httptest.NewRecorder()
 	handler.CreateElectionHandler(rec, req)
@@ -259,7 +260,7 @@ func TestElectionHandler_CloseElectionHandler(t *testing.T) {
 
 	// Close election
 	req = httptest.NewRequest(http.MethodPost, "/api/v1/elections/"+electionID+"/close", nil)
-	ctx = context.WithValue(req.Context(), "public_key", "admin-key")
+	ctx = context.WithValue(req.Context(), mw.PublicKeyKey, "admin-key")
 	req = req.WithContext(ctx)
 	rec = httptest.NewRecorder()
 
@@ -300,7 +301,7 @@ func TestElectionHandler_ConfirmNominationHandler(t *testing.T) {
 	body := `{"title": "Test Election", "description": "Test", "vote_threshold": 3}`
 	req := httptest.NewRequest(http.MethodPost, "/api/v1/elections", bytes.NewBufferString(body))
 	req.Header.Set("Content-Type", "application/json")
-	ctx := context.WithValue(req.Context(), "public_key", "admin-key")
+	ctx := context.WithValue(req.Context(), mw.PublicKeyKey, "admin-key")
 	req = req.WithContext(ctx)
 	rec := httptest.NewRecorder()
 	handler.CreateElectionHandler(rec, req)
@@ -314,14 +315,14 @@ func TestElectionHandler_ConfirmNominationHandler(t *testing.T) {
 	nominateBody := `{"user_id": "nominee-key", "user_name": "Nominee", "self_nominated": false}`
 	req = httptest.NewRequest(http.MethodPost, "/api/v1/elections/"+electionID+"/candidates", bytes.NewBufferString(nominateBody))
 	req.Header.Set("Content-Type", "application/json")
-	ctx = context.WithValue(req.Context(), "public_key", "nominator-key")
+	ctx = context.WithValue(req.Context(), mw.PublicKeyKey, "nominator-key")
 	req = req.WithContext(ctx)
 	rec = httptest.NewRecorder()
 	handler.NominateCandidateHandler(rec, req)
 
 	// Confirm nomination (by the nominee)
 	req = httptest.NewRequest(http.MethodPost, "/api/v1/elections/"+electionID+"/candidates/nominee-key/confirm", nil)
-	ctx = context.WithValue(req.Context(), "public_key", "nominee-key")
+	ctx = context.WithValue(req.Context(), mw.PublicKeyKey, "nominee-key")
 	req = req.WithContext(ctx)
 	rec = httptest.NewRecorder()
 
@@ -351,7 +352,7 @@ func TestElectionHandler_ConfirmNominationHandler_WrongUser(t *testing.T) {
 	body := `{"title": "Test Election", "description": "Test", "vote_threshold": 3}`
 	req := httptest.NewRequest(http.MethodPost, "/api/v1/elections", bytes.NewBufferString(body))
 	req.Header.Set("Content-Type", "application/json")
-	ctx := context.WithValue(req.Context(), "public_key", "admin-key")
+	ctx := context.WithValue(req.Context(), mw.PublicKeyKey, "admin-key")
 	req = req.WithContext(ctx)
 	rec := httptest.NewRecorder()
 	handler.CreateElectionHandler(rec, req)
@@ -365,14 +366,14 @@ func TestElectionHandler_ConfirmNominationHandler_WrongUser(t *testing.T) {
 	nominateBody := `{"user_id": "nominee-key", "user_name": "Nominee", "self_nominated": false}`
 	req = httptest.NewRequest(http.MethodPost, "/api/v1/elections/"+electionID+"/candidates", bytes.NewBufferString(nominateBody))
 	req.Header.Set("Content-Type", "application/json")
-	ctx = context.WithValue(req.Context(), "public_key", "nominator-key")
+	ctx = context.WithValue(req.Context(), mw.PublicKeyKey, "nominator-key")
 	req = req.WithContext(ctx)
 	rec = httptest.NewRecorder()
 	handler.NominateCandidateHandler(rec, req)
 
 	// Try to confirm with wrong user
 	req = httptest.NewRequest(http.MethodPost, "/api/v1/elections/"+electionID+"/candidates/nominee-key/confirm", nil)
-	ctx = context.WithValue(req.Context(), "public_key", "wrong-user")
+	ctx = context.WithValue(req.Context(), mw.PublicKeyKey, "wrong-user")
 	req = req.WithContext(ctx)
 	rec = httptest.NewRecorder()
 
@@ -400,6 +401,46 @@ func TestExtractLastPathParam(t *testing.T) {
 		if result != tt.expected {
 			t.Errorf("extractLastPathParam(%q) = %q, expected %q", tt.path, result, tt.expected)
 		}
+	}
+}
+
+// TestCreateElectionHandler_UsesTypedContextKey verifies that CreateElectionHandler
+// reads the typed mw.PublicKeyKey (not bare string "public_key"). Before the fix,
+// the handler used Value("public_key") which never matched the typed key set by
+// auth middleware, so CreatedBy was always empty.
+func TestCreateElectionHandler_UsesTypedContextKey(t *testing.T) {
+	store := kv.NewMemoryStore()
+	handler := NewElectionHandler(store)
+
+	body := `{"title":"T","description":"D","vote_threshold":1,"duration_days":1,"auto_elect":true}`
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/elections/create", bytes.NewBufferString(body))
+	req = req.WithContext(context.WithValue(req.Context(), mw.PublicKeyKey, "pk-admin"))
+	rec := httptest.NewRecorder()
+	handler.CreateElectionHandler(rec, req)
+
+	if rec.Code != http.StatusCreated {
+		t.Fatalf("status=%d body=%s", rec.Code, rec.Body.String())
+	}
+	var createResp APIResponse
+	json.Unmarshal(rec.Body.Bytes(), &createResp)
+	createData := createResp.Data.(map[string]interface{})
+	electionID := createData["election_id"].(string)
+
+	// Fetch the created election and verify createdBy is the typed-key value
+	req = httptest.NewRequest(http.MethodGet, "/api/v1/elections/"+electionID, nil)
+	rec = httptest.NewRecorder()
+	handler.GetElectionHandler(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("get election status=%d body=%s", rec.Code, rec.Body.String())
+	}
+	var getResp APIResponse
+	json.Unmarshal(rec.Body.Bytes(), &getResp)
+	getData := getResp.Data.(map[string]interface{})
+	election := getData["election"].(map[string]interface{})
+	createdBy, _ := election["createdBy"].(string)
+	if createdBy != "pk-admin" {
+		t.Fatalf("expected createdBy=%q, got %q (handler is reading bare-string key instead of typed mw.PublicKeyKey)", "pk-admin", createdBy)
 	}
 }
 
@@ -456,7 +497,7 @@ func TestElectionHandler_VoteHandler_RequiresLv3(t *testing.T) {
 	body := `{"title": "Test", "description": "Test", "vote_threshold": 3}`
 	req := httptest.NewRequest(http.MethodPost, "/api/v1/elections", bytes.NewBufferString(body))
 	req.Header.Set("Content-Type", "application/json")
-	ctx := context.WithValue(req.Context(), "public_key", "admin-key")
+	ctx := context.WithValue(req.Context(), mw.PublicKeyKey, "admin-key")
 	req = req.WithContext(ctx)
 	rec := httptest.NewRecorder()
 	handler.CreateElectionHandler(rec, req)
@@ -470,7 +511,7 @@ func TestElectionHandler_VoteHandler_RequiresLv3(t *testing.T) {
 	nominateBody := `{"user_name": "Candidate", "self_nominated": true}`
 	req = httptest.NewRequest(http.MethodPost, "/api/v1/elections/"+electionID+"/candidates", bytes.NewBufferString(nominateBody))
 	req.Header.Set("Content-Type", "application/json")
-	ctx = context.WithValue(req.Context(), "public_key", "candidate-key")
+	ctx = context.WithValue(req.Context(), mw.PublicKeyKey, "candidate-key")
 	req = req.WithContext(ctx)
 	rec = httptest.NewRecorder()
 	handler.NominateCandidateHandler(rec, req)
@@ -479,7 +520,7 @@ func TestElectionHandler_VoteHandler_RequiresLv3(t *testing.T) {
 	voteBody := `{"candidate_id": "candidate-key"}`
 	req = httptest.NewRequest(http.MethodPost, "/api/v1/elections/"+electionID+"/vote", bytes.NewBufferString(voteBody))
 	req.Header.Set("Content-Type", "application/json")
-	ctx = context.WithValue(req.Context(), "public_key", "lv2-voter")
+	ctx = context.WithValue(req.Context(), mw.PublicKeyKey, "lv2-voter")
 	req = req.WithContext(ctx)
 	rec = httptest.NewRecorder()
 
@@ -497,7 +538,7 @@ func TestElectionHandler_CloseElectionHandler_RequiresLv5(t *testing.T) {
 	body := `{"title": "Test", "description": "Test", "vote_threshold": 3}`
 	req := httptest.NewRequest(http.MethodPost, "/api/v1/elections", bytes.NewBufferString(body))
 	req.Header.Set("Content-Type", "application/json")
-	ctx := context.WithValue(req.Context(), "public_key", "admin-key")
+	ctx := context.WithValue(req.Context(), mw.PublicKeyKey, "admin-key")
 	req = req.WithContext(ctx)
 	rec := httptest.NewRecorder()
 	handler.CreateElectionHandler(rec, req)
@@ -509,7 +550,7 @@ func TestElectionHandler_CloseElectionHandler_RequiresLv5(t *testing.T) {
 
 	// Try to close with non-admin (would be rejected by middleware in production)
 	req = httptest.NewRequest(http.MethodPost, "/api/v1/elections/"+electionID+"/close", nil)
-	ctx = context.WithValue(req.Context(), "public_key", "non-admin")
+	ctx = context.WithValue(req.Context(), mw.PublicKeyKey, "non-admin")
 	req = req.WithContext(ctx)
 	rec = httptest.NewRecorder()
 
@@ -527,7 +568,7 @@ func TestElectionHandler_DuplicateVote(t *testing.T) {
 	body := `{"title": "Test", "description": "Test", "vote_threshold": 5}`
 	req := httptest.NewRequest(http.MethodPost, "/api/v1/elections", bytes.NewBufferString(body))
 	req.Header.Set("Content-Type", "application/json")
-	ctx := context.WithValue(req.Context(), "public_key", "admin-key")
+	ctx := context.WithValue(req.Context(), mw.PublicKeyKey, "admin-key")
 	req = req.WithContext(ctx)
 	rec := httptest.NewRecorder()
 	handler.CreateElectionHandler(rec, req)
@@ -541,7 +582,7 @@ func TestElectionHandler_DuplicateVote(t *testing.T) {
 	nominateBody := `{"user_name": "Candidate", "self_nominated": true}`
 	req = httptest.NewRequest(http.MethodPost, "/api/v1/elections/"+electionID+"/candidates", bytes.NewBufferString(nominateBody))
 	req.Header.Set("Content-Type", "application/json")
-	ctx = context.WithValue(req.Context(), "public_key", "candidate-key")
+	ctx = context.WithValue(req.Context(), mw.PublicKeyKey, "candidate-key")
 	req = req.WithContext(ctx)
 	rec = httptest.NewRecorder()
 	handler.NominateCandidateHandler(rec, req)
@@ -550,7 +591,7 @@ func TestElectionHandler_DuplicateVote(t *testing.T) {
 	voteBody := `{"candidate_id": "candidate-key"}`
 	req = httptest.NewRequest(http.MethodPost, "/api/v1/elections/"+electionID+"/vote", bytes.NewBufferString(voteBody))
 	req.Header.Set("Content-Type", "application/json")
-	ctx = context.WithValue(req.Context(), "public_key", "voter-1")
+	ctx = context.WithValue(req.Context(), mw.PublicKeyKey, "voter-1")
 	req = req.WithContext(ctx)
 	rec = httptest.NewRecorder()
 	handler.VoteHandler(rec, req)
@@ -562,7 +603,7 @@ func TestElectionHandler_DuplicateVote(t *testing.T) {
 	// Duplicate vote from same voter
 	req = httptest.NewRequest(http.MethodPost, "/api/v1/elections/"+electionID+"/vote", bytes.NewBufferString(voteBody))
 	req.Header.Set("Content-Type", "application/json")
-	ctx = context.WithValue(req.Context(), "public_key", "voter-1")
+	ctx = context.WithValue(req.Context(), mw.PublicKeyKey, "voter-1")
 	req = req.WithContext(ctx)
 	rec = httptest.NewRecorder()
 

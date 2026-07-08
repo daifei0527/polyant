@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"strings"
 
+	mw "github.com/daifei0527/polyant/internal/api/middleware"
 	"github.com/daifei0527/polyant/internal/core/election"
 	"github.com/daifei0527/polyant/internal/storage/kv"
 	"github.com/daifei0527/polyant/internal/storage/model"
@@ -67,7 +68,7 @@ func (h *ElectionHandler) CreateElectionHandler(w http.ResponseWriter, r *http.R
 		return
 	}
 
-	publicKey, _ := r.Context().Value("public_key").(string)
+	publicKey, _ := r.Context().Value(mw.PublicKeyKey).(string)
 
 	ctx := r.Context()
 	election, err := h.electionSvc.CreateElection(ctx, req.Title, req.Description, publicKey, req.VoteThreshold, req.DurationDays, req.AutoElect)
@@ -190,7 +191,7 @@ func (h *ElectionHandler) NominateCandidateHandler(w http.ResponseWriter, r *htt
 		return
 	}
 
-	publicKey, _ := r.Context().Value("public_key").(string)
+	publicKey, _ := r.Context().Value(mw.PublicKeyKey).(string)
 
 	// 如果是自荐，UserID 应该是自己的公钥
 	if req.SelfNominated {
@@ -246,7 +247,7 @@ func (h *ElectionHandler) VoteHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	publicKey, _ := r.Context().Value("public_key").(string)
+	publicKey, _ := r.Context().Value(mw.PublicKeyKey).(string)
 
 	ctx := r.Context()
 	result, err := h.electionSvc.Vote(ctx, electionID, publicKey, req.CandidateID)
@@ -327,7 +328,7 @@ func (h *ElectionHandler) ConfirmNominationHandler(w http.ResponseWriter, r *htt
 	userID := parts[6]
 
 	// 验证权限：只有被提名人自己可以确认
-	publicKey, _ := r.Context().Value("public_key").(string)
+	publicKey, _ := r.Context().Value(mw.PublicKeyKey).(string)
 	if publicKey != userID {
 		writeJSON(w, http.StatusForbidden, &APIResponse{
 			Code:    403,
